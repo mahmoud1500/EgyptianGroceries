@@ -2994,6 +2994,11 @@ window.supSendReply = async function (id) {
   });
 })();
 (async function init() {
+  // v43: show the running build version in the footer (support/debugging).
+  fetch('/api/version').then(r => r.json()).then(j => {
+    const el = document.getElementById('app-version');
+    if (el && j && j.version) el.textContent = 'Build ' + j.version;
+  }).catch(() => {});
   await loadMe();
   applyLang();
   loadAnalytics(); // fire-and-forget: a missing analytics ID is a no-op

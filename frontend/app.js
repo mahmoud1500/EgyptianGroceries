@@ -754,6 +754,14 @@ function dietBadges(dish) {
   if (dish && dish.is_vegan) h += ' <span class="diet-badge" title="' + esc(t('diet_vegan')) + '">🌿</span>';
   return h;
 }
+/* One customization line (legacy single-modifier cart entries, pre-v39 shape:
+   {choice_label, delta}) in the same format as the modern added-extra line. */
+function modLineHTML(mod) {
+  if (!mod) return '';
+  const nm = mod.choice_label || mod.label || '';
+  const d = Number(mod.delta) || 0;
+  return '<div class="vendor-tag mod-line">➕ ' + esc(d ? t('mod_line', { label: nm, delta: money(d) }) : nm) + '</div>';
+}
 /* Customization summary under a cart/checkout line (new shape + legacy). */
 function custLinesHTML(entry) {
   const e = entry || {};
@@ -856,13 +864,15 @@ window.removePromo = function () {
    unreachable. */
 const LOY_REDEEM_FALLBACK = 50;
 async function loadLoyalty() {
-  if (!S.user || S.user.role !== 'customer') return;
-  if (S.loyalty.balance !== null && S.loyalty.rate !== null) return;
+  if (!S.user) return; // v44: any logged-in user (vendors/admins order too since v30)
+  if (S.loyalty.balance !== null && S.loyalty.rate !== null && S.loyalty.earn_rate !== null) return;
   try {
     const [b, r] = await Promise.all([api('/loyalty/balance'), api('/loyalty/rates')]);
     S.loyalty.balance = Number(b && b.balance) || 0;
     const rate = r && Number(r.points_per_dollar_redeem);
     S.loyalty.rate = rate > 0 ? rate : LOY_REDEEM_FALLBACK;
+    const earn = r && Number(r.points_per_dollar);
+    S.loyalty.earn_rate = earn > 0 ? earn : 1;
   } catch (e) { /* loyalty is a bonus — never break the page */ }
 }
 /* Estimated dollar value of redeeming N points at the current redeem rate. */
@@ -876,8 +886,20 @@ function checkoutPointsOff(subSum, feeSum) {
   if (!(S.checkout.redeem_points > 0)) return 0;
   return Math.min(loyaltyEstOff(S.checkout.redeem_points), Math.max(0, subSum + feeSum));
 }
+/* v44: "You'll earn ~N points on this order" preview shown right by the
+   redeem block / totals. N = floor(cart subtotal × earn rate), mirroring
+   the backend award — an estimate, the backend is authoritative. Shown
+   only when logged in and N > 0; re-rendered with the totals (vCart and
+   vReview call it next to the redeem block). */
+function loyaltyEarnPreviewHTML(subSum) {
+  if (!S.user) return '';
+  const rate = S.loyalty.earn_rate || 1;
+  const n = Math.floor(Number(subSum || 0) * rate);
+  if (n <= 0) return '';
+  return '<div class="hint loyalty-earn-hint">🪙 ' + esc(t('points_earn_preview', { n })) + '</div>';
+}
 function loyaltyBlockHTML() {
-  if (!S.user || S.user.role !== 'customer') return '';
+  if (!S.user) return ''; // v44: any logged-in user
   const bal = S.loyalty.balance;
   if (bal === null || bal <= 0) return '';
   const off = loyaltyEstOff(bal);
@@ -1185,7 +1207,7 @@ const S = {
   checkout: { payment: 'zelle', address: '', groups: {}, promo: null, guestMode: false, guest: null,
     redeem_points: 0 },
   // Loyalty points cache: balance + redeem rate, refreshed on demand.
-  loyalty: { balance: null, rate: null },
+  loyalty: { balance: null, rate: null, earn_rate: null },
   // Public site settings from GET /api/settings/public (auth-free):
   // admin-set tax_rate used by the checkout preview. Defaults to 0 until
   // the fetch resolves; a failed fetch keeps the TAX_RATE fallback.
@@ -3404,6 +3426,7 @@ async function vCart() {
 
   const subSum = groups.reduce((a, gr) => a + gr.subtotal, 0);
   const feeSum = groups.reduce((a, gr) => a + gr.fee, 0);
+  html += loyaltyEarnPreviewHTML(subSum);
   html += totalsBreakdown(subSum, feeSum, null, cartDiscount(subSum), checkoutPointsOff(subSum, feeSum));
   html += '<button class="btn" style="width:100%" onclick="nextReview()">' + esc(t('next_review')) + '</button>';
   html += '</div></div>';
@@ -3684,6 +3707,7 @@ async function vReview() {
   const subSum = groups.reduce((a, gr) => a + gr.subtotal, 0);
   await loadLoyalty();
   html += '<div class="summary"><h3>' + esc(t('order_total')) + '</h3>' + promoBlockHTML() + loyaltyBlockHTML() +
+    loyaltyEarnPreviewHTML(subSum) +
     totalsBreakdown(subSum, feeSum, null, cartDiscount(subSum), checkoutPointsOff(subSum, feeSum)) +
     '<div class="hint" style="margin:.6rem 0;">' + esc(t('multi_split_hint')) + '</div>' +
     '<div id="review-error" class="checkout-inline-error" role="alert" tabindex="-1" hidden></div>' +
@@ -5107,6 +5131,11 @@ window.addEventListener('ehf-lang', renderZipWidget);
   renderZipWidget(); // === delivery ZIP (Oct 2026) ===
   applyLang();
   loadAnalytics(); // fire-and-forget: a missing analytics ID is a no-op
+  // v43: show the running build version in the footer (support/debugging).
+  fetch('/api/version').then(r => r.json()).then(j => {
+    const el = document.getElementById('app-version');
+    if (el && j && j.version) el.textContent = 'Build ' + j.version;
+  }).catch(() => {});
   const pathRoute = parsePathRoute();
   const hashRoute = window.location.pathname === '/' && window.location.hash ? parseReturnHash() : null;
   const initial = pathRoute || hashRoute || { route: 'home', arg: null };

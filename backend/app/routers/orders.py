@@ -989,6 +989,17 @@ def _prepare_order(
          "referral_code": attr_vendor.referral_code if attr_vendor else None,
          "attributed_vendor_id": attr_vendor.id if attr_vendor else None},
     )
+    # === v44: loyalty points are earned at PLACEMENT (not completion) ===
+    # One call site covers every create path (single, multi, guest — the
+    # helper skips guests). The helper never raises and only flushes, so a
+    # rolled-back checkout takes the earn with it.
+    earned = loyalty.award_order_points(db, order)
+    if earned:
+        _log_event(
+            db, order, "points",
+            f"Awarded {earned} loyalty points",
+            {"points": earned},
+        )
     return order
 
 
@@ -1435,14 +1446,21 @@ def update_status(
             "Cancelled by customer",
             {"from": "new", "to": "cancelled", "by": user.name, "by_role": "customer"},
         )
-        # Loyalty: refund any redeemed points (earn can never exist here —
-        # customers can only cancel 'new' orders — but the helper guards anyway).
+        # Loyalty: refund any redeemed points AND reverse the points earned at
+        # placement (v44) — the helpers guard when there's nothing to do.
         refunded = loyalty.refund_redeemed_points(db, order)
         if refunded:
             _log_event(
                 db, order, "points",
                 f"Refunded {refunded} redeemed loyalty points (order cancelled)",
                 {"points": refunded},
+            )
+        reversed_pts = loyalty.reverse_earn_points(db, order)
+        if reversed_pts:
+            _log_event(
+                db, order, "points",
+                f"Reversed {reversed_pts} earned loyalty points (order cancelled)",
+                {"points": reversed_pts},
             )
         _stripe_refund_on_cancel(db, order)  # refunds only paid card orders; never breaks cancel
         # Stock: restore ordered quantities (cancel_restore). Runs once —
@@ -1472,14 +1490,22 @@ def update_status(
         # P1-1 (2026-10-15 audit): a vendor cancelling a paid card order must
         # trigger the same Stripe refund flow as customer/admin cancels.
         _stripe_refund_on_cancel(db, order)  # refunds only paid card orders; never breaks cancel
-        # Loyalty: refund any redeemed points, same as customer/admin cancels
-        # (owner decision 2026-10-12) — the helper guards when nothing was redeemed.
+        # Loyalty: refund any redeemed points AND reverse the points earned
+        # at placement (v44), same as customer/admin cancels (owner decision
+        # 2026-10-12) — the helpers guard when there's nothing to do.
         refunded = loyalty.refund_redeemed_points(db, order)
         if refunded:
             _log_event(
                 db, order, "points",
                 f"Refunded {refunded} redeemed loyalty points (order cancelled)",
                 {"points": refunded},
+            )
+        reversed_pts = loyalty.reverse_earn_points(db, order)
+        if reversed_pts:
+            _log_event(
+                db, order, "points",
+                f"Reversed {reversed_pts} earned loyalty points (order cancelled)",
+                {"points": reversed_pts},
             )
         # Stock: restore ordered quantities (cancel_restore). Runs once —
         # the state machine rejects cancelling an already-cancelled order.
@@ -1493,9 +1519,10 @@ def update_status(
             f"Completion email sent to {order.customer.email if order.customer else 'customer'}",
             {"subject": subject, "body": body, "to": order.customer.email if order.customer else ""},
         )
-        # Loyalty: award points on the transition TO completed. The helper
-        # guards against double-award (existing earn row) and guests.
-        earned = loyalty.award_completion_points(db, order)
+        # Loyalty safety net (v44): points are normally awarded at PLACEMENT
+        # (see _prepare_order); this hook only pays out pre-v44 orders that
+        # never earned. The helper's double-award guard keeps it exactly-once.
+        earned = loyalty.award_order_points(db, order)
         if earned:
             _log_event(
                 db, order, "points",

@@ -89,8 +89,8 @@ def clean_demo(confirm: bool = True) -> dict:
                 delete(models.OrderMessage).where(models.OrderMessage.order_id.in_(order_ids))
             ).rowcount or 0
             # LoyaltyLedger rows with order_id pointing at a demo order
-            # (reason 'earn', written by award_completion_points when an
-            # order is completed) must go BEFORE the orders: the FK has no
+            # (reason 'earn', written by award_order_points when an order is
+            # placed) must go BEFORE the orders: the FK has no
             # ON DELETE CASCADE, so deleting orders first raises
             # ForeignKeyViolation on Postgres and rolls the whole cleanup
             # back. The user-based loyalty delete below still handles

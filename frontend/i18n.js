@@ -521,6 +521,7 @@ en: {
   points_use: 'Use all {n} points',
   points_up_to: 'You have {n} points — use them for up to {off} off',
   points_row: 'Points',
+  points_earn_preview: 'You\'ll earn ~{n} points on this order',
 
   footer_catering: 'Catering',
   catering_title: '🎉 Event catering',
@@ -1197,6 +1198,7 @@ ar: {
   points_use: 'استخدم كل النقاط ({n})',
   points_up_to: 'عندك {n} نقطة — استخدمهم بخصم يوصل لـ {off}',
   points_row: 'نقاط',
+  points_earn_preview: 'هتكسب حوالي {n} نقطة من الطلب ده',
 
   footer_catering: 'كيترينج',
   catering_title: '🎉 كيترينج الحفلات والمناسبات',
