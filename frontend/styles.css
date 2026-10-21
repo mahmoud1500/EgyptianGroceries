@@ -1,21 +1,21 @@
 /* Egyptian Home Food Marketplace — warm sand / terracotta / deep red theme */
 :root {
-  --bg: #faf4e8;
-  --card: #fffdf7;
-  --ink: #3a2a1c;
-  --muted: #6e5b43;
-  --accent: #9e1b1b;
-  --accent-dark: #7c1414;
-  --deep: #9e1b1b;
-  --deep-dark: #6d1111;
-  --gold: #d9a441;
-  --gold-soft: #f6e3b8;
-  --brand: #9e1b1b;
-  --brand-soft: #fbe7e5;
-  --line: #ead9c0;
+  --bg: #fbf6eb;
+  --card: #fffdf8;
+  --ink: #38251f;
+  --muted: #705d4c;
+  --accent: #7f2635;
+  --accent-dark: #651c2a;
+  --deep: #7f2635;
+  --deep-dark: #541824;
+  --gold: #c5a15a;
+  --gold-soft: #f1e2bd;
+  --brand: #7f2635;
+  --brand-soft: #f5e8e7;
+  --line: #e7d8c2;
   --danger: #b3261e;
   --radius: 14px;
-  --shadow: 0 2px 10px rgba(90, 50, 20, 0.10);
+  --shadow: 0 2px 10px rgba(67, 39, 30, 0.10);
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
