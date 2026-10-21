@@ -587,14 +587,21 @@ def admin_set_status(
     )
     if target == "cancelled":
         _stripe_refund_on_cancel(db, order)  # refunds only paid card orders; never breaks cancel
-        # Loyalty: refund redeemed points — but never when points were already
-        # earned (earn only fires on completed; the helper guards anyway).
+        # Loyalty: refund redeemed points AND reverse the points earned at
+        # placement (v44) — the helpers guard when there's nothing to do.
         refunded = loyalty.refund_redeemed_points(db, order)
         if refunded:
             _log_event(
                 db, order, "points",
                 f"Refunded {refunded} redeemed loyalty points (order cancelled)",
                 {"points": refunded},
+            )
+        reversed_pts = loyalty.reverse_earn_points(db, order)
+        if reversed_pts:
+            _log_event(
+                db, order, "points",
+                f"Reversed {reversed_pts} earned loyalty points (order cancelled)",
+                {"points": reversed_pts},
             )
         # Stock: restore ordered quantities (cancel_restore). Runs once —
         # cancelling an already-cancelled order is rejected above.
@@ -604,9 +611,11 @@ def admin_set_status(
         {"from": previous, "to": target},
     )
     if target == "completed":
-        # Loyalty: award points on the transition TO completed (double-award
-        # guarded by the helper; cancelled orders can't reach here).
-        earned = loyalty.award_completion_points(db, order)
+        # Loyalty safety net (v44): points are normally awarded at PLACEMENT
+        # (see _prepare_order in orders.py); this hook only pays out pre-v44
+        # orders that never earned — the helper's double-award guard keeps
+        # it exactly-once. Cancelled orders can't reach here.
+        earned = loyalty.award_order_points(db, order)
         if earned:
             _log_event(
                 db, order, "points",
@@ -1081,6 +1090,7 @@ def admin_refund(
       with the reason (and logs a FAILED refund event, excluded from the
       cumulative guard) — the request never crashes with a 500.
     """
+    # Loyalty: earned points are intentionally left alone on a refund-without-cancel (v40 semantics — the order keeps its status, so no earn reversal; clawback only happens on cancel).
     order = db.get(models.Order, order_id)
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")

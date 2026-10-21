@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import func, select, update
+from sqlalchemy import case, func, select, update
 from sqlalchemy.orm import Session
 
 from . import models
@@ -22,6 +22,7 @@ DEFAULT_SETTINGS: dict[str, str] = {
 EARN = "earn"
 REDEEM = "redeem"
 ADJUST = "adjust"
+EARN_REVERSAL = "earn_reversal"
 
 
 def get_setting(db: Session, key: str, default: int) -> int:
@@ -82,12 +83,15 @@ def reconcile_points_balances(db: Session) -> list[dict]:
     return mismatches
 
 
-def award_completion_points(db: Session, order: models.Order) -> int:
-    """Award loyalty points when an order transitions TO completed.
+def award_order_points(db: Session, order: models.Order) -> int:
+    """Award loyalty points when an order is PLACED (called from order
+    creation; the existing completion hooks remain as a safety net for
+    pre-v44 orders — the per-order double-award guard keeps it
+    exactly-once).
 
     floor(subtotal * points_per_dollar), guarded against double-award by an
     existing reason='earn' ledger row for the order. Guests earn nothing.
-    Never raises: a loyalty failure must not break a status change.
+    Never raises: a loyalty failure must not break the order flow.
     Returns the number of points awarded (0 when skipped).
     """
     try:
@@ -114,7 +118,7 @@ def award_completion_points(db: Session, order: models.Order) -> int:
                 order_id=order.id,
                 delta=points,
                 reason=EARN,
-                note=f"Order #{order.id} completed",
+                note=f"Order #{order.id} placed",
             )
         )
         # Atomic balance update (DBA P1-2): read-modify-write loses
@@ -134,24 +138,80 @@ def award_completion_points(db: Session, order: models.Order) -> int:
         return 0
 
 
-def refund_redeemed_points(db: Session, order: models.Order) -> int:
-    """Refund redeemed points when an order is cancelled BEFORE completion.
+def reverse_earn_points(db: Session, order: models.Order) -> int:
+    """Reverse points earned at placement when the order is cancelled (v44).
 
-    Writes a reason='adjust' / note='cancel refund' ledger row and restores
-    the balance. Skips when the order has no redeem rows, was already
-    refunded, or already earned points (earn only fires on completed).
-    Never raises. Returns the number of points refunded (0 when skipped).
+    If an 'earn' ledger row exists for the order and no 'earn_reversal'
+    row exists yet, write a reversal row with the negative of the total
+    earned delta and decrement the user's balance by the same amount,
+    floored at 0 (the customer may already have spent some of them).
+    Never raises: a loyalty failure must not break a cancellation.
+    Returns the number of points reversed (0 when skipped).
     """
     try:
         if order.customer_id is None:
             return 0
         earned = db.scalar(
-            select(models.LoyaltyLedger.id).where(
+            select(func.coalesce(func.sum(models.LoyaltyLedger.delta), 0)).where(
                 models.LoyaltyLedger.order_id == order.id,
                 models.LoyaltyLedger.reason == EARN,
             )
+        ) or 0
+        if earned <= 0:
+            return 0
+        already = db.scalar(
+            select(models.LoyaltyLedger.id).where(
+                models.LoyaltyLedger.order_id == order.id,
+                models.LoyaltyLedger.reason == EARN_REVERSAL,
+            )
         )
-        if earned is not None:
+        if already is not None:
+            return 0
+        user = db.get(models.User, order.customer_id)
+        if user is None:
+            return 0
+        db.add(
+            models.LoyaltyLedger(
+                user_id=user.id,
+                order_id=order.id,
+                delta=-earned,
+                reason=EARN_REVERSAL,
+                note=f"Order #{order.id} cancelled — earned points reversed",
+            )
+        )
+        # Atomic balance decrement floored at 0 (DBA P1-2 pattern; CASE is
+        # portable — func.max/greatest differ between SQLite and Postgres).
+        balance = func.coalesce(models.User.points_balance, 0)
+        db.execute(
+            update(models.User)
+            .where(models.User.id == user.id)
+            .values(
+                points_balance=case(
+                    (balance - earned > 0, balance - earned), else_=0
+                )
+            )
+        )
+        db.expire(user, ["points_balance"])
+        db.flush()
+        return earned
+    except Exception as exc:  # noqa: BLE001 — reversal must never break cancellation
+        print(f"[loyalty] earn reversal failed: {exc}")
+        return 0
+
+
+def refund_redeemed_points(db: Session, order: models.Order) -> int:
+    """Refund redeemed points when an order is cancelled.
+
+    Writes a reason='adjust' / note='cancel refund' ledger row and restores
+    the balance. Skips when the order has no redeem rows or was already
+    refunded. (v44: points earned at placement are clawed back separately
+    by reverse_earn_points — the pre-v44 "skip when earned" guard was
+    removed because every placed order now has an earn row, which would
+    have silently disabled this refund.)
+    Never raises. Returns the number of points refunded (0 when skipped).
+    """
+    try:
+        if order.customer_id is None:
             return 0
         already_refunded = db.scalar(
             select(models.LoyaltyLedger.id).where(
@@ -182,7 +242,7 @@ def refund_redeemed_points(db: Session, order: models.Order) -> int:
                 note="cancel refund",
             )
         )
-        # Atomic balance update (DBA P1-2) — see award_completion_points.
+        # Atomic balance update (DBA P1-2) — see award_order_points.
         db.execute(
             update(models.User)
             .where(models.User.id == user.id)

@@ -137,9 +137,19 @@ def _create_tables():
         )
 
 
+# Bump this on every release (egypt-v<N>) — the footers display it so the
+# running build can be confirmed at a glance during debugging.
+APP_VERSION = "v45"
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/version")
+def version():
+    return {"version": APP_VERSION}
 
 
 @app.get("/api/config")
