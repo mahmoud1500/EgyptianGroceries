@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- TODO: when you launch, replace the relative paths below with absolute URLs
+     on your production domain, e.g. <loc>https://yourdomain.com/</loc> -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>/vendor/</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+</urlset>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vendor Portal — Egyptian Home Food Marketplace</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar vendor-topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#" data-go="home"><img src="img/logo.png" class="brand-logo" alt="Vendor portal logo"><span data-i18n="brand">Vendor Portal</span></a>
+      <nav class="nav" id="main-nav">
+        <a href="#" data-go="portal" id="nav-portal"><span data-i18n="nav_dashboard">Dashboard</span> <span id="portal-badge" class="badge hidden"></span></a>
+        <a href="#" data-go="stock" id="nav-stock" style="display:none"><span data-i18n="nav_stock">📦 Stock</span></a>
+        <a href="#" data-go="reviews" id="nav-reviews" style="display:none"><span data-i18n="nav_reviews">⭐ Reviews</span></a>
+        <a href="#" data-go="settings" id="nav-settings" style="display:none"><span data-i18n="nav_settings">⚙️ Settings</span></a>
+        <a href="#" data-go="reports" id="nav-reports" style="display:none"><span data-i18n="nav_reports">📊 Reports</span></a>
+        <a href="#" data-go="payouts" id="nav-payouts" style="display:none"><span data-i18n="nav_payouts">💰 Payouts</span></a>
+        <a href="#" data-go="problems" id="nav-problems" style="display:none"><span data-i18n="nav_problems">🚨 Problems</span></a>
+        <a href="#" data-go="support" id="nav-support" style="display:none"><span data-i18n="nav_support">🎧 Support</span></a>
+        <a href="#" data-go="admin" id="nav-admin" style="display:none"><span data-i18n="nav_admin">👑 Admin</span></a>
+        <a href="/"><span data-i18n="nav_market">← Marketplace</span></a>
+      </nav>
+      <button id="lang-toggle" class="lang-toggle" type="button">عربي</button>
+      <div class="auth-area" id="auth-area"></div>
+    </div>
+  </header>
+  <main id="app" class="container"></main>
+  <footer class="footer">
+    <p><span data-i18n="footer_tag">🏪 Vendor Portal — linked to the <a href="/">Egyptian Home Food Marketplace</a>.</span><br>
+    <small data-i18n="footer_demo">Cards are processed through Stripe when enabled · Zelle, Venmo & Cash are recorded on the order and settled directly with the cook.</small></p>
+  </footer>
+  <div id="dish-modal" class="modal hidden" onclick="if(event.target===this)cancelDishEdit()"></div>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

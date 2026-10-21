@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Egyptian Home Food Marketplace — Homemade Egyptian Food from Local Cooks</title>
+  <meta name="description" content="Order authentic homemade Egyptian food — koshary, mahshi, molokhia and more — cooked by local home cooks. Pickup or delivery. English & عربي.">
+  <meta name="theme-color" content="#9e1b1b">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Egyptian Home Food Marketplace">
+  <meta property="og:title" content="Egyptian Home Food Marketplace — Homemade Egyptian Food from Local Cooks">
+  <meta property="og:description" content="Authentic homemade Egyptian dishes — koshary, mahshi, molokhia and more — cooked with love by local home cooks.">
+  <meta property="og:image" content="img/logo.png">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ar_EG">
+  <!-- Twitter card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Egyptian Home Food Marketplace">
+  <meta name="twitter:description" content="Homemade Egyptian food from local home cooks — pickup or delivery.">
+  <meta name="twitter:image" content="img/logo.png">
+  <link rel="stylesheet" href="styles.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Egyptian Home Food Marketplace",
+    "alternateName": "سوق الأكل البيتي المصري",
+    "description": "Marketplace for homemade Egyptian food from local home cooks.",
+    "inLanguage": ["en", "ar"]
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#" data-go="home"><img src="img/logo.png" class="brand-logo" alt="Egyptian Home Food logo">Egyptian Home Food</a>
+      <nav class="nav" id="main-nav">
+        <a href="#" data-go="home"><span data-i18n="nav_home">Home</span></a>
+        <a href="/dishes" id="nav-browse" data-go="dishes"><span data-i18n="nav_browse">Dishes</span></a>
+        <a href="#" data-go="groceries"><span data-i18n="nav_groceries">🛒 Groceries</span></a>
+        <!-- === F5: bundles discoverable listing === -->
+        <a href="#" data-go="bundles"><span data-i18n="nav_bundles">🎁 Bundles</span></a>
+        <!-- === END F5 === -->
+        <a href="#" data-go="cart" id="nav-cart"><span data-i18n="nav_cart">Cart</span> <span id="cart-badge" class="badge hidden" aria-hidden="true">0</span></a>
+        <span id="cart-live" class="sr-only" aria-live="polite" aria-atomic="true"></span>
+        <a href="#" data-go="orders" id="nav-orders" class="hidden"><span data-i18n="nav_orders">My Orders</span></a>
+        <a href="#" data-go="favorites" id="nav-favorites" class="hidden"><span data-i18n="nav_favorites">❤️ Favorites</span></a>
+        <a href="#" data-go="profile" id="nav-profile" class="hidden"><span data-i18n="nav_profile">Profile</span></a>
+      </nav>
+      <button id="lang-toggle" class="lang-toggle" type="button">عربي</button>
+      <!-- === Delivery ZIP (Oct 2026): JS-rendered widget (#zip-wrap) === -->
+      <div class="zip-wrap" id="zip-wrap"></div>
+      <div class="auth-area" id="auth-area"></div>
+    </div>
+  </header>
+  <main id="app" class="container"></main>
+  <footer class="footer">
+    <p><span data-i18n="footer_tag">🍲 Egyptian Home Food Marketplace — homemade Egyptian food, made with love.</span><br>
+    <small data-i18n="footer_demo">Cards are processed through Stripe when enabled · Zelle, Venmo & Cash are recorded on the order and settled directly with your cook.</small></p>
+    <p class="footer-links"><a href="#" data-go="about" data-i18n="footer_about">About</a> · <a href="#" data-go="faq" data-i18n="footer_faq">FAQ</a> · <a href="#" data-go="terms" data-i18n="footer_terms">Terms</a> · <a href="#" data-go="privacy" data-i18n="footer_privacy">Privacy</a> · <a href="#" data-go="help" data-i18n="footer_help">Help</a> · <a href="/vendor/" data-i18n="footer_vendor">Vendor portal</a> · <a href="#/apply" data-go="apply" data-i18n="footer_apply">Sell with us</a> · <a href="#/catering" data-go="catering" data-i18n="footer_catering">Catering</a></p>
+  </footer>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+  <script src="chatbot.js"></script>
+</body>
+</html>
