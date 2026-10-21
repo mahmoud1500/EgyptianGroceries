@@ -137,6 +137,9 @@ class VendorOut(_Out):
     phone: str
     fulfillment: str
     delivery_fee: Decimal
+    # v46: free-delivery threshold (dollars). NULL = off. Delivery orders at
+    # or above this items subtotal get the delivery fee waived.
+    free_delivery_over: Decimal | None = None
     zelle_handle: str | None = None
     venmo_handle: str | None = None
     street_address: str | None = None
@@ -1311,6 +1314,8 @@ class OrderOut(_Out):
     # stored or returned by this API. ===
     card_brand: str | None = None
     card_last4: str | None = None
+    # === v46: delivery photo proof URL (NULL = vendor attached none). ===
+    delivery_photo_url: str | None = None
 
 
 class OrderStatusUpdate(BaseModel):
@@ -1660,6 +1665,9 @@ class VendorUpdate(BaseModel):
     phone: str | None = Field(default=None, max_length=40)
     fulfillment: str | None = None
     delivery_fee: Decimal | None = Field(default=None, ge=0, le=100000)
+    # v46: free-delivery threshold (dollars). Explicit null clears it
+    # (feature off); >= 0 enforced here and in the vendors router.
+    free_delivery_over: Decimal | None = Field(default=None, ge=0, le=100000)
     zelle_handle: str | None = Field(default=None, max_length=120)
     venmo_handle: str | None = Field(default=None, max_length=120)
     street_address: str | None = Field(default=None, max_length=120)

@@ -13,7 +13,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
-from PIL import Image
+from PIL import Image, ImageOps
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -83,6 +83,12 @@ def save_uploaded_photo(file: UploadFile) -> str:
 
     Raises HTTPException(400) on any validation failure. Shared by the dish
     photo endpoint and the review photo endpoint.
+
+    The stored file is ALWAYS re-encoded from the decoded pixels, never the
+    original bytes: a verbatim copy keeps the source EXIF — including GPS
+    coordinates, which for delivery-proof photos is the customer's home
+    address. Any EXIF orientation is baked into the pixels first so photos
+    don't display sideways once the tag is gone.
     """
     ctype = (file.content_type or "").lower()
     if ctype not in ALLOWED_CONTENT_TYPES:
@@ -100,16 +106,36 @@ def save_uploaded_photo(file: UploadFile) -> str:
         ext = ALLOWED_FORMATS.get(fmt)
         if not ext:
             raise ValueError("unsupported format")
+        img.load()
     except Exception:
         raise HTTPException(status_code=400, detail="File is not a valid image")
+    # Bake EXIF orientation into the pixels (dropping the tag) so the stored
+    # image displays upright with its metadata stripped. Skipped for GIFs
+    # and animations: they carry no EXIF orientation, and transposing the
+    # loaded frame would detach it from its sibling frames.
+    if fmt != "GIF" and not getattr(img, "is_animated", False):
+        img = ImageOps.exif_transpose(img)
     # Downscale very large photos so pages stay fast.
     if max(img.size) > MAX_PHOTO_SIDE:
         img.thumbnail((MAX_PHOTO_SIDE, MAX_PHOTO_SIDE), Image.LANCZOS)
         if img.mode in ("RGBA", "LA", "P"):
             img = img.convert("RGB")
-        buf = io.BytesIO()
-        img.save(buf, "JPEG", quality=82)
-        data, ext = buf.getvalue(), "jpg"
+        fmt, ext = "JPEG", "jpg"
+    # Re-encode from the decoded image in its detected format (never passing
+    # the source EXIF/metadata through). Re-encoding also drops ancillary
+    # chunks the decoder doesn't carry over, e.g. most PNG text chunks.
+    buf = io.BytesIO()
+    if fmt == "JPEG":
+        if img.mode not in ("L", "RGB", "CMYK", "YCbCr"):
+            img = img.convert("RGB")
+        img.save(buf, "JPEG", quality=85)
+    elif fmt == "PNG":
+        img.save(buf, "PNG")
+    elif fmt == "WEBP":
+        img.save(buf, "WEBP", quality=85, save_all=True)
+    else:  # GIF
+        img.save(buf, "GIF", save_all=True)
+    data = buf.getvalue()
     name = f"{uuid.uuid4().hex}.{ext}"
     (UPLOAD_DIR / name).write_bytes(data)
     return f"/img/uploads/{name}"
@@ -164,14 +190,16 @@ def _sweep_dir(dir_path, root, referenced, name_re):
 
 
 def sweep_orphan_uploads(db: Session) -> dict:
-    """Delete /img/uploads/* files that no dish, review, or video field references.
+    """Delete /img/uploads/* files that no dish, review, delivery-photo, or
+    video field references.
 
     Covers the uploads root (images: dish/review photo_urls) and the videos
     subdir (dish.video_url + vendor.intro_video_url). Only UUID-named files
     are candidates — anything else (e.g. a .gitkeep) is left alone. Every
     deletion is traversal-checked. Returns {"deleted": n, "kept": m}.
     P1-3 (2026-10-15 audit); review-photo references added Oct 2026;
-    video sweep added Oct 2026 (P2).
+    video sweep added Oct 2026 (P2); delivery-photo references added
+    Oct 2026 (v46) — the sweep was deleting live delivery-proof photos.
     """
     import json as _json
 
@@ -191,6 +219,23 @@ def sweep_orphan_uploads(db: Session) -> dict:
             continue
         for url in urls or []:
             if isinstance(url, str) and url.startswith("/img/uploads/"):
+                referenced.add(Path(url).name)
+    # Delivery-proof photos (v46): an order's handoff photo is live evidence
+    # for the customer, so the sweep must treat it as referenced too.
+    for url in db.scalars(select(_m.Order.delivery_photo_url)).all():
+        if url and url.startswith("/img/uploads/"):
+            referenced.add(Path(url).name)
+    # Problem-report photos (same bug class as delivery photos, spotted in
+    # the v46 fix pass): a customer's report photo is evidence too.
+    for url in db.scalars(select(_m.OrderProblem.photo_url)).all():
+        if url and url.startswith("/img/uploads/"):
+            referenced.add(Path(url).name)
+    # Remaining uploads-URL columns (same v46 pass): vendor chef photos,
+    # bundle photos, and pickup-map images if one was ever uploaded.
+    for _col in (_m.Vendor.chef_photo_url, _m.Bundle.photo_url,
+                 _m.Vendor.pickup_map_url):
+        for url in db.scalars(select(_col)).all():
+            if url and url.startswith("/img/uploads/"):
                 referenced.add(Path(url).name)
     video_referenced = {
         Path(url).name

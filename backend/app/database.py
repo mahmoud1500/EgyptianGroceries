@@ -136,6 +136,11 @@ def ensure_schema():
             if "card_last4" not in cols:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN card_last4 VARCHAR(4)"))
             # === END v41 ===
+            # === v46: delivery photo proof URL. Nullable; old orders keep
+            # NULL = no photo, so no backfill is needed. ===
+            if "delivery_photo_url" not in cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN delivery_photo_url TEXT"))
+            # === END v46 ===
             # === END community drops ===
             # Guest checkout (Oct 2026) needs customer_id NULLABLE. Databases
             # created before the guest-checkout build still have NOT NULL —
@@ -354,6 +359,11 @@ def ensure_schema():
             if "commission_rate" not in cols:
                 conn.execute(text("ALTER TABLE vendors ADD COLUMN commission_rate NUMERIC(10, 2)"))
             # === END v40 ===
+            # === v46: free-delivery threshold (dollars). NULL = feature
+            # off; old vendors keep NULL, no backfill needed. ===
+            if "free_delivery_over" not in cols:
+                conn.execute(text("ALTER TABLE vendors ADD COLUMN free_delivery_over NUMERIC(10, 2)"))
+            # === END v46 ===
     if "vendor_applications" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("vendor_applications")}
         with engine.begin() as conn:

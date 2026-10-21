@@ -215,6 +215,13 @@ en: {
   subtotal: 'Subtotal',
   fee_row: 'Delivery fee',
   delivery_fees_row: 'Delivery fees',
+  // === v46: free delivery over a threshold + delivery photo proof ===
+  free_word: 'FREE',
+  free_delivery_over: 'Free delivery over {amount}',
+  free_delivery_applied: 'Free delivery applied — your order reached this shop\'s free-delivery threshold!',
+  free_delivery_more: 'Add {amount} more to this order from {name} to get free delivery',
+  delivery_photo_title: 'Delivered — photo from your cook',
+  // === END v46 ===
   tax_row: 'Tax',
   total: 'Total',
   next_review: 'Next: review order →',
@@ -895,6 +902,13 @@ ar: {
   subtotal: 'المجموع الفرعي',
   fee_row: 'رسوم التوصيل',
   delivery_fees_row: 'رسوم التوصيل',
+  // === v46: توصيل مجاني فوق حد معين + صورة إثبات التوصيل ===
+  free_word: 'مجاني',
+  free_delivery_over: 'توصيل مجاني للطلبات فوق {amount}',
+  free_delivery_applied: 'تم تطبيق التوصيل المجاني — طلبك وصل لحد التوصيل المجاني في هذا المحل!',
+  free_delivery_more: 'أضف بقيمة {amount} كمان لطلبك من {name} عشان التوصيل يبقى مجاني',
+  delivery_photo_title: 'تم التوصيل — صورة من الطباخ',
+  // === END v46 ===
   tax_row: 'الضريبة',
   total: 'الإجمالي',
   next_review: '← التالي: مراجعة الطلب',

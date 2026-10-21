@@ -125,13 +125,15 @@ const TAX_RATE = 0;
    GET /api/settings/public, TAX_RATE fallback). pointsDiscount is the dollar value
    redeemed from loyalty points (backend record) or the client estimate at
    checkout — shown as a "Points" line whenever > 0. */
-function totalsBreakdown(sub, fee, storedTax, discount, pointsDiscount) {
+function totalsBreakdown(sub, fee, storedTax, discount, pointsDiscount, feeWaived) {
   const tax = storedTax != null ? Number(storedTax) : Math.round(sub * currentTaxRate() * 100) / 100;
   const disc = discount && Number(discount.amount) > 0 ? Number(discount.amount) : 0;
   const pts = Number(pointsDiscount) > 0 ? Number(pointsDiscount) : 0;
   let h = '<table class="totals">' +
     '<tr><td>' + esc(t('subtotal')) + '</td><td style="text-align:right">' + money(sub) + '</td></tr>';
   if (fee > 0) h += '<tr><td>' + esc(t('delivery_fees_row')) + '</td><td style="text-align:right">' + money(fee) + '</td></tr>';
+  // v46: a waived delivery fee still gets its row — shown as FREE.
+  else if (feeWaived) h += '<tr><td>' + esc(t('delivery_fees_row')) + '</td><td style="text-align:right">' + esc(t('free_word')) + '</td></tr>';
   if (disc > 0) h += '<tr class="disc-row"><td>' + esc(t('discount_row', { code: (discount && discount.code) || '' })) +
     '</td><td style="text-align:right">−' + money(disc) + '</td></tr>';
   if (pts > 0) h += '<tr class="disc-row"><td>' + esc(t('points_row')) +
@@ -1301,7 +1303,7 @@ function coerceGroupFulfillment(vendor, g) {
   if (!allowDelivery && g.fulfillment === 'delivery') g.fulfillment = 'pickup';
   return { allowPickup, allowDelivery };
 }
-/* Cart lines grouped by vendor: [{vendor, lines:[{dish, qty}], subtotal, fee, g}] */
+/* Cart lines grouped by vendor: [{vendor, lines:[{dish, qty}], subtotal, fee, g, freeDelivery}] */
 async function cartGroups() {
   const lines = await cartLines();
   const byVendor = new Map();
@@ -1322,8 +1324,16 @@ async function cartGroups() {
     const g = checkoutGroup(vendor);
     coerceGroupFulfillment(vendor, g);
     const subtotal = vlines.reduce((a, l) => a + l.unit * l.qty, 0);
-    const fee = g.fulfillment === 'delivery' ? Number(vendor.delivery_fee) || 0 : 0;
-    groups.push({ vendor, lines: vlines, subtotal, fee, g });
+    let fee = g.fulfillment === 'delivery' ? Number(vendor.delivery_fee) || 0 : 0;
+    // === v46: free delivery over the vendor's threshold — mirrors the
+    // backend rule (pre-discount items subtotal at/above the threshold). ===
+    let freeDelivery = false;
+    if (g.fulfillment === 'delivery') {
+      const fdo = freeDeliveryOver(vendor);
+      if (fdo !== null && subtotal >= fdo) { fee = 0; freeDelivery = true; }
+    }
+    // === END v46 ===
+    groups.push({ vendor, lines: vlines, subtotal, fee, g, freeDelivery });
   }
   return groups;
 }
@@ -1529,6 +1539,21 @@ function zipDeliveryBadge(v) {
   }
   return '<span class="zip-badge pickup-only">' + esc(t('pickup_only')) + '</span>';
 }
+/* ================= v46: free delivery over a threshold ================= */
+/* The vendor's free-delivery threshold in dollars, or null when the feature
+   is off (field absent/null — older cached vendor objects included). */
+function freeDeliveryOver(v) {
+  if (!v || v.free_delivery_over === null || v.free_delivery_over === undefined || v.free_delivery_over === '') return null;
+  const n = Number(v.free_delivery_over);
+  return isFinite(n) && n >= 0 ? n : null;
+}
+/* Badge for vendor cards + storefronts: "Free delivery over $X". */
+function freeDeliveryBadge(v) {
+  const fdo = freeDeliveryOver(v);
+  if (fdo === null) return '';
+  return '<span class="zip-badge delivers">🛵 ' + esc(t('free_delivery_over', { amount: money(fdo) })) + '</span>';
+}
+/* ================= END v46 ================= */
 /* Header ZIP widget: saved ZIP (or an "enter ZIP" prompt) with an inline
    editable form. Rendered by JS into #zip-wrap. */
 function renderZipWidget() {
@@ -2769,7 +2794,7 @@ function vendorCard(v) {
     '<div class="vendor-meta"><span>📍 ' + esc(v.area) + '</span>' + rating +
     (v.dish_count > 0 ? '<span>🍲 ' + v.dish_count + '</span>' : '') +
     (v.phone ? '<span>📞 <a href="tel:' + esc(v.phone.replace(/[^+\d]/g, '')) + '">' + esc(v.phone) + '</a></span>' : '') +
-    fulfillBadge(v) + zipDeliveryBadge(v) + '</div>' +
+    fulfillBadge(v) + zipDeliveryBadge(v) + freeDeliveryBadge(v) + '</div>' +
     '<div><button class="btn small" onclick="go(\'vendor\',' + v.id + ')">' + esc(t('view_menu')) + '</button></div>' +
     '</div>';
 }
@@ -2869,6 +2894,7 @@ async function vVendor(vendorId) {
       fulfillBadge(v) + zipDeliveryBadge(v) +
       (String(v.fulfillment).toLowerCase() === 'delivery' && Number(v.delivery_fee) > 0
         ? '<span>' + esc(t('delivery_fee', { fee: money(v.delivery_fee) })) + '</span>' : '') +
+      freeDeliveryBadge(v) +
       '</div>';
     if (v.phone) {
       const digits = String(v.phone).replace(/\D/g, '');
@@ -3317,7 +3343,8 @@ async function vCart() {
       (g.fulfillment === 'pickup' ? 'checked' : '') + ' onchange="setGroupFulfillment(' + v.id + ',\'pickup\')"><span class="r-ico">🛍️</span>' + esc(t('pickup')) + '</label>';
     if (allowDelivery) html += '<label class="radio-card"><input type="radio" name="ful-' + v.id + '" value="delivery" ' +
       (g.fulfillment === 'delivery' ? 'checked' : '') + ' onchange="setGroupFulfillment(' + v.id + ',\'delivery\')"><span class="r-ico">🛵</span>' + esc(t('delivery')) +
-      (Number(v.delivery_fee) > 0 ? esc(t('delivery_fee_suffix', { fee: money(v.delivery_fee) })) : '') + '</label>';
+      (gr.freeDelivery ? ' (' + esc(t('free_word')) + ')' // === v46: waived at this subtotal ===
+        : Number(v.delivery_fee) > 0 ? esc(t('delivery_fee_suffix', { fee: money(v.delivery_fee) })) : '') + '</label>';
     // === Community drops (Oct 2026): a third fulfillment option when the
     // vendor has active drops serving the customer's ZIP. Drops are free
     // like pickup (no delivery fee). ===
@@ -3380,7 +3407,20 @@ async function vCart() {
       '<textarea id="notes-' + v.id + '" rows="2" maxlength="1000" placeholder="' + esc(t('notes_ph')) + '" ' +
       'oninput="setGroupNotes(' + v.id + ',this.value)">' + esc(g.notes) + '</textarea>';
     html += '<table class="totals"><tr><td>' + esc(t('subtotal')) + '</td><td style="text-align:right">' + money(gr.subtotal) + '</td></tr>' +
-      (gr.fee ? '<tr><td>' + esc(t('fee_row')) + '</td><td style="text-align:right">' + money(gr.fee) + '</td></tr>' : '') + '</table>';
+      (gr.fee ? '<tr><td>' + esc(t('fee_row')) + '</td><td style="text-align:right">' + money(gr.fee) + '</td></tr>'
+        : gr.freeDelivery ? '<tr><td>' + esc(t('fee_row')) + '</td><td style="text-align:right">' + esc(t('free_word')) + '</td></tr>' : '') + '</table>';
+    // === v46: free-delivery progress messaging for delivery groups ===
+    if (g.fulfillment === 'delivery') {
+      const fdo = freeDeliveryOver(v);
+      if (fdo !== null) {
+        if (gr.freeDelivery) {
+          html += '<div class="notice">🎉 ' + esc(t('free_delivery_applied')) + '</div>';
+        } else {
+          html += '<div class="hint">🛵 ' + esc(t('free_delivery_more', { amount: money(fdo - gr.subtotal), name: v.name })) + '</div>';
+        }
+      }
+    }
+    // === END v46 ===
     // Estimated prep time for this vendor's items: per-dish minutes × qty.
     const prepTotal = gr.lines.reduce(function (a, l) {
       return a + prepMins(l.dish, v) * (Number(l.qty) || 0);
@@ -3427,7 +3467,7 @@ async function vCart() {
   const subSum = groups.reduce((a, gr) => a + gr.subtotal, 0);
   const feeSum = groups.reduce((a, gr) => a + gr.fee, 0);
   html += loyaltyEarnPreviewHTML(subSum);
-  html += totalsBreakdown(subSum, feeSum, null, cartDiscount(subSum), checkoutPointsOff(subSum, feeSum));
+  html += totalsBreakdown(subSum, feeSum, null, cartDiscount(subSum), checkoutPointsOff(subSum, feeSum), groups.some(gr => gr.freeDelivery));
   html += '<button class="btn" style="width:100%" onclick="nextReview()">' + esc(t('next_review')) + '</button>';
   html += '</div></div>';
   view.innerHTML = html;
@@ -3692,7 +3732,8 @@ async function vReview() {
         : g.fulfillment === 'pickup'
         ? '🛍️ ' + esc(t('pickup')) + ' · <strong>' + esc(t('pickup_time_is')) + '</strong> ' + esc(fmtPickupDate(pickupAtToUTC(g.pickupAt)))
         : '🛵 ' + esc(t('delivery')) + ' · <strong>' + esc(t('deliver_to')) + '</strong> ' + esc(S.checkout.address) + mapsLink(S.checkout.address)) +
-      (gr.fee ? ' · ' + esc(t('fee_row')) + ' ' + money(gr.fee) : '') +
+      (gr.fee ? ' · ' + esc(t('fee_row')) + ' ' + money(gr.fee)
+        : gr.freeDelivery ? ' · ' + esc(t('fee_row')) + ' ' + esc(t('free_word')) : '') +
       ' · <strong>' + money(gr.subtotal + gr.fee) + '</strong></div>';
     if ((g.notes || '').trim()) {
       html += '<div class="vendor-tag">📝 ' + esc(g.notes.trim()) + '</div>';
@@ -3708,7 +3749,7 @@ async function vReview() {
   await loadLoyalty();
   html += '<div class="summary"><h3>' + esc(t('order_total')) + '</h3>' + promoBlockHTML() + loyaltyBlockHTML() +
     loyaltyEarnPreviewHTML(subSum) +
-    totalsBreakdown(subSum, feeSum, null, cartDiscount(subSum), checkoutPointsOff(subSum, feeSum)) +
+    totalsBreakdown(subSum, feeSum, null, cartDiscount(subSum), checkoutPointsOff(subSum, feeSum), groups.some(gr => gr.freeDelivery)) +
     '<div class="hint" style="margin:.6rem 0;">' + esc(t('multi_split_hint')) + '</div>' +
     '<div id="review-error" class="checkout-inline-error" role="alert" tabindex="-1" hidden></div>' +
     '<button class="btn" style="width:100%" onclick="placeOrder(this)">' + esc(t('place_order')) + '</button></div></div>';
@@ -3872,7 +3913,8 @@ async function vConfirm() {
     }
     html += '<p><strong>' + esc(t('payment_is')) + '</strong> ' + (pay ? pay.icon + ' ' + esc(t(pay.key)) : esc(o.payment_method)) +
       (o.payment_method && o.payment_method !== 'credit_card' ? ' <small>' + esc(t('recorded_only')) + '</small>' : '') + '</p>' +
-      totalsBreakdown(Number(o.subtotal), Number(o.delivery_fee || 0), o.tax, discountOf(o), pointsDiscountOf(o)) +
+      totalsBreakdown(Number(o.subtotal), Number(o.delivery_fee || 0), o.tax, discountOf(o), pointsDiscountOf(o),
+        o.fulfillment === 'delivery' && !(Number(o.delivery_fee) > 0)) +
       '<div class="notice">' + t('vendor_notified', { name: esc(o.vendor_name) }) + '</div>' +
       '<div class="order-actions"><button class="btn small secondary" onclick="reorder(' + o.id + ')">' +
       esc(t('order_again')) + '</button></div></div>';
@@ -4446,7 +4488,8 @@ async function vCustomerOrder(orderId) {
         : order.payment_method === 'credit_card' ? ' · ' + esc(t('pay_pending'))
         : ' ' + esc(t('recorded_only'))) +
       '</div>' +
-      totalsBreakdown(Number(order.subtotal), Number(order.delivery_fee || 0), order.tax, discountOf(order), pointsDiscountOf(order)) +
+      totalsBreakdown(Number(order.subtotal), Number(order.delivery_fee || 0), order.tax, discountOf(order), pointsDiscountOf(order),
+        order.fulfillment === 'delivery' && !(Number(order.delivery_fee) > 0)) +
       pickupHTML +
       // === F8: chosen weekly pickup slot snapshot ===
       (order.pickup_slot_label ? '<div class="vendor-tag">' + esc(t('slot_label')) + ': <strong>' + esc(order.pickup_slot_label) + '</strong></div>' : '') +
@@ -4455,6 +4498,14 @@ async function vCustomerOrder(orderId) {
         ? '<div class="delivery-addr">📍 <strong>' + esc(t('deliver_to')) + '</strong> ' + esc(order.delivery_address) +
           '<br><a class="btn small" style="margin-top:.4rem" href="' + mapsUrl(order.delivery_address) +
           '" target="_blank" rel="noopener">' + esc(t('maps_open')) + '</a></div>' : '') +
+      // === v46: delivery photo proof — the cook's handoff photo ===
+      (order.delivery_photo_url
+        ? '<div class="delivery-photo"><div class="vendor-tag">📸 <strong>' + esc(t('delivery_photo_title')) + '</strong></div>' +
+          '<a href="' + esc(order.delivery_photo_url) + '" target="_blank" rel="noopener">' +
+          '<img src="' + esc(order.delivery_photo_url) + '" alt="' + esc(t('delivery_photo_title')) +
+          '" loading="lazy" style="max-height:260px;max-width:100%;border-radius:10px"></a></div>'
+        : '') +
+      // === END v46 ===
       (order.notes ? '<div class="vendor-tag">📝 <strong>' + esc(t('your_notes')) + '</strong> ' + esc(order.notes) + '</div>' : '') +
       // === F10: failed card payment badge + retry ===
       (order.payment_status === 'failed' && order.payment_failed_at

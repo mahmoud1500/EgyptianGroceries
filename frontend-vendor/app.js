@@ -845,6 +845,32 @@ async function uploadDishPhoto(fileId) {
   return j.photo_url;
 }
 
+/* === v46: delivery photo proof — uploads the picked file straight to the
+   order's delivery-photo endpoint (same raw-fetch/FormData approach as
+   uploadDishPhoto: api() forces JSON, which breaks multipart), then
+   reloads the order detail so the thumbnail shows. === */
+window.deliveryPhotoPicked = async function (orderId) {
+  var inp = document.getElementById('delphoto-file');
+  var errEl = document.getElementById('delphoto-err');
+  if (!inp || !inp.files || !inp.files[0]) return;
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  var headers = {};
+  if (S.token) headers['Authorization'] = 'Bearer ' + S.token;
+  try {
+    var res = await fetch('/api/orders/' + orderId + '/delivery-photo', { method: 'POST', headers: headers, body: fd });
+    if (!res.ok) {
+      var msg = res.statusText;
+      try { var j = await res.json(); if (j && j.detail) msg = j.detail; } catch (e) { /* ignore */ }
+      throw new Error(msg);
+    }
+    await vOrderDetail(orderId);
+  } catch (e) {
+    if (errEl) errEl.textContent = t('upload_failed') + e.message;
+  }
+};
+/* === END v46 === */
+
 /* ---- video upload plumbing (dishes + vendor intro) ----
    Mirrors the photo flow: validate client-side for a friendly message
    (server enforces mp4/webm + 25MB too), show a local preview immediately,
@@ -1727,6 +1753,20 @@ function renderOrderDetail() {
   html += '<h3 class="section-title">' + esc(t('change_status')) + '</h3>' +
     '<div class="status-options">' + statusBtns + '</div>';
 
+  // === v46: delivery photo proof — attach once on_the_way / completed ===
+  if (o.fulfillment === 'delivery' && (o.status === 'on_the_way' || o.status === 'completed')) {
+    html += '<h3 class="section-title">📸 ' + esc(t('delphoto_h')) + '</h3><div class="order-card">' +
+      (o.delivery_photo_url
+        ? '<a href="' + esc(o.delivery_photo_url) + '" target="_blank" rel="noopener">' +
+          '<img src="' + esc(o.delivery_photo_url) + '" alt="" style="max-height:180px;max-width:100%;border-radius:10px"></a>' +
+          '<div class="hint">' + esc(t('delphoto_attached')) + '</div>'
+        : '<div class="hint">' + esc(t('delphoto_none')) + '</div>') +
+      '<label class="field upload-label">' + esc(o.delivery_photo_url ? t('delphoto_replace') : t('delphoto_add')) + ' ' +
+      '<input type="file" id="delphoto-file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="deliveryPhotoPicked(' + o.id + ')"></label>' +
+      '<div id="delphoto-err" style="color:#b3261e"></div></div>';
+  }
+  // === END v46 ===
+
   if (emailEv) {
     let meta = {};
     try { meta = JSON.parse(emailEv.meta || '{}'); } catch (e) { /* ignore */ }
@@ -2409,6 +2449,12 @@ function renderSettings() {
     '</select></div>' +
     '<div><label class="field">' + esc(t('set_fee')) + '</label><input type="number" id="set-fee" step="0.01" min="0" placeholder="0.00" value="' +
     esc(v.delivery_fee === null || v.delivery_fee === undefined ? '' : v.delivery_fee) + '"></div></div>' +
+    // === v46: free-delivery threshold (blank = off) ===
+    '<div class="row2"><div><label class="field">' + esc(t('set_freedel')) + '</label>' +
+    '<input type="number" id="set-freedel" step="0.01" min="0" placeholder="' + esc(t('set_freedel_ph')) + '" value="' +
+    esc(v.free_delivery_over === null || v.free_delivery_over === undefined ? '' : v.free_delivery_over) + '"></div>' +
+    '<div><div class="hint" style="margin-top:1.7rem">' + esc(t('set_freedel_hint')) + '</div></div></div>' +
+    // === END v46 ===
     '<div class="mt"><button class="btn" onclick="saveSettings()">' + esc(t('set_save')) + '</button></div></div>';
 
   // === VENDOR MEDIA/DELIVERY (Oct 2026): delivery ZIP coverage ===
@@ -2541,6 +2587,20 @@ window.saveSettings = async function () {
     }
     body.delivery_fee = fee;
   }
+  // === v46: free-delivery threshold — always sent (blank = null = off) so
+  // clearing the field actually turns the feature off. ===
+  const fdoRaw = $('#set-freedel').value.trim();
+  if (fdoRaw === '') { body.free_delivery_over = null; }
+  else {
+    const fdo = Number(fdoRaw);
+    if (!isFinite(fdo) || fdo < 0) {
+      errEl.innerHTML = '<div class="error">' + esc(t('set_bad_freedel')) + '</div>';
+      $('#set-freedel').focus();
+      return;
+    }
+    body.free_delivery_over = fdo;
+  }
+  // === END v46 ===
   // Opening hours.
   const prepRaw = $('#set-prep').value.trim();
   if (prepRaw === '') { body.prep_minutes = null; }

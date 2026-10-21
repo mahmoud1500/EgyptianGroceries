@@ -117,6 +117,12 @@ class Vendor(Base):
     # design — old rows keep NULL, no backfill needed. ===
     commission_rate: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
     # === END v40 ===
+    # === v46: free-delivery threshold (dollars). Delivery orders whose
+    # items subtotal (before discounts) reaches this amount get delivery_fee
+    # waived at order time. NULL = feature off (fee always charged).
+    # Nullable by design — old vendors keep NULL, no backfill needed. ===
+    free_delivery_over: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
+    # === END v46 ===
 
     owner: Mapped["User | None"] = relationship("User", back_populates="vendors")
     dishes: Mapped[list["Dish"]] = relationship("Dish", back_populates="vendor", cascade="all, delete-orphan")
@@ -359,6 +365,11 @@ class Order(Base):
     card_brand: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
     card_last4: Mapped[str | None] = mapped_column(String(4), nullable=True, default=None)
     # === END v41 ===
+    # === v46: delivery photo proof — the vendor's handoff photo URL
+    # (/img/uploads/*), attached once the order is on_the_way/completed.
+    # Shown to the customer on their order page. NULL = no photo. ===
+    delivery_photo_url: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    # === END v46 ===
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
 
     customer: Mapped["User | None"] = relationship("User", back_populates="orders")

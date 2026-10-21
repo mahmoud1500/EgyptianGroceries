@@ -5,12 +5,13 @@ import uuid
 from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, emailer, flash_sales, loyalty, models, notifier, referrals, schemas
 from ..database import get_db
+from ..photo_uploads import delete_uploaded_file, save_uploaded_photo
 from ..ratelimit import check_rate_limit
 from ..order_windows import dish_order_window, order_window_block_message
 from .pickup_slots import slot_label_with_date, slot_next_date  # === FEATURE 8 ===
@@ -936,6 +937,16 @@ def _prepare_order(
         else Decimal("0")
     )
     delivery_fee = Decimal(vendor.delivery_fee) if fulfillment == "delivery" else Decimal("0")
+    # === v46: free delivery over the vendor's threshold. Compares the
+    # items subtotal BEFORE promo/points discounts (the `subtotal` above);
+    # a threshold of 0 waives the fee on every delivery order. ===
+    if (
+        fulfillment == "delivery"
+        and vendor.free_delivery_over is not None
+        and subtotal >= Decimal(vendor.free_delivery_over)
+    ):
+        delivery_fee = Decimal("0")
+    # === END v46 ===
     tax = (subtotal * _current_tax_rate(db)).quantize(Decimal("0.01"))
     order = models.Order(
         customer_id=user.id if user is not None else None,
@@ -1546,6 +1557,46 @@ def update_status(
         notifier.send_order_status_push(db, order, target)
     except Exception as exc:  # noqa: BLE001
         print(f"[orders] status push failed: {exc}")
+    return _serialize(order)
+
+
+@router.post("/{order_id}/delivery-photo", response_model=schemas.OrderOut)
+def attach_delivery_photo(
+    order_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.get_current_user),
+):
+    """Attach (or replace) the delivery handoff photo for an order.
+
+    Only the vendor who owns the order (or the site admin). Delivery orders
+    only, and only once the order is on_the_way or completed — the photo is
+    proof of the handoff, shown to the customer on their order page.
+    """
+    order = db.get(models.Order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if user.role == "admin":
+        pass
+    elif user.role == "vendor" and any(v.id == order.vendor_id for v in user.vendors):
+        pass
+    else:
+        raise HTTPException(status_code=403, detail="Not your order")
+    if order.fulfillment != "delivery":
+        raise HTTPException(status_code=400, detail="Delivery photos are for delivery orders only")
+    if order.status not in ("on_the_way", "completed"):
+        raise HTTPException(
+            status_code=400,
+            detail="A delivery photo can be added once the order is on the way or completed",
+        )
+    # Same disk-fill guard as the other photo uploads: 20/hour per IP.
+    check_rate_limit(request, "delivery_photo_upload", limit=20, window_seconds=3600)
+    new_url = save_uploaded_photo(file)
+    delete_uploaded_file(order.delivery_photo_url)
+    order.delivery_photo_url = new_url
+    db.commit()
+    db.refresh(order)
     return _serialize(order)
 
 

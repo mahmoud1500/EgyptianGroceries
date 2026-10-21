@@ -438,6 +438,12 @@ def update_vendor(
         vendor.fulfillment = data["fulfillment"]
     if "delivery_fee" in data and data["delivery_fee"] is not None:
         vendor.delivery_fee = data["delivery_fee"]
+    # === v46: free-delivery threshold. Unlike delivery_fee, an explicit
+    # null CLEARS the threshold (feature off) — the key being present in
+    # the payload is the signal. Bounds (>= 0) are enforced by the schema. ===
+    if "free_delivery_over" in data:
+        vendor.free_delivery_over = data["free_delivery_over"]
+    # === END v46 ===
     # === v29: delivery zones + chef intro profile (Oct 2026) ===
     if "delivery_zips" in data:
         # Already validated + normalized by the schema (blank -> None =
