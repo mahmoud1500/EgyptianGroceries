@@ -1276,7 +1276,7 @@ ar: {
   status_on_the_way: 'في الطريق',
   mark_on_the_way: '🚚 في الطريق',
   paid_badge_yes: 'مدفوع ✅',
-  paid_badge_no: 'غير مدفوع',
+  paid_badge_no: 'دفع العميل غير مكتمل',
 
   pause_shop: '⏸️ وقف المحل مؤقتًا',
   resume_shop: '▶️ شغل المحل',
