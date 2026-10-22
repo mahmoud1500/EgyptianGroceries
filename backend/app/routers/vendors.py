@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, models, schemas
+from ..commission import commission_due_for_order
 from ..database import get_db
 from ..photo_uploads import delete_uploaded_file
 
@@ -173,6 +174,54 @@ def my_payouts(
         for p, name in rows
     ]
 
+
+@router.get("/mine/commission-receivables")
+def my_commission_receivables(
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_vendor),
+):
+    """Read-only weekly commission balance for shops owned by this vendor."""
+    owned_ids = [v.id for v in user.vendors]
+    if not owned_ids:
+        return []
+    rate_row = db.scalar(select(models.Setting).where(models.Setting.key == "commission_percent"))
+    try:
+        default_rate = Decimal(str(rate_row.value)) if rate_row is not None else Decimal("0")
+    except (ValueError, TypeError):
+        default_rate = Decimal("0")
+    vendors = list(db.scalars(select(models.Vendor).where(models.Vendor.id.in_(owned_ids))))
+    collected_rows = db.execute(
+        select(
+            models.VendorSettlement.vendor_id,
+            func.coalesce(func.sum(models.VendorSettlement.amount), 0),
+        )
+        .where(
+            models.VendorSettlement.vendor_id.in_(owned_ids),
+            models.VendorSettlement.source == "commission_collection",
+        )
+        .group_by(models.VendorSettlement.vendor_id)
+    ).all()
+    collected_by_vendor = {int(v_id): Decimal(str(amount or 0)) for v_id, amount in collected_rows}
+    result = []
+    for vendor in vendors:
+        orders = list(db.scalars(
+            select(models.Order).where(
+                models.Order.vendor_id == vendor.id,
+                models.Order.status == "completed",
+                func.lower(models.Order.payment_method) == "cash",
+            )
+        ))
+        due = sum((commission_due_for_order(order, vendor, default_rate) for order in orders), Decimal("0.00")).quantize(Decimal("0.01"))
+        collected = collected_by_vendor.get(vendor.id, Decimal("0.00"))
+        result.append({
+            "vendor_id": vendor.id,
+            "vendor_name": vendor.name,
+            "cash_order_count": len(orders),
+            "commission_due": float(due),
+            "commission_collected": float(collected),
+            "outstanding_commission": float(max(Decimal("0.00"), due - collected)),
+        })
+    return result
 
 @router.get("/mine/settlements")
 def my_settlements(
