@@ -3496,8 +3496,16 @@ async function vCart() {
   }
 
   const cardOn = await stripeStatus(); // v41: label the card option honestly
+  // === v48: direct-pay pause — when ANY shop in the cart has direct
+  // payments paused (unpaid commission), cash/Zelle/Venmo are hidden
+  // entirely (the backend rejects them too) and the selection falls
+  // back to card. ===
+  const DIRECT_PAY_IDS = ['zelle', 'venmo', 'cash'];
+  const anyDirectPaused = groups.some(gr => gr.vendor && gr.vendor.direct_pay_paused);
+  if (anyDirectPaused && DIRECT_PAY_IDS.includes(S.checkout.payment)) S.checkout.payment = 'credit_card';
+  const visiblePayments = anyDirectPaused ? PAYMENTS.filter(p => !DIRECT_PAY_IDS.includes(p.id)) : PAYMENTS;
   html += '<label class="field">' + esc(t('payment_method')) + '</label><div class="radio-list">' +
-    PAYMENTS.map(p => {
+    visiblePayments.map(p => {
       const unavailable = p.id === 'credit_card' && !cardOn;
       return '<label class="radio-card' + (unavailable ? ' is-disabled' : '') + '"><input type="radio" name="pay" value="' + p.id + '" ' +
         (S.checkout.payment === p.id ? 'checked' : '') + (unavailable ? ' disabled' : '') + ' onchange="setPayment(this.value)">' +
@@ -3506,6 +3514,7 @@ async function vCart() {
           ? ' <small style="opacity:.75">' + esc(t(cardOn ? 'card_secure_hint' : 'card_coming_soon')) + '</small>'
           : '') + '</label>';
     }).join('') + '</div>' +
+    (anyDirectPaused ? '<div class="notice">⏸ ' + esc(t('direct_pay_paused_notice')) + '</div>' : '') +
     payHintsHTML(groups, S.checkout.payment) +
     '<div class="hint" style="margin:.6rem 0;">' + esc(t('demo_hint')) + '</div>';
 

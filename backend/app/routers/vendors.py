@@ -223,6 +223,42 @@ def my_commission_receivables(
         })
     return result
 
+@router.get("/mine/commission-statements")
+def my_commission_statements(
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_vendor),
+):
+    """v48: weekly commission statements for the vendor's OWN shops only
+    (written by the weekly commission cycle)."""
+    owned_ids = [v.id for v in user.vendors]
+    if not owned_ids:
+        return []
+    rows = db.execute(
+        select(models.CommissionStatement, models.Vendor.name)
+        .join(models.Vendor, models.Vendor.id == models.CommissionStatement.vendor_id)
+        .where(models.CommissionStatement.vendor_id.in_(owned_ids))
+        .order_by(models.CommissionStatement.period_start.desc(), models.CommissionStatement.id.desc())
+    ).all()
+    return [
+        {
+            "id": s.id,
+            "vendor_id": s.vendor_id,
+            "vendor_name": name,
+            "week_key": s.week_key,
+            "period_start": s.period_start.isoformat() if s.period_start else None,
+            "period_end": s.period_end.isoformat() if s.period_end else None,
+            "direct_sales": float(s.direct_sales or 0),
+            "commission_due": float(s.commission_due or 0),
+            "commission_collected": float(s.commission_collected or 0),
+            "outstanding": float(s.outstanding or 0),
+            "reminded": bool(s.reminded),
+            "pause_applied": bool(s.pause_applied),
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s, name in rows
+    ]
+
+
 @router.get("/mine/settlements")
 def my_settlements(
     db: Session = Depends(get_db),

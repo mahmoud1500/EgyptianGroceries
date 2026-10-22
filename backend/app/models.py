@@ -123,6 +123,21 @@ class Vendor(Base):
     # Nullable by design — old vendors keep NULL, no backfill needed. ===
     free_delivery_over: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
     # === END v46 ===
+    # === v48: commission automation — direct-pay pause switch. Set by
+    # the weekly commission cycle (or an admin override) when the vendor's
+    # outstanding direct-pay commission stays over the configured limit;
+    # while True, checkout rejects cash/Zelle/Venmo for this shop (card
+    # still works). Default False — old vendors are never paused. ===
+    direct_pay_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # === v48 fix (Security M1): LIVE "warning issued for the current
+    # debt episode" flag. Set when the weekly cycle reminds the vendor;
+    # cleared the moment the episode closes (outstanding back at/under
+    # the pause limit — at a run, or immediately when a collection is
+    # recorded). Every NEW episode of debt therefore gets its own fresh
+    # warning week before any pause; deriving "warned" from all past
+    # statements paused settled vendors with no warning. Default False. ===
+    commission_warned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # === END v48 ===
 
     owner: Mapped["User | None"] = relationship("User", back_populates="vendors")
     dishes: Mapped[list["Dish"]] = relationship("Dish", back_populates="vendor", cascade="all, delete-orphan")
@@ -592,6 +607,38 @@ class VendorSettlement(Base):
 
     vendor: Mapped["Vendor"] = relationship("Vendor")
     order: Mapped["Order | None"] = relationship("Order")
+
+
+class CommissionStatement(Base):
+    """v48: one weekly commission statement per vendor, written by the
+    weekly commission cycle (commission_cycle.run_weekly_statements).
+
+    Figures are a snapshot of the vendor's direct-pay receivable at run
+    time. `reminded` marks the warning week (first week over the pause
+    limit in the current debt episode); `pause_applied` marks the week the cycle actually paused the
+    vendor's direct-pay methods. Unique per (vendor, ISO week) so repeat
+    runs in the same week are idempotent.
+    """
+
+    __tablename__ = "commission_statements"
+    __table_args__ = (
+        UniqueConstraint("vendor_id", "week_key", name="uq_commission_statements_vendor_week"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    vendor_id: Mapped[int] = mapped_column(ForeignKey("vendors.id"), nullable=False, index=True)
+    week_key: Mapped[str] = mapped_column(String(10), nullable=False, index=True)  # ISO "YYYY-Www"
+    period_start: Mapped[dt.date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[dt.date] = mapped_column(Date, nullable=False)
+    direct_sales: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    commission_due: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    commission_collected: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    outstanding: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    reminded: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    pause_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, server_default=func.now())
+
+    vendor: Mapped["Vendor"] = relationship("Vendor")
 
 
 class PromoCode(Base):

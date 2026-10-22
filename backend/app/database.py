@@ -367,6 +367,18 @@ def ensure_schema():
             if "free_delivery_over" not in cols:
                 conn.execute(text("ALTER TABLE vendors ADD COLUMN free_delivery_over NUMERIC(10, 2)"))
             # === END v46 ===
+            # === v48: direct-pay pause flag (commission automation).
+            # Old vendors are never paused — add with FALSE default and
+            # backfill any NULLs. ===
+            if "direct_pay_paused" not in cols:
+                conn.execute(text("ALTER TABLE vendors ADD COLUMN direct_pay_paused BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("UPDATE vendors SET direct_pay_paused = FALSE WHERE direct_pay_paused IS NULL"))
+            # === v48 fix (Security M1): live per-episode warning flag.
+            # Pre-fix vendors have no open warning episode — FALSE. ===
+            if "commission_warned" not in cols:
+                conn.execute(text("ALTER TABLE vendors ADD COLUMN commission_warned BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("UPDATE vendors SET commission_warned = FALSE WHERE commission_warned IS NULL"))
+            # === END v48 ===
     if "vendor_applications" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("vendor_applications")}
         with engine.begin() as conn:

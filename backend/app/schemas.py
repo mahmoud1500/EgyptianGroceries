@@ -156,6 +156,10 @@ class VendorOut(_Out):
     close_time: str | None = None  # "HH:MM"
     closed_weekdays: str | None = None  # e.g. "5" or "5,6"; 0=Sunday..6=Saturday
     is_paused: bool = False
+    # v48: commission automation — True while the shop's direct payments
+    # (cash/Zelle/Venmo) are paused for unpaid commission. The shop
+    # frontend hides those methods at checkout; the backend also rejects.
+    direct_pay_paused: bool = False
     # Referral share code (F2, Oct 2026) — unique per vendor, used in /v/<code>.
     referral_code: str | None = None
     # Pickup-point card (F9, Oct 2026) — shown at checkout/confirmation/reminders.
@@ -957,6 +961,10 @@ class SiteSettingsOut(BaseModel):
     alert_tickets: bool = True
     alert_phone: str = ""
     last_backup_at: str = ""
+    # v48: weekly commission cycle. pause_limit 0/blank = automation never
+    # pauses anyone; statement_weekday is 0=Mon..6=Sun.
+    commission_pause_limit: Decimal = Decimal("0")
+    commission_statement_weekday: int = 0
 
 
 class SiteSettingsIn(BaseModel):
@@ -970,6 +978,15 @@ class SiteSettingsIn(BaseModel):
     alert_applications: bool | None = None
     alert_tickets: bool | None = None
     alert_phone: str | None = Field(default=None, max_length=40)
+    # v48: weekly commission cycle controls (see SiteSettingsOut).
+    commission_pause_limit: Decimal | None = Field(default=None, ge=0, le=1000000)
+    commission_statement_weekday: int | None = Field(default=None, ge=0, le=6)
+
+
+class DirectPayPauseIn(BaseModel):
+    """v48: admin manual override for a vendor's direct-pay pause flag."""
+
+    paused: bool
 
 
 class RefundIn(BaseModel):

@@ -12,7 +12,7 @@ from sqlalchemy import case as sa_case
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
-from .. import auth, emailer, loyalty, models, notifier, schemas
+from .. import auth, commission_cycle, emailer, loyalty, models, notifier, schemas
 from ..commission import (
     DIRECT_PAYMENT_METHODS,
     commission_due_for_order,
@@ -48,14 +48,16 @@ def log_admin_action(
     details: dict | None = None,
 ) -> None:
     """Append one AdminAuditLog row. Callers flush/commit; this only adds.
-    details must be JSON-serializable (stored as a JSON string)."""
+    details is stored as a JSON string; default=str keeps money values
+    (Decimal, e.g. a commission_rate change) from 500ing the mutation
+    they audit."""
     db.add(
         models.AdminAuditLog(
             admin_user_id=admin.id,
             action=action,
             target_type=target_type,
             target_id=target_id,
-            details=json.dumps(details or {}),
+            details=json.dumps(details or {}, default=str),
         )
     )
 
@@ -90,6 +92,10 @@ _SETTING_DEFAULTS = {
     "alert_tickets": "1",
     "alert_phone": "",
     "last_backup_at": "",
+    # v48: weekly commission cycle. Pause limit in dollars; "" = unset
+    # (automation never pauses anyone). Weekday 0=Mon..6=Sun (default Mon).
+    "commission_pause_limit": "",
+    "commission_statement_weekday": "0",
 }
 
 
@@ -102,6 +108,40 @@ def _staff(user: models.User = Depends(auth.require_staff)) -> models.User:
     and change orders, and browse vendors/dishes. Payouts, settings, users,
     analytics, refunds, and moderation stay admin-only (_admin)."""
     return user
+
+
+# === v48: staff money-blindness — the owner decided vendor/platform money
+# figures are admin eyes only. Staff keep full operational access, but on
+# every staff-reachable route the money fields are nulled at serialization
+# (admin responses are byte-for-byte unchanged). The money KEYS of the
+# /admin/vendors rows; the per-vendor revenue aggregate is nulled there
+# too, as is the platform revenue in /admin/stats and the per-order
+# commission_due on the admin order routes (see _serialize_order_for). ===
+_VENDOR_MONEY_KEYS = (
+    "commission_rate",
+    "gross",
+    "commission",
+    "paid",
+    "owed",
+    "collected_sales",
+    "direct_sales",
+    "direct_order_count",
+    "direct_commission_due",
+    "direct_commission_collected",
+    "direct_commission_outstanding",
+    "net_owed",
+)
+
+
+def _serialize_order_for(order: models.Order, user: models.User) -> schemas.OrderOut:
+    """_serialize() + v48 staff money-blindness: commission_due is the
+    marketplace's cut of the order (money), so staff callers see it as
+    null. Order totals/subtotal/fees stay — transactional data staff need
+    to work the order."""
+    out = _serialize(order)
+    if user.role == "staff":
+        out.commission_due = None
+    return out
 
 
 def _admin_dl(
@@ -220,8 +260,9 @@ def stats(db: Session = Depends(get_db), admin: models.User = Depends(_staff)):
             models.Order.status != "cancelled"
         )
     )
-    return {
-        "revenue": float(revenue or 0),
+    result = {
+        # v48: platform revenue is money — admin eyes only (null for staff).
+        "revenue": None if admin.role == "staff" else float(revenue or 0),
         "orders": db.scalar(select(func.count()).select_from(models.Order)) or 0,
         "customers": db.scalar(
             select(func.count()).select_from(models.User).where(models.User.role == "customer")
@@ -242,6 +283,7 @@ def stats(db: Session = Depends(get_db), admin: models.User = Depends(_staff)):
         )
         or 0,
     }
+    return result
 
 
 @router.get("/orders", response_model=list[schemas.OrderOut])
@@ -264,7 +306,7 @@ def all_orders(
         stmt = stmt.where(models.Order.status == status.strip().lower())
     if vendor_id:
         stmt = stmt.where(models.Order.vendor_id == vendor_id)
-    return [_serialize(o) for o in db.scalars(stmt).unique().all()]
+    return [_serialize_order_for(o, admin) for o in db.scalars(stmt).unique().all()]
 
 
 @router.get("/customers")
@@ -310,6 +352,10 @@ def all_vendors(db: Session = Depends(get_db), admin: models.User = Depends(_sta
     # formula reconciled with the settlement ledger in v47). ===
     default_rate = _commission_default(db)
     # === END v40 ===
+    # === v48: staff money-blindness — staff browse vendors for operations
+    # only; every money field (incl. the revenue aggregate) is null and the
+    # money computation is skipped entirely. Admin rows are unchanged. ===
+    hide_money = admin.role == "staff"
     out = []
     for v in vendors:
         owner = db.get(models.User, v.owner_id) if v.owner_id else None
@@ -328,8 +374,12 @@ def all_vendors(db: Session = Depends(get_db), admin: models.User = Depends(_sta
             p for p in [v.street_address, v.city, v.state, v.zipcode] if p
         )
         # === v40: per-vendor money summary (completed orders only;
-        # reconciled with the settlement ledger in v47). ===
-        money = _vendor_money(db, v, default_rate)
+        # reconciled with the settlement ledger in v47). v48: skipped for
+        # staff — money_fields are all None (money is admin eyes only). ===
+        if hide_money:
+            money = dict.fromkeys(_VENDOR_MONEY_KEYS)
+        else:
+            money = _vendor_money(db, v, default_rate)
         # === END v40 ===
         out.append(
             {
@@ -345,7 +395,8 @@ def all_vendors(db: Session = Depends(get_db), admin: models.User = Depends(_sta
                 "delivery_fee": float(v.delivery_fee or 0),
                 "dishes": int(dishes),
                 "orders": int(agg[0] or 0),
-                "revenue": float(agg[1] or 0),
+                # v48: per-vendor revenue is money — null for staff.
+                "revenue": None if hide_money else float(agg[1] or 0),
                 "last_order": agg[2].isoformat() if agg[2] else None,
                 # === v40 (split fields added in v47) ===
                 "commission_rate": money["commission_rate"],
@@ -613,7 +664,7 @@ def admin_set_status(
     if previous == "cancelled" and target != "cancelled":
         raise HTTPException(status_code=400, detail="Cancelled orders cannot be reopened")
     if target == previous:
-        return _serialize(order)
+        return _serialize_order_for(order, admin)
     order.status = target
     db.flush()
     _log_event(
@@ -671,7 +722,7 @@ def admin_set_status(
         notifier.send_order_status_sms(db, order, target)
     except Exception as exc:  # noqa: BLE001
         print(f"[admin] status SMS failed: {exc}")
-    return _serialize(order)
+    return _serialize_order_for(order, admin)
 
 
 def _commission_receivable_for_vendor(db: Session, vendor: models.Vendor, default_rate: Decimal) -> dict:
@@ -792,12 +843,80 @@ def create_settlement(
     )
     db.commit()
     db.refresh(settlement)
+    # === v48: a commission collection restores direct-pay IMMEDIATELY
+    # when it brings the vendor back at/under the pause limit (pausing
+    # itself stays weekly-only). Best-effort: the settlement is already
+    # recorded, so a restore failure must not fail the request. ===
+    if payload.source == "commission_collection":
+        try:
+            if commission_cycle.reevaluate_vendor_pause(db, vendor):
+                db.commit()
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            print(f"[admin] direct-pay restore check failed: {exc}")
+    # === END v48 ===
     return {
         "id": settlement.id, "vendor_id": vendor.id, "vendor_name": vendor.name,
         "order_id": settlement.order_id, "source": settlement.source,
         "amount": settlement.amount, "method": settlement.method,
         "note": settlement.note, "created_at": settlement.created_at,
     }
+
+
+# ---------- v48: weekly commission cycle (reminders -> auto-pause) ----------
+@router.get("/commission-cycle/status")
+def commission_cycle_status(db: Session = Depends(get_db), admin: models.User = Depends(_admin)):
+    """Cycle configuration + last run + per-vendor pause state.
+    Admin-only: this is money data (staff stay blind, per the owner)."""
+    limit = commission_cycle.get_pause_limit(db)
+    default_rate = _commission_default(db)
+    vendors = []
+    for vendor in db.scalars(select(models.Vendor).order_by(models.Vendor.name)):
+        figures = commission_cycle.vendor_receivable(db, vendor, default_rate)
+        vendors.append({
+            "vendor_id": vendor.id,
+            "vendor_name": vendor.name,
+            "direct_pay_paused": bool(vendor.direct_pay_paused),
+            "outstanding_commission": float(figures["outstanding"]),
+        })
+    return {
+        "pause_limit": float(limit) if limit is not None else None,
+        "statement_weekday": commission_cycle.get_statement_weekday(db),
+        "last_run": commission_cycle.last_run_summary(db),
+        "vendors": vendors,
+    }
+
+
+@router.post("/commission-cycle/run")
+def commission_cycle_run(db: Session = Depends(get_db), admin: models.User = Depends(_admin)):
+    """Run the weekly statement cycle for the current week, right now.
+    Same function the scheduler calls; idempotent within the week."""
+    summary = commission_cycle.run_weekly_statements(db)
+    log_admin_action(db, admin, "commission_cycle_run", "commission_cycle", None, dict(summary))
+    db.commit()
+    return summary
+
+
+@router.post("/vendors/{vendor_id}/direct-pay-pause")
+def set_direct_pay_pause(
+    vendor_id: int,
+    payload: schemas.DirectPayPauseIn,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(_admin),
+):
+    """Manual override for a vendor's direct-pay pause flag (admin-only).
+    The weekly cycle may still re-apply its own rules on the next run."""
+    vendor = db.get(models.Vendor, vendor_id)
+    if vendor is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    vendor.direct_pay_paused = payload.paused
+    log_admin_action(
+        db, admin,
+        "direct_pay_pause" if payload.paused else "direct_pay_resume",
+        "vendor", vendor.id, {"paused": payload.paused},
+    )
+    db.commit()
+    return {"vendor_id": vendor.id, "direct_pay_paused": bool(vendor.direct_pay_paused)}
 
 
 @router.get("/payouts")
@@ -1226,7 +1345,7 @@ def admin_order_detail(
         ).all()
     )
     return {
-        "order": _serialize(order),
+        "order": _serialize_order_for(order, admin),
         "events": [schemas.OrderEventOut.model_validate(e) for e in events],
         "messages": [schemas.OrderMessageOut.model_validate(m) for m in messages],
     }
@@ -1658,6 +1777,23 @@ def admin_user_update(
 
 
 # ---------- site settings (item 7) ----------
+def _setting_decimal(raw: str) -> Decimal:
+    """Parse a numeric Setting value; blank/corrupt -> 0 (never raises)."""
+    try:
+        return Decimal((raw or "").strip() or "0")
+    except (InvalidOperation, ValueError, TypeError):
+        return Decimal("0")
+
+
+def _setting_weekday(raw: str) -> int:
+    """Parse the statement weekday Setting; blank/corrupt/out-of-range -> 0 (Mon)."""
+    try:
+        weekday = int((raw or "").strip())
+    except (ValueError, TypeError):
+        return 0
+    return weekday if 0 <= weekday <= 6 else 0
+
+
 @router.get("/settings", response_model=schemas.SiteSettingsOut)
 def settings_get(
     db: Session = Depends(get_db),
@@ -1681,6 +1817,9 @@ def settings_get(
         "alert_tickets": values["alert_tickets"] == "1",
         "alert_phone": values["alert_phone"],
         "last_backup_at": values["last_backup_at"],
+        # v48: weekly commission cycle controls.
+        "commission_pause_limit": _setting_decimal(values["commission_pause_limit"]),
+        "commission_statement_weekday": _setting_weekday(values["commission_statement_weekday"]),
     }
 
 

@@ -285,14 +285,17 @@ async function vPortal() {
 
 async function portalReload(first) {
   const id = S.portal.vendorId;
-  const [earnings, orders, menu] = await Promise.all([
+  const [earnings, orders, menu, receivables] = await Promise.all([
     api('/vendors/' + id + '/earnings'),
     api('/orders?vendor_id=' + id),
     api('/dishes?vendor_id=' + id + '&available_only=false'),
+    // v48: commission balance drives the direct-pay pause banner.
+    api('/vendors/mine/commission-receivables').catch(() => []),
   ]);
   S.portal.earnings = earnings;
   S.portal.orders = orders;
   S.portal.menu = menu;
+  S.portal.receivables = receivables;
   menu.forEach(d => { S.dishById[d.id] = d; });
   if (!first) portalRefreshDynamic();
 }
@@ -945,6 +948,13 @@ function renderPortalShell() {
   let html = '<h2 class="section-title">🏪 ' + esc(v.name) + ' <span class="sub">' + esc(t('portal_sub')) + '</span></h2>';
   // Big prominent pause/resume switch at the top of the dashboard.
   if (paused) html += '<div class="paused-banner">' + esc(t('paused_notice')) + '</div>';
+  // === v48: direct-pay pause banner (weekly commission automation) ===
+  if (v && v.direct_pay_paused) {
+    const rec = (S.portal.receivables || []).find(r => r.vendor_id === v.id);
+    html += '<div class="paused-banner">⏸ ' +
+      esc(t('direct_paused_banner', { amount: rec ? money(rec.outstanding_commission) : '—' })) + '</div>';
+  }
+  // === END v48 ===
   html += '<button class="btn pause-btn' + (paused ? '' : ' danger') + '" style="width:100%;margin:.4rem 0 .8rem;font-size:1.05rem;padding:.7rem" onclick="togglePause()">' +
     esc(paused ? t('resume_shop') : t('pause_shop')) + '</button>';
   html += '<div class="stat-cards">' +
@@ -3079,10 +3089,11 @@ async function vPayouts() {
   }
   view.innerHTML = '<div class="empty"><span class="big">💰</span>' + esc(t('payout_loading')) + '</div>';
   try {
-    const [payouts, receivables, settlements] = await Promise.all([
+    const [payouts, receivables, settlements, statements] = await Promise.all([
       api('/vendors/mine/payouts'),
       api('/vendors/mine/commission-receivables'),
       api('/vendors/mine/settlements'),
+      api('/vendors/mine/commission-statements').catch(() => []),
     ]);
     let html = '<h2 class="section-title">' + esc(t('payout_title')) + '</h2>' +
       '<p class="hint">' + esc(t('payout_vendor_sub')) + '</p>';
@@ -3103,6 +3114,18 @@ async function vPayouts() {
           '</td><td><strong>' + money(s.amount) + '</strong></td><td>' + esc(s.method) +
           '</td><td>' + esc(s.note || '—') + '</td></tr>').join('') + '</tbody></table></div>'
       : '<div class="empty">' + esc(t('comm_history_none')) + '</div>';
+    // === v48: weekly commission statements (cycle snapshots) ===
+    html += '<h3 class="section-title">' + esc(t('comm_statements_h')) + '</h3>';
+    html += statements.length
+      ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('comm_stmt_week')) + '</th><th>' + esc(t('comm_stmt_period')) + '</th><th>' + esc(t('comm_shop')) + '</th><th>' + esc(t('comm_direct_sales')) + '</th><th>' + esc(t('comm_accrued')) + '</th><th>' + esc(t('comm_collected')) + '</th><th>' + esc(t('comm_outstanding')) + '</th><th>' + esc(t('comm_stmt_status')) + '</th></tr></thead><tbody>' +
+        statements.map(s => '<tr><td><b>' + esc(s.week_key) + '</b></td><td>' + esc(s.period_start || '') + ' – ' + esc(s.period_end || '') +
+          '</td><td>' + esc(s.vendor_name) + '</td><td>' + money(s.direct_sales) + '</td><td>' + money(s.commission_due) +
+          '</td><td>' + money(s.commission_collected) + '</td><td><strong>' + money(s.outstanding) + '</strong></td><td>' +
+          (s.pause_applied ? '<span class="vendor-tag">' + esc(t('comm_stmt_paused')) + '</span>'
+            : s.reminded ? '<span class="vendor-tag">' + esc(t('comm_stmt_reminded')) + '</span>' : '—') +
+          '</td></tr>').join('') + '</tbody></table></div>'
+      : '<div class="empty">' + esc(t('comm_statements_none')) + '</div>';
+    // === END v48 ===
     html += '<h3 class="section-title">' + esc(t('comm_payouts_to_you')) + '</h3>';
     html += payouts.length
       ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('tbl_date')) + '</th><th>' +
@@ -3177,7 +3200,8 @@ window.setAdminTab = function (x) { S.adminTab = x; vAdmin(); };
 async function admOverview() {
   const s = await api('/admin/stats');
   const cards = [
-    [money(s.revenue), t('adm_stat_revenue')],
+    // v48: revenue is null for staff (money is admin eyes only) — show '—'.
+    [isStaffUser() ? '—' : money(s.revenue), t('adm_stat_revenue')],
     [s.orders, t('adm_stat_orders')],
     [s.new_orders, t('stat_new_orders')],
     [s.customers, t('stat_customers')],
@@ -3436,7 +3460,10 @@ async function admCustomers() {
 
 async function admVendors() {
   const vs = await api('/admin/vendors');
-  vs.sort((a, b) => b.revenue - a.revenue);
+  // v48: staff rows carry null money (admin eyes only) — sort null-safely
+  // and render '—' in every money cell instead of a misleading $0.00.
+  const staffView = isStaffUser();
+  vs.sort((a, b) => (Number(b.revenue) || 0) - (Number(a.revenue) || 0));
   let html = '<div class="table-wrap">' + '<table class="menu-table"><thead><tr><th>' + esc(t('tbl_vendor')) + '</th><th>' + esc(t('tbl_owner')) +
     '</th><th>' + esc(t('tbl_phone')) + '</th><th>' + esc(t('tbl_dishes')) + '</th><th>' + esc(t('tbl_orders')) +
     '</th><th>' + esc(t('tbl_revenue')) + '</th><th>' + esc(t('an_gross')) + '</th><th>' + esc(t('an_commission')) +
@@ -3445,11 +3472,11 @@ async function admVendors() {
     vs.map(v => '<tr><td><b>' + esc(v.name) + '</b></td>' +
       '<td>' + esc(v.owner_name || t('tbl_never')) + '<br><small>' + esc(v.owner_email || '') + '</small></td>' +
       '<td>' + esc(v.phone || t('tbl_never')) + '</td><td>' + v.dishes + '</td><td>' + v.orders + '</td>' +
-      '<td>' + money(v.revenue) + '</td>' +
-      '<td>' + money(v.gross || 0) + '</td>' +
-      '<td>' + money(v.commission || 0) + '<br><small>' + esc(t('an_rate', { n: v.commission_rate })) + '</small></td>' +
-      '<td>' + money(v.paid || 0) + '</td>' +
-      '<td><strong>' + money(v.owed || 0) + '</strong></td>' +
+      '<td>' + (staffView ? '—' : money(v.revenue)) + '</td>' +
+      '<td>' + (staffView ? '—' : money(v.gross || 0)) + '</td>' +
+      '<td>' + (staffView ? '—' : money(v.commission || 0) + '<br><small>' + esc(t('an_rate', { n: v.commission_rate })) + '</small>') + '</td>' +
+      '<td>' + (staffView ? '—' : money(v.paid || 0)) + '</td>' +
+      '<td>' + (staffView ? '—' : '<strong>' + money(v.owed || 0) + '</strong>') + '</td>' +
       '<td>' + (v.last_order ? esc(fmtDate(v.last_order)) : esc(t('tbl_never'))) + '</td>' +
       '<td><small>' + esc(v.address || v.area || t('tbl_never')) + '</small></td>' +
       '<td>' + (v.is_paused ? '⏸️ ' + esc(t('adm_vendor_paused')) : '✅ ' + esc(t('adm_vendor_active'))) + '</td>' +
@@ -3626,11 +3653,13 @@ window.admAppStatus = async function (id, status) {
 
 /* ---------- admin: record and view vendor payouts ---------- */
 async function admPayouts() {
-  const [payouts, vendors, receivables, settlements] = await Promise.all([
+  const [payouts, vendors, receivables, settlements, cycleStatus, siteSettings] = await Promise.all([
     api('/admin/payouts'),
     api('/admin/vendors'),
     api('/admin/commission-receivables'),
     api('/admin/settlements'),
+    api('/admin/commission-cycle/status').catch(() => null),
+    api('/admin/settings').catch(() => null),
   ]);
   vendors.sort((a, b) => String(a.name).localeCompare(String(b.name)));
   let html = '<div class="form-card"><h3>' + esc(t('payout_record_h')) + '</h3><div id="payout-err"></div>' +
@@ -3661,6 +3690,38 @@ async function admPayouts() {
             : '<span class="vendor-tag">' + esc(t('an_settled')) + '</span>') + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   // === END v40 ===
+  // === v48: weekly commission cycle panel (reminders -> auto-pause) ===
+  if (cycleStatus) {
+    const pausedByVendor = {};
+    (cycleStatus.vendors || []).forEach(v => { pausedByVendor[v.vendor_id] = !!v.direct_pay_paused; });
+    S.cyclePausedByVendor = pausedByVendor;
+    const dayKeys = ['slot_day_mon', 'slot_day_tue', 'slot_day_wed', 'slot_day_thu', 'slot_day_fri', 'slot_day_sat', 'slot_day_sun'];
+    const curLimit = cycleStatus.pause_limit != null ? cycleStatus.pause_limit : (siteSettings ? Number(siteSettings.commission_pause_limit || 0) : 0);
+    const curDay = cycleStatus.statement_weekday != null ? cycleStatus.statement_weekday : 0;
+    const lr = cycleStatus.last_run;
+    html += '<h3 class="section-title">🔁 ' + esc(t('cyc_h')) + '</h3>' +
+      '<p class="hint">' + esc(t('cyc_hint')) + '</p>' +
+      '<div class="form-card"><div id="cycle-err"></div>' +
+      '<div class="row2"><div><label class="field">' + esc(t('cyc_limit')) + '</label>' +
+      '<input type="number" id="cyc-limit" min="0" step="0.01" placeholder="' + esc(t('cyc_limit_ph')) + '" value="' + (curLimit ? esc(curLimit) : '') + '"></div>' +
+      '<div><label class="field">' + esc(t('cyc_weekday')) + '</label><select id="cyc-weekday">' +
+      dayKeys.map((k, i) => '<option value="' + i + '"' + (i === curDay ? ' selected' : '') + '>' + esc(t(k)) + '</option>').join('') +
+      '</select></div></div>' +
+      '<div class="mt"><button class="btn" onclick="cycleSaveSettings()">' + esc(t('cyc_save')) + '</button> ' +
+      '<button class="btn secondary" onclick="cycleRunNow()">' + esc(t('cyc_run_now')) + '</button></div>' +
+      '<p class="hint" style="margin-top:.5rem">' +
+      (lr
+        ? esc(t('cyc_last_run', {
+            when: fmtDate(lr.ran_at), week: lr.week_key || '',
+            created: lr.statements_created || 0,
+            reminded: (lr.reminded || []).length,
+            paused: (lr.paused || []).length,
+            unpaused: (lr.unpaused || []).length,
+          }))
+        : esc(t('cyc_never_run'))) +
+      '</p></div>';
+  }
+  // === END v48 ===
   // Weekly commission collection is a receivable, not a vendor payout.
   html += '<h3 class="section-title">' + esc(t('comm_weekly_h')) + '</h3>' +
     '<p class="hint">' + esc(t('comm_admin_hint')) + '</p>' +
@@ -3672,11 +3733,18 @@ async function admPayouts() {
     '<label class="field">Reference / note</label><input type="text" id="commission-note" maxlength="2000" placeholder="Weekly settlement date, receipt number, or note">' +
     '<div class="mt"><button class="btn" onclick="recordCommissionCollection()">Record commission collection</button></div></div>';
   html += '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('tbl_vendor')) + '</th><th>' + esc(t('comm_direct_orders')) + '</th><th>' + esc(t('comm_direct_sales')) + '</th><th>' + esc(t('comm_accrued')) + '</th><th>' + esc(t('comm_collected')) + '</th><th>' + esc(t('comm_outstanding')) + '</th><th></th></tr></thead><tbody>' +
-    receivables.map(r => '<tr><td><b>' + esc(r.vendor_name) + '</b></td><td>' + esc(r.direct_order_count) +
+    receivables.map(r => {
+      const isPaused = !!((S.cyclePausedByVendor || {})[r.vendor_id]);
+      return '<tr><td><b>' + esc(r.vendor_name) + '</b>' +
+      (isPaused ? '<br><span class="vendor-tag">' + esc(t('cyc_paused_tag')) + '</span>' : '') +
+      '</td><td>' + esc(r.direct_order_count) +
       '</td><td>' + money(r.direct_sales) + '</td><td>' + money(r.commission_due) + '</td><td>' +
       money(r.commission_collected) + '</td><td><strong>' + money(r.outstanding_commission) + '</strong></td><td>' +
       (r.outstanding_commission > 0 ? '<button class="btn small" onclick="commissionPrefill(' + r.vendor_id + ',' + Number(r.outstanding_commission).toFixed(2) + ')">Collect</button>' : '<span class="vendor-tag">Settled</span>') +
-      '</td></tr>').join('') + '</tbody></table></div>';
+      ' <button class="btn small secondary" onclick="cycleSetPause(' + r.vendor_id + ',' + (isPaused ? 'false' : 'true') + ')">' +
+      esc(t(isPaused ? 'cyc_resume_btn' : 'cyc_pause_btn')) + '</button>' +
+      '</td></tr>';
+    }).join('') + '</tbody></table></div>';
   const commissionOrders = receivables.flatMap(r => (r.orders || []).map(o => ({
     vendor_name: r.vendor_name, order_id: o.order_id, created_at: o.created_at,
     payment_method: o.payment_method,
@@ -3709,6 +3777,44 @@ async function admPayouts() {
     : '<div class="empty">' + esc(t('payout_none')) + '</div>';
   $('#adm-body').innerHTML = html;
 }
+// === v48: weekly commission cycle — settings save, manual run, and the
+// per-vendor direct-pay pause / resume override buttons. ===
+window.cycleSaveSettings = async function () {
+  const raw = ($('#cyc-limit').value || '').trim();
+  const limit = raw === '' ? 0 : Math.max(0, Number(raw) || 0);
+  const weekday = parseInt($('#cyc-weekday').value, 10);
+  try {
+    await api('/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        commission_pause_limit: limit,
+        commission_statement_weekday: isNaN(weekday) ? 0 : weekday,
+      }),
+    });
+    toast(t('cyc_saved'));
+    admPayouts();
+  } catch (e) { errInto($('#cycle-err'), e); }
+};
+
+window.cycleRunNow = async function () {
+  try {
+    await api('/admin/commission-cycle/run', { method: 'POST' });
+    toast(t('cyc_ran'));
+    admPayouts();
+  } catch (e) { errInto($('#cycle-err'), e); }
+};
+
+window.cycleSetPause = async function (vendorId, paused) {
+  try {
+    await api('/admin/vendors/' + vendorId + '/direct-pay-pause', {
+      method: 'POST',
+      body: JSON.stringify({ paused: !!paused }),
+    });
+    admPayouts();
+  } catch (e) { alert(e.message); }
+};
+// === END v48 ===
+
 window.commissionPrefill = function (vendorId, outstanding) {
   const sel = $('#commission-vendor'), amount = $('#commission-amount');
   if (!sel || !amount) return;

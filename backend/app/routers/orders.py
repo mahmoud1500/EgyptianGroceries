@@ -10,7 +10,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, emailer, flash_sales, loyalty, models, notifier, referrals, schemas
-from ..commission import commission_for_amount
+from ..commission import commission_for_amount, is_direct_payment_method
 from ..database import get_db
 from ..photo_uploads import delete_uploaded_file, save_uploaded_photo
 from ..ratelimit import check_rate_limit
@@ -703,6 +703,17 @@ def _prepare_order(
     is_open, open_msg = vendor_open_status(vendor)
     if not is_open:
         raise HTTPException(status_code=400, detail=open_msg)
+
+    # === v48: direct-pay pause (weekly commission automation). While a
+    # shop's direct payments are paused for unpaid commission, cash /
+    # Zelle / Venmo orders are rejected; card + wallet methods still work.
+    # Every create path (single, multi, guest) funnels through here. ===
+    if getattr(vendor, "direct_pay_paused", False) and is_direct_payment_method(payment_method):
+        raise HTTPException(
+            status_code=400,
+            detail="Direct payments are paused for this shop — please pay by card or contact the shop",
+        )
+    # === END v48 ===
 
     if fulfillment == "delivery" and vendor.fulfillment == "pickup":
         raise HTTPException(status_code=400, detail="This vendor is pickup only")

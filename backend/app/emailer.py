@@ -387,3 +387,61 @@ def send_catering_notification(to: str, req) -> bool:
         ]
     )
     return send_email(to, f"[Catering #{req.id}] {req.event_type} — {req.event_date}", body)
+
+
+def send_commission_statement_notice(
+    to: str,
+    vendor_name: str,
+    *,
+    outstanding: str,
+    pause_limit: str,
+    kind: str,
+    week_key: str,
+) -> bool:
+    """v48: weekly commission cycle notice to a vendor owner.
+
+    kind == "reminded": first week over the pause limit — a warning.
+    kind == "paused": still over the limit after a warning week, so
+    direct payments (cash/Zelle/Venmo) are now paused for the shop.
+    Amounts arrive pre-formatted as strings (Decimal-safe upstream).
+    """
+    portal = _frontend_base() + "/vendor/"
+    if kind == "paused":
+        subject = f"Direct payments paused for {vendor_name} — commission overdue"
+        lines = [
+            "Hello from the Osiris Marketplace team,",
+            "",
+            f"Your weekly commission statement for {vendor_name} (week {week_key}) shows "
+            f"${outstanding} in unpaid marketplace commission — still above the "
+            f"${pause_limit} limit after last week's reminder.",
+            "",
+            "Direct payments (cash, Zelle, and Venmo) are now PAUSED for your shop: "
+            "customers can still order and pay by card, but they can't choose a "
+            "direct payment method until the balance is settled.",
+            "",
+            "As soon as your commission is settled and the outstanding balance is "
+            "at or under the limit, direct payments switch back on automatically.",
+            "",
+            f"Review your balance any time in the vendor portal: {portal}",
+            "",
+            "— Osiris Marketplace",
+        ]
+    else:
+        subject = f"Commission reminder for {vendor_name} — ${outstanding} outstanding"
+        lines = [
+            "Hello from the Osiris Marketplace team,",
+            "",
+            f"Your weekly commission statement for {vendor_name} (week {week_key}) shows "
+            f"${outstanding} in unpaid marketplace commission on direct-payment orders "
+            f"(cash, Zelle, Venmo). The direct-pay pause limit is ${pause_limit}.",
+            "",
+            "No action has been taken yet — this is a reminder. If the balance is "
+            "still over the limit at next week's statement, direct payments "
+            "(cash, Zelle, Venmo) will be paused for your shop until it is settled. "
+            "Card payments are never affected.",
+            "",
+            f"Review your balance any time in the vendor portal: {portal}",
+            "",
+            "— Osiris Marketplace",
+        ]
+    return send_email(to, subject, "\n".join(lines))

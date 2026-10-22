@@ -3,6 +3,7 @@
 Serves the JSON API under /api/* and the plain HTML/CSS/JS frontend
 from / (static files, no Node build step needed).
 """
+import asyncio
 import html as html_lib
 import json
 import os
@@ -19,7 +20,7 @@ from sqlalchemy import select
 
 log = logging.getLogger(__name__)
 
-from . import flash_sales, models
+from . import commission_cycle, flash_sales, models
 from .database import Base, SessionLocal, engine, ensure_schema
 from .routers import auth as auth_router
 from .routers import admin as admin_router
@@ -139,12 +140,47 @@ def _create_tables():
 
 # Bump this on every release (egypt-v<N>) — the footers display it so the
 # running build can be confirmed at a glance during debugging.
-APP_VERSION = "v47"
+APP_VERSION = "v48"
 
 
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+# === v48: weekly commission-cycle scheduler. Checks on startup and then
+# every ~6 hours whether the configured statement weekday of the current
+# week has arrived with no statements written yet, and runs the cycle.
+# Failure-contained by design: a broken cycle can never crash the app.
+# Disabled when DISABLE_CYCLE_SCHEDULER is set (tests / one-off scripts).
+_cycle_task: asyncio.Task | None = None
+
+
+def _cycle_scheduler_enabled() -> bool:
+    return not os.environ.get("DISABLE_CYCLE_SCHEDULER")
+
+
+async def _cycle_scheduler_loop():
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                commission_cycle.maybe_run_due(db)
+            finally:
+                db.close()
+        except Exception as exc:  # noqa: BLE001 — the cycle must never take the app down
+            log.warning("commission cycle scheduler check failed: %s", exc)
+        await asyncio.sleep(6 * 3600)
+
+
+@app.on_event("startup")
+async def _start_cycle_scheduler():
+    global _cycle_task
+    if not _cycle_scheduler_enabled():
+        log.info("DISABLE_CYCLE_SCHEDULER set — weekly commission cycle scheduler is off")
+        return
+    _cycle_task = asyncio.create_task(_cycle_scheduler_loop())
+# === END v48 ===
 
 
 @app.get("/api/version")
