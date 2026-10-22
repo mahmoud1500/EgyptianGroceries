@@ -23,6 +23,8 @@ SQLite database file; set `DATABASE_URL` to point at PostgreSQL for hosting.
 
 No Docker, no database server needed — just Python and a SQLite file.
 
+**Local database note:** `backend/app.db` is generated local state and is intentionally ignored by Git. Before pulling a change that removes a previously tracked database file, back up any local orders, vendors, or other data you need. For a fresh demo database, follow the seed step below; do not run the seed command against a database containing data you want to preserve without reviewing what it adds.
+
 ### 1. Open the project
 Extract the zip, then in VS Code: **File → Open Folder** → pick the
 `egyptian-food-marketplace` folder (the one with `backend/` and `frontend/` inside).
