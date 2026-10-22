@@ -1284,6 +1284,7 @@ class OrderOut(_Out):
     delivery_fee: Decimal
     tax: Decimal = Decimal("0")
     total: Decimal
+    commission_due: Decimal | None = None
     created_at: dt.datetime
     items: list[OrderItemOut] = []
     customer_name: str = ""
