@@ -67,6 +67,9 @@ def ensure_schema():
                 conn.execute(text("ALTER TABLE orders ADD COLUMN notes TEXT"))
             if "paid" not in cols:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN paid BOOLEAN DEFAULT FALSE"))
+            # Weekly vendor commission receivable snapshot. Nullable for legacy orders.
+            if "commission_due" not in cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN commission_due NUMERIC(10, 2)"))
             # Multi-vendor checkout link (Oct 2026). Nullable; old orders keep NULL.
             if "checkout_group" not in cols:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN checkout_group VARCHAR(36)"))
