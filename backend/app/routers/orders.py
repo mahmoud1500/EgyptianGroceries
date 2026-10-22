@@ -369,8 +369,25 @@ def _serialize(order: models.Order) -> schemas.OrderOut:
     return out
 
 
-def _modifier_options(db: Session, dish_ids: list[int]) -> dict[int, list[models.DishOption]]:
-    """All modifier groups per dish, keyed by dish_id (id order)."""
+
+
+_FISH_SIDE_CHOICES = [{"label":"Rice","delta":0},{"label":"French fries","delta":0},{"label":"Tahini salad","delta":0},{"label":"Egyptian salad","delta":0}]
+
+def _default_fish_sides(dish: models.Dish) -> bool:
+    return dish.name.strip().casefold() == "whole grilled fish" and float(dish.price) == 18.0
+
+def _fish_sides_group(dish: models.Dish, option_id: int) -> models.DishOption:
+    return models.DishOption(
+        id=option_id, dish_id=dish.id, name="Sides", selection_type="multiple",
+        min_select=0, max_select=None, choices=json.dumps(_FISH_SIDE_CHOICES),
+    )
+
+def _modifier_options(
+    db: Session,
+    dish_ids: list[int],
+    dishes: dict[int, models.Dish] | None = None,
+) -> dict[int, list[models.DishOption]]:
+    """All modifier groups plus transient built-in fish sides for order validation."""
     by_dish: dict[int, list[models.DishOption]] = {}
     for o in db.scalars(
         select(models.DishOption)
@@ -378,6 +395,19 @@ def _modifier_options(db: Session, dish_ids: list[int]) -> dict[int, list[models
         .order_by(models.DishOption.id)
     ).all():
         by_dish.setdefault(o.dish_id, []).append(o)
+    if dishes:
+        for dish_id in dish_ids:
+            dish = dishes.get(dish_id)
+            if dish is None or not _default_fish_sides(dish):
+                continue
+            groups = by_dish.get(dish_id, [])
+            side_idx = next((i for i, g in enumerate(groups) if (g.name or "").strip().casefold() == "sides"), None)
+            if side_idx is None:
+                groups = groups + [_fish_sides_group(dish, -dish.id)]
+            else:
+                groups = list(groups)
+                groups[side_idx] = _fish_sides_group(dish, groups[side_idx].id)
+            by_dish[dish_id] = groups
     return by_dish
 
 
@@ -792,7 +822,7 @@ def _prepare_order(
 
     dish_ids = [i.dish_id for i in items if i.dish_id is not None]
     dishes = {d.id: d for d in db.scalars(select(models.Dish).where(models.Dish.id.in_(dish_ids)))}
-    options = _modifier_options(db, dish_ids)
+    options = _modifier_options(db, dish_ids, dishes)
     ingredients = _dish_ingredients(db, dish_ids, dishes)
     # === FEATURE 5: bundle line items (priced ONLY at the bundle's fixed price) ===
     bundle_ids = [i.bundle_id for i in items if i.bundle_id is not None]
