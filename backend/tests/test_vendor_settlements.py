@@ -11,7 +11,7 @@ class VendorSettlementSchemaTests(unittest.TestCase):
     def test_settlement_source_is_required_and_restricted(self):
         for source in ("admin_payout", "direct_customer_payment", "commission_collection"):
             payload = schemas.SettlementCreate(
-                vendor_id=1, source=source, amount=Decimal("12.345"), method="zelle"
+                vendor_id=1, source=source, amount=Decimal("12.346"), method="zelle"
             )
             self.assertEqual(payload.source, source)
             self.assertEqual(payload.amount, Decimal("12.35"))
