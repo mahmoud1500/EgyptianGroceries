@@ -3673,6 +3673,18 @@ async function admPayouts() {
       money(r.commission_collected) + '</td><td><strong>' + money(r.outstanding_commission) + '</strong></td><td>' +
       (r.outstanding_commission > 0 ? '<button class="btn small" onclick="commissionPrefill(' + r.vendor_id + ',' + Number(r.outstanding_commission).toFixed(2) + ')">Collect</button>' : '<span class="vendor-tag">Settled</span>') +
       '</td></tr>').join('') + '</tbody></table></div>';
+  const commissionOrders = receivables.flatMap(r => (r.orders || []).map(o => ({
+    vendor_name: r.vendor_name, order_id: o.order_id, created_at: o.created_at,
+    total: o.total, commission_due: o.commission_due, refunded_amount: o.refunded_amount,
+  })));
+  html += '<h3 class="section-title">Cash-order commission detail</h3>';
+  html += commissionOrders.length
+    ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Order</th><th>Vendor</th><th>Completed</th><th>Order total</th><th>Refunded</th><th>Commission due</th></tr></thead><tbody>' +
+      commissionOrders.map(o => '<tr><td>#' + esc(o.order_id) + '</td><td>' + esc(o.vendor_name) +
+        '</td><td>' + esc(fmtDate(o.created_at)) + '</td><td>' + money(o.total) +
+        '</td><td>' + money(o.refunded_amount) + '</td><td><strong>' + money(o.commission_due) +
+        '</strong></td></tr>').join('') + '</tbody></table></div>'
+    : '<div class="empty">No completed cash orders have accrued commission yet.</div>';
   const commissionHistory = settlements.filter(s => s.source === 'commission_collection');
   html += '<h3 class="section-title">Commission collection history</h3>';
   html += commissionHistory.length
