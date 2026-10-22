@@ -3079,9 +3079,31 @@ async function vPayouts() {
   }
   view.innerHTML = '<div class="empty"><span class="big">💰</span>' + esc(t('payout_loading')) + '</div>';
   try {
-    const payouts = await api('/vendors/mine/payouts');
+    const [payouts, receivables, settlements] = await Promise.all([
+      api('/vendors/mine/payouts'),
+      api('/vendors/mine/commission-receivables'),
+      api('/vendors/mine/settlements'),
+    ]);
     let html = '<h2 class="section-title">' + esc(t('payout_title')) + '</h2>' +
       '<p class="hint">' + esc(t('payout_vendor_sub')) + '</p>';
+    html += '<h3 class="section-title">Marketplace commission balance</h3>' +
+      '<p class="hint">Commission is collected weekly for completed orders where customers pay cash directly to your shop. This balance is separate from customer payments and marketplace payouts.</p>';
+    html += receivables.length
+      ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Shop</th><th>Completed cash orders</th><th>Commission accrued</th><th>Commission collected</th><th>Outstanding</th></tr></thead><tbody>' +
+        receivables.map(r => '<tr><td><b>' + esc(r.vendor_name) + '</b></td><td>' + esc(r.cash_order_count) +
+          '</td><td>' + money(r.commission_due) + '</td><td>' + money(r.commission_collected) +
+          '</td><td><strong>' + money(r.outstanding_commission) + '</strong></td></tr>').join('') +
+        '</tbody></table></div>'
+      : '<div class="empty">No shops are linked to this vendor account.</div>';
+    const commissionRows = settlements.filter(s => s.source === 'commission_collection');
+    html += '<h3 class="section-title">Commission settlement history</h3>';
+    html += commissionRows.length
+      ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Date</th><th>Shop</th><th>Amount</th><th>Method</th><th>Reference / note</th></tr></thead><tbody>' +
+        commissionRows.map(s => '<tr><td>' + esc(fmtDate(s.created_at)) + '</td><td>' + esc(s.vendor_name) +
+          '</td><td><strong>' + money(s.amount) + '</strong></td><td>' + esc(s.method) +
+          '</td><td>' + esc(s.note || '—') + '</td></tr>').join('') + '</tbody></table></div>'
+      : '<div class="empty">No commission collections have been recorded yet.</div>';
+    html += '<h3 class="section-title">Marketplace payouts to you</h3>';
     html += payouts.length
       ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('tbl_date')) + '</th><th>' +
         esc(t('tbl_amount')) + '</th><th>' + esc(t('tbl_note')) + '</th></tr></thead><tbody>' +
@@ -3604,9 +3626,11 @@ window.admAppStatus = async function (id, status) {
 
 /* ---------- admin: record and view vendor payouts ---------- */
 async function admPayouts() {
-  const [payouts, vendors] = await Promise.all([
+  const [payouts, vendors, receivables, settlements] = await Promise.all([
     api('/admin/payouts'),
     api('/admin/vendors'),
+    api('/admin/commission-receivables'),
+    api('/admin/settlements'),
   ]);
   vendors.sort((a, b) => String(a.name).localeCompare(String(b.name)));
   let html = '<div class="form-card"><h3>' + esc(t('payout_record_h')) + '</h3><div id="payout-err"></div>' +
@@ -3633,6 +3657,30 @@ async function admPayouts() {
           : '<span class="vendor-tag">' + esc(t('an_settled')) + '</span>') + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   // === END v40 ===
+  // Weekly commission collection is a receivable, not a vendor payout.
+  html += '<h3 class="section-title">Weekly commission collection</h3>' +
+    '<p class="hint">Only completed cash orders paid directly to vendors accrue commission receivables. Recording a collection never changes the customer payment flag or vendor payout ledger.</p>' +
+    '<div class="form-card"><div id="commission-err"></div>' +
+    '<label class="field">Vendor</label><select id="commission-vendor">' +
+    vendors.map(v => '<option value="' + v.id + '">' + esc(v.name) + '</option>').join('') + '</select>' +
+    '<div class="row2"><div><label class="field">Amount collected ($)</label><input type="number" id="commission-amount" min="0.01" step="0.01" placeholder="0.00"></div>' +
+    '<div><label class="field">Collection method</label><select id="commission-method"><option value="cash">Cash</option><option value="zelle">Zelle</option><option value="venmo">Venmo</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div></div>' +
+    '<label class="field">Reference / note</label><input type="text" id="commission-note" maxlength="2000" placeholder="Weekly settlement date, receipt number, or note">' +
+    '<div class="mt"><button class="btn" onclick="recordCommissionCollection()">Record commission collection</button></div></div>';
+  html += '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Vendor</th><th>Completed cash orders</th><th>Cash sales</th><th>Commission accrued</th><th>Collected</th><th>Outstanding</th><th></th></tr></thead><tbody>' +
+    receivables.map(r => '<tr><td><b>' + esc(r.vendor_name) + '</b></td><td>' + esc(r.cash_order_count) +
+      '</td><td>' + money(r.cash_sales) + '</td><td>' + money(r.commission_due) + '</td><td>' +
+      money(r.commission_collected) + '</td><td><strong>' + money(r.outstanding_commission) + '</strong></td><td>' +
+      (r.outstanding_commission > 0 ? '<button class="btn small" onclick="commissionPrefill(' + r.vendor_id + ',' + Number(r.outstanding_commission).toFixed(2) + ')">Collect</button>' : '<span class="vendor-tag">Settled</span>') +
+      '</td></tr>').join('') + '</tbody></table></div>';
+  const commissionHistory = settlements.filter(s => s.source === 'commission_collection');
+  html += '<h3 class="section-title">Commission collection history</h3>';
+  html += commissionHistory.length
+    ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Date</th><th>Vendor</th><th>Amount</th><th>Method</th><th>Reference / note</th></tr></thead><tbody>' +
+      commissionHistory.map(s => '<tr><td>' + esc(fmtDate(s.created_at)) + '</td><td>' + esc(s.vendor_name) +
+        '</td><td><strong>' + money(s.amount) + '</strong></td><td>' + esc(s.method) +
+        '</td><td>' + esc(s.note || '—') + '</td></tr>').join('') + '</tbody></table></div>'
+    : '<div class="empty">No commission collections recorded yet.</div>';
   html += '<h3 class="section-title">' + esc(t('payout_history_h')) + '</h3>';
   html += payouts.length
     ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('tbl_id')) + '</th><th>' + esc(t('tbl_date')) +
@@ -3643,6 +3691,45 @@ async function admPayouts() {
     : '<div class="empty">' + esc(t('payout_none')) + '</div>';
   $('#adm-body').innerHTML = html;
 }
+window.commissionPrefill = function (vendorId, outstanding) {
+  const sel = $('#commission-vendor'), amount = $('#commission-amount');
+  if (!sel || !amount) return;
+  sel.value = String(vendorId);
+  amount.value = Number(outstanding).toFixed(2);
+  amount.focus();
+  amount.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+window.recordCommissionCollection = async function () {
+  const errEl = $('#commission-err');
+  errEl.innerHTML = '';
+  const vendorId = Number($('#commission-vendor').value);
+  const amount = Number($('#commission-amount').value);
+  const method = $('#commission-method').value;
+  const note = $('#commission-note').value.trim();
+  if (!vendorId) { errEl.innerHTML = '<div class="error">Select a vendor.</div>'; return; }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    errEl.innerHTML = '<div class="error">Enter a collection amount greater than zero.</div>';
+    $('#commission-amount').focus();
+    return;
+  }
+  if (!confirm('Record ' + money(amount) + ' commission collected from this vendor?')) return;
+  try {
+    await api('/admin/settlements', {
+      method: 'POST',
+      body: JSON.stringify({
+        vendor_id: vendorId,
+        source: 'commission_collection',
+        amount,
+        method,
+        note: note || null,
+      }),
+    });
+    await admPayouts();
+  } catch (e) {
+    errEl.innerHTML = '<div class="error">' + esc(errText(e)) + '</div>';
+  }
+};
+
 window.payoutVendorPick = function () {
   // Clear a stale prefill when the admin picks a different vendor manually.
   const amt = $('#payout-amount');
