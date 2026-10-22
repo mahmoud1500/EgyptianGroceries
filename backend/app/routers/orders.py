@@ -10,6 +10,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, emailer, flash_sales, loyalty, models, notifier, referrals, schemas
+from ..commission import commission_for_amount
 from ..database import get_db
 from ..photo_uploads import delete_uploaded_file, save_uploaded_photo
 from ..ratelimit import check_rate_limit
@@ -993,7 +994,7 @@ def _prepare_order(
         else default_commission_rate
     )
     order_total = subtotal - discount - points_discount + delivery_fee + tax
-    commission_due = (order_total * commission_rate / Decimal("100")).quantize(Decimal("0.01"))
+    commission_due = commission_for_amount(order_total, commission_rate)
     order = models.Order(
         customer_id=user.id if user is not None else None,
         vendor_id=vendor.id,
