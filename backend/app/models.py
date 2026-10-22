@@ -568,6 +568,29 @@ class VendorPayout(Base):
     vendor: Mapped["Vendor"] = relationship("Vendor", back_populates="payouts")
 
 
+class VendorSettlement(Base):
+    """Auditable money movement for either payment direction.
+
+    source values:
+      admin_payout: marketplace paid the vendor
+      direct_customer_payment: customer paid the vendor directly
+      commission_collection: vendor paid marketplace commission
+    """
+    __tablename__ = "vendor_settlements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    vendor_id: Mapped[int] = mapped_column(ForeignKey("vendors.id"), nullable=False, index=True)
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id"), nullable=True, index=True)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    method: Mapped[str] = mapped_column(String(30), nullable=False, default="other")
+    note: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, server_default=func.now())
+
+    vendor: Mapped["Vendor"] = relationship("Vendor")
+    order: Mapped["Order | None"] = relationship("Order")
+
+
 class PromoCode(Base):
     """Discount code applied at multi-vendor checkout (Oct 2026).
 
