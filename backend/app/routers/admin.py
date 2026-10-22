@@ -680,13 +680,14 @@ def create_settlement(
         note=(payload.note or "").strip() or None,
     )
     db.add(settlement)
-    db.commit()
-    db.refresh(settlement)
+    db.flush()
     log_admin_action(
         db, admin, "create", "vendor_settlement", settlement.id,
         {"vendor_id": vendor.id, "order_id": settlement.order_id,
          "source": settlement.source, "amount": str(settlement.amount)},
     )
+    db.commit()
+    db.refresh(settlement)
     return {
         "id": settlement.id, "vendor_id": vendor.id, "vendor_name": vendor.name,
         "order_id": settlement.order_id, "source": settlement.source,
