@@ -75,7 +75,7 @@ def _audit_row(log: models.AdminAuditLog, admin_name: str | None) -> dict:
 # Site-settings keys stored in the Setting key-value table.
 _SETTING_DEFAULTS = {
     "tax_rate": "0.00",
-    "commission_percent": "0",
+    "commission_percent": "10",
     "site_name": "Egyptian Home Food Marketplace",
     # F2: referral rebate percent (display-only in v1 — no money moves).
     "referral_rebate_percent": "2",
