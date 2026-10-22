@@ -262,7 +262,7 @@ en: {
   adm_tab_retention: 'Retention',
   adm_tab_payouts: 'Payouts',
   payout_title: '💰 Payouts',
-  payout_vendor_sub: 'Payments the admin has recorded for your shop. The Paid/Customer payment unpaid badge on an order tracks customer payment, not vendor payouts.'
+  payout_vendor_sub: 'Payments the admin has recorded for your shop. The Paid/Customer payment unpaid badge on an order tracks customer payment, not vendor payouts.',
   payout_loading: 'Loading payouts…',
   payout_none: 'No payouts recorded yet.',
   f_name: 'Name',
