@@ -652,8 +652,13 @@ function dishIngredients(dish) {
 /* Is the dish-detail page for this dish currently rendered? Quick-add from
    dish cards has no customization UI — plain defaults apply there. */
 function dishPageActive(dishId) {
+  // Option groups and ingredient controls are rendered separately. A dish
+  // with ingredients but no option groups has no #dish-custom wrapper, so
+  // detect its ingredient list too or its ingredient selections are lost.
   const el = document.getElementById('dish-custom');
-  return !!(el && Number(el.getAttribute('data-dish')) === Number(dishId));
+  if (el && Number(el.getAttribute('data-dish')) === Number(dishId)) return true;
+  const ing = document.getElementById('ing-list');
+  return !!(ing && Number(ing.getAttribute('data-dish')) === Number(dishId));
 }
 /* === Oct 2026 (the 4-fish bug): a dish is "customizable" when it has option
    groups (sides) or ingredient rows. Customizable dishes NEVER one-tap-add
@@ -3184,7 +3189,7 @@ async function vDishDetail(dishId) {
     // Ingredients: removable ones render as ON toggles (tap to remove),
     // fixed ones as plain info text, add-ons as "+ Add" switches with +$X.
     if (dishIng.length) {
-      html += '<h2 class="section-title">' + esc(t('ing_title')) + '</h2><div class="ing-list" id="ing-list">';
+      html += '<h2 class="section-title">' + esc(t('ing_title')) + '</h2><div class="ing-list" id="ing-list" data-dish="' + dish.id + '">';
       dishIng.forEach(function (ig) {
         const nm = ig.name || '';
         if (ig.included_by_default) {
