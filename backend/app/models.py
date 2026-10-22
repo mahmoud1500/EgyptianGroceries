@@ -298,6 +298,9 @@ class Order(Base):
     delivery_fee: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     tax: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     total: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    # Commission amount captured at checkout so later rate changes do not rewrite history.
+    # Nullable for legacy orders; receivable reporting computes a safe fallback.
+    commission_due: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
     # Promo code applied at checkout (Oct 2026): the code and the per-order
     # discount amount (discount = round(subtotal * pct/100, 2)).
     promo_code: Mapped[str | None] = mapped_column(String(40), nullable=True, default=None)
