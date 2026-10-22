@@ -68,7 +68,10 @@ def list_dishes(
         stmt = stmt.where(models.Dish.available == True)  # noqa: E712
     dishes = list(db.scalars(stmt).all())
     _attach_ratings(db, dishes)
-    _attach_options(db, dishes)
+    _attach_options(
+        db, dishes,
+        include_fish_sides=caller is None or caller.role not in {"vendor", "admin"},
+    )
     _attach_ingredient_options(db, dishes)
     return dishes
 
@@ -244,8 +247,36 @@ def _attach_ingredient_options(db: Session, dishes: list[models.Dish]) -> None:
         d.ingredient_options = by_dish.get(d.id, [])
 
 
-def _attach_options(db: Session, dishes: list[models.Dish]) -> None:
-    """Fill `options` on dish objects with ONE query (avoids N+1 lazy loads)."""
+
+
+_FISH_SIDE_CHOICES = [{"label":"Rice","delta":0},{"label":"French fries","delta":0},{"label":"Tahini salad","delta":0},{"label":"Egyptian salad","delta":0}]
+
+def _default_fish_sides(dish: models.Dish) -> bool:
+    """Whether this exact catalog item gets the built-in included-side group."""
+    return (
+        dish.name.strip().casefold() == "whole grilled fish"
+        and float(dish.price) == 18.0
+    )
+
+def _fish_sides_group(dish: models.Dish, option_id: int) -> models.DishOption:
+    """Transient group: expose default sides without writing to production DB."""
+    return models.DishOption(
+        id=option_id,
+        dish_id=dish.id,
+        name="Sides",
+        selection_type="multiple",
+        min_select=0,
+        max_select=None,
+        choices=json.dumps(_FISH_SIDE_CHOICES),
+    )
+
+def _attach_options(
+    db: Session,
+    dishes: list[models.Dish],
+    *,
+    include_fish_sides: bool = False,
+) -> None:
+    """Fill option groups in one query; optional public defaults are transient."""
     if not dishes:
         return
     by_dish: dict[int, list[models.DishOption]] = {}
@@ -256,7 +287,16 @@ def _attach_options(db: Session, dishes: list[models.Dish]) -> None:
     ).all():
         by_dish.setdefault(opt.dish_id, []).append(opt)
     for d in dishes:
-        d.options = by_dish.get(d.id, [])
+        groups = by_dish.get(d.id, [])
+        if include_fish_sides and _default_fish_sides(d):
+            side_idx = next((i for i, g in enumerate(groups) if (g.name or "").strip().casefold() == "sides"), None)
+            if side_idx is None:
+                groups = groups + [_fish_sides_group(d, -d.id)]
+            else:
+                # Present the requested menu choices without mutating the ORM row.
+                groups = list(groups)
+                groups[side_idx] = _fish_sides_group(d, groups[side_idx].id)
+        d.options = groups
 
 
 def _attach_ratings(db: Session, dishes: list[models.Dish]) -> None:
@@ -378,7 +418,10 @@ def get_dish(
         if not allowed:
             raise HTTPException(status_code=404, detail="Dish not found")
     _attach_ratings(db, [dish])
-    _attach_options(db, [dish])
+    _attach_options(
+        db, [dish],
+        include_fish_sides=caller is None or caller.role not in {"vendor", "admin"},
+    )
     _attach_ingredient_options(db, [dish])
     return dish
 
