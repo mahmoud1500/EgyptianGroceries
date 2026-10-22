@@ -13,6 +13,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, emailer, loyalty, models, notifier, schemas
+from ..commission import commission_due_for_order
 from ..database import engine, get_db
 from .dishes import (
     _attach_ingredient_options,
@@ -636,6 +637,60 @@ def admin_set_status(
     return _serialize(order)
 
 
+def _commission_receivable_for_vendor(db: Session, vendor: models.Vendor, default_rate: Decimal) -> dict:
+    """Outstanding commission for completed cash orders, separate from vendor payouts."""
+    orders = list(db.scalars(
+        select(models.Order)
+        .where(
+            models.Order.vendor_id == vendor.id,
+            models.Order.status == "completed",
+            func.lower(models.Order.payment_method) == "cash",
+        )
+        .order_by(models.Order.created_at.desc(), models.Order.id.desc())
+    ))
+    commission_due = sum(
+        (commission_due_for_order(order, vendor, default_rate) for order in orders),
+        Decimal("0.00"),
+    ).quantize(Decimal("0.01"))
+    collected = Decimal(str(db.scalar(
+        select(func.coalesce(func.sum(models.VendorSettlement.amount), 0)).where(
+            models.VendorSettlement.vendor_id == vendor.id,
+            models.VendorSettlement.source == "commission_collection",
+        )
+    ) or 0)).quantize(Decimal("0.01"))
+    outstanding = max(Decimal("0.00"), commission_due - collected)
+    rate = Decimal(str(vendor.commission_rate)) if vendor.commission_rate is not None else default_rate
+    return {
+        "vendor_id": vendor.id,
+        "vendor_name": vendor.name,
+        "commission_rate": float(rate),
+        "cash_order_count": len(orders),
+        "cash_sales": float(sum((Decimal(str(o.total or 0)) for o in orders), Decimal("0.00"))),
+        "commission_due": float(commission_due),
+        "commission_collected": float(collected),
+        "outstanding_commission": float(outstanding),
+        "orders": [
+            {
+                "order_id": o.id,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+                "total": float(o.total or 0),
+                "commission_due": float(commission_due_for_order(o, vendor, default_rate)),
+                "refunded_amount": float(o.refunded_amount or 0),
+            }
+            for o in orders
+        ],
+    }
+
+
+@router.get("/commission-receivables")
+def list_commission_receivables(db: Session = Depends(get_db), admin: models.User = Depends(_admin)):
+    """Weekly collection worklist; only completed cash orders create receivables."""
+    default_rate = _commission_default(db)
+    return [
+        _commission_receivable_for_vendor(db, vendor, default_rate)
+        for vendor in db.scalars(select(models.Vendor).order_by(models.Vendor.name))
+    ]
+
 @router.get("/settlements")
 def list_settlements(db: Session = Depends(get_db), admin: models.User = Depends(_admin)):
     """Ledger of all recorded money movements involving a vendor."""
@@ -671,6 +726,14 @@ def create_settlement(
             raise HTTPException(status_code=404, detail="Order not found")
         if order.vendor_id != vendor.id:
             raise HTTPException(status_code=422, detail="Order does not belong to this vendor")
+    if payload.source == "commission_collection":
+        current = _commission_receivable_for_vendor(db, vendor, _commission_default(db))
+        outstanding = Decimal(str(current["outstanding_commission"]))
+        if payload.amount > outstanding:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Collection exceeds outstanding commission ({outstanding:.2f})",
+            )
     settlement = models.VendorSettlement(
         vendor_id=vendor.id,
         order_id=payload.order_id,
