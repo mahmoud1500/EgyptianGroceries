@@ -2,6 +2,8 @@
 import unittest
 from decimal import Decimal
 
+from sqlalchemy import create_engine, inspect
+
 from app import models, schemas
 
 
@@ -34,6 +36,14 @@ class VendorSettlementSchemaTests(unittest.TestCase):
         self.assertIn("source", table.c)
         self.assertIn("amount", table.c)
         self.assertIn("method", table.c)
+
+    def test_create_all_migration_creates_ledger_table(self):
+        engine = create_engine("sqlite:///:memory:")
+        try:
+            models.Base.metadata.create_all(bind=engine)
+            self.assertIn("vendor_settlements", inspect(engine).get_table_names())
+        finally:
+            engine.dispose()
 
 
 if __name__ == "__main__":
