@@ -112,10 +112,7 @@ def get_dish_by_barcode(
     if dish is None:
         raise HTTPException(status_code=404, detail="No item with this barcode in your shop.")
     _attach_ratings(db, [dish])
-    _attach_options(
-        db, [dish],
-        include_fish_sides=caller is None or caller.role not in {"vendor", "admin"},
-    )
+    _attach_options(db, [dish])
     _attach_ingredient_options(db, [dish])
     return dish
 
@@ -421,7 +418,10 @@ def get_dish(
         if not allowed:
             raise HTTPException(status_code=404, detail="Dish not found")
     _attach_ratings(db, [dish])
-    _attach_options(db, [dish])
+    _attach_options(
+        db, [dish],
+        include_fish_sides=caller is None or caller.role not in {"vendor", "admin"},
+    )
     _attach_ingredient_options(db, [dish])
     return dish
 
