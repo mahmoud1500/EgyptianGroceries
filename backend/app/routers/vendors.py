@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, models, schemas
-from ..commission import commission_due_for_order
+from ..commission import DIRECT_PAYMENT_METHODS, commission_due_for_order
 from ..database import get_db
 from ..photo_uploads import delete_uploaded_file
 
@@ -208,7 +208,7 @@ def my_commission_receivables(
             select(models.Order).where(
                 models.Order.vendor_id == vendor.id,
                 models.Order.status == "completed",
-                func.lower(models.Order.payment_method) == "cash",
+                func.lower(func.trim(models.Order.payment_method)).in_(DIRECT_PAYMENT_METHODS),
             )
         ))
         due = sum((commission_due_for_order(order, vendor, default_rate) for order in orders), Decimal("0.00")).quantize(Decimal("0.01"))
@@ -216,7 +216,7 @@ def my_commission_receivables(
         result.append({
             "vendor_id": vendor.id,
             "vendor_name": vendor.name,
-            "cash_order_count": len(orders),
+            "direct_order_count": len(orders),
             "commission_due": float(due),
             "commission_collected": float(collected),
             "outstanding_commission": float(max(Decimal("0.00"), due - collected)),

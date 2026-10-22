@@ -13,7 +13,12 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, emailer, loyalty, models, notifier, schemas
-from ..commission import commission_due_for_order
+from ..commission import (
+    DIRECT_PAYMENT_METHODS,
+    commission_due_for_order,
+    effective_commission_rate,
+    is_platform_payment_method,
+)
 from ..database import engine, get_db
 from .dishes import (
     _attach_ingredient_options,
@@ -134,31 +139,78 @@ def _commission_default(db: Session) -> Decimal:
 def _vendor_money(
     db: Session,
     vendor: models.Vendor,
-    gross: Decimal,
-    paid: Decimal,
     default_rate: Decimal,
 ) -> dict:
-    """Per-vendor money summary for COMPLETED orders only.
+    """Per-vendor money summary for COMPLETED orders, reconciled with the
+    settlement ledger (v47 — one consistent story):
 
-    gross = sum(order.total); commission = gross * rate/100 where rate is
-    the vendor's own commission_rate or the global default; paid = sum of
-    recorded payouts; owed = gross − commission − paid.
+    - Platform-collected methods (credit_card / apple_pay / google_pay):
+      the marketplace holds the money, so it owes the vendor
+      collected_sales − collected_commission − payouts.
+    - Direct methods (cash / zelle / venmo): the vendor already holds the
+      money, so those sales are NOT payout gross; only their outstanding
+      commission (receivable due − collections, from
+      _commission_receivable_for_vendor) offsets what the platform owes.
+    - payouts counts every recorded payout: VendorPayout rows (the
+      /admin/payouts flow) plus VendorSettlement rows with
+      source='admin_payout' (the /admin/settlements flow). Each endpoint
+      writes its own table, so a payment is recorded once, in one place.
+    - net_owed = collected_sales − collected_commission − payouts
+      − direct_commission_outstanding. It is signed: negative means the
+      vendor owes the marketplace (never floored at zero here).
+
+    Legacy keys keep corrected semantics: gross = collected_sales,
+    commission = collected_commission, paid = payouts, owed = net_owed.
     """
-    rate = (
-        Decimal(str(vendor.commission_rate))
-        if vendor.commission_rate is not None
-        else default_rate
-    )
-    commission = (gross * rate / Decimal(100)).quantize(Decimal("0.01"))
-    owed = gross - commission - paid
+    rate = effective_commission_rate(vendor, default_rate)
+    orders = list(db.scalars(
+        select(models.Order).where(
+            models.Order.vendor_id == vendor.id,
+            models.Order.status == "completed",
+        )
+    ))
+    collected_orders = [o for o in orders if is_platform_payment_method(o.payment_method)]
+    collected_sales = sum(
+        (Decimal(str(o.total or 0)) for o in collected_orders), Decimal("0.00")
+    ).quantize(Decimal("0.01"))
+    collected_commission = sum(
+        (commission_due_for_order(o, vendor, default_rate) for o in collected_orders),
+        Decimal("0.00"),
+    ).quantize(Decimal("0.01"))
+    payout_rows = Decimal(str(db.scalar(
+        select(func.coalesce(func.sum(models.VendorPayout.amount), 0)).where(
+            models.VendorPayout.vendor_id == vendor.id,
+        )
+    ) or 0))
+    settlement_rows = Decimal(str(db.scalar(
+        select(func.coalesce(func.sum(models.VendorSettlement.amount), 0)).where(
+            models.VendorSettlement.vendor_id == vendor.id,
+            models.VendorSettlement.source == "admin_payout",
+        )
+    ) or 0))
+    payouts = (payout_rows + settlement_rows).quantize(Decimal("0.01"))
+    receivable = _commission_receivable_for_vendor(db, vendor, default_rate)
+    direct_outstanding = Decimal(str(receivable["outstanding_commission"]))
+    net_owed = (
+        collected_sales - collected_commission - payouts - direct_outstanding
+    ).quantize(Decimal("0.01"))
     return {
         "commission_rate": float(rate),
-        "gross": float(gross),
-        "commission": float(commission),
-        "paid": float(paid),
-        "owed": float(owed),
+        # Legacy keys (corrected semantics — see docstring).
+        "gross": float(collected_sales),
+        "commission": float(collected_commission),
+        "paid": float(payouts),
+        "owed": float(net_owed),
+        # Split fields.
+        "collected_sales": float(collected_sales),
+        "direct_sales": receivable["direct_sales"],
+        "direct_order_count": receivable["direct_order_count"],
+        "direct_commission_due": receivable["commission_due"],
+        "direct_commission_collected": receivable["commission_collected"],
+        "direct_commission_outstanding": float(direct_outstanding),
+        "net_owed": float(net_owed),
     }
-# === END v40 ===
+# === END v40 (money formula reconciled in v47) ===
 
 
 @router.get("/stats")
@@ -254,26 +306,9 @@ def all_customers(db: Session = Depends(get_db), admin: models.User = Depends(_a
 @router.get("/vendors")
 def all_vendors(db: Session = Depends(get_db), admin: models.User = Depends(_staff)):
     vendors = list(db.scalars(select(models.Vendor).order_by(models.Vendor.name)))
-    # === v40: money summary inputs, aggregated once for all vendors. ===
+    # === v40: money summary (inputs computed per vendor by _vendor_money;
+    # formula reconciled with the settlement ledger in v47). ===
     default_rate = _commission_default(db)
-    gross_by_vendor = dict(
-        db.execute(
-            select(
-                models.Order.vendor_id,
-                func.coalesce(func.sum(models.Order.total), 0),
-            )
-            .where(models.Order.status == "completed")
-            .group_by(models.Order.vendor_id)
-        ).all()
-    )
-    paid_by_vendor = dict(
-        db.execute(
-            select(
-                models.VendorPayout.vendor_id,
-                func.coalesce(func.sum(models.VendorPayout.amount), 0),
-            ).group_by(models.VendorPayout.vendor_id)
-        ).all()
-    )
     # === END v40 ===
     out = []
     for v in vendors:
@@ -292,14 +327,9 @@ def all_vendors(db: Session = Depends(get_db), admin: models.User = Depends(_sta
         addr = ", ".join(
             p for p in [v.street_address, v.city, v.state, v.zipcode] if p
         )
-        # === v40: per-vendor money summary (completed orders only). ===
-        money = _vendor_money(
-            db,
-            v,
-            Decimal(str(gross_by_vendor.get(v.id, 0) or 0)),
-            Decimal(str(paid_by_vendor.get(v.id, 0) or 0)),
-            default_rate,
-        )
+        # === v40: per-vendor money summary (completed orders only;
+        # reconciled with the settlement ledger in v47). ===
+        money = _vendor_money(db, v, default_rate)
         # === END v40 ===
         out.append(
             {
@@ -317,12 +347,19 @@ def all_vendors(db: Session = Depends(get_db), admin: models.User = Depends(_sta
                 "orders": int(agg[0] or 0),
                 "revenue": float(agg[1] or 0),
                 "last_order": agg[2].isoformat() if agg[2] else None,
-                # === v40 ===
+                # === v40 (split fields added in v47) ===
                 "commission_rate": money["commission_rate"],
                 "gross": money["gross"],
                 "commission": money["commission"],
                 "paid": money["paid"],
                 "owed": money["owed"],
+                "collected_sales": money["collected_sales"],
+                "direct_sales": money["direct_sales"],
+                "direct_order_count": money["direct_order_count"],
+                "direct_commission_due": money["direct_commission_due"],
+                "direct_commission_collected": money["direct_commission_collected"],
+                "direct_commission_outstanding": money["direct_commission_outstanding"],
+                "net_owed": money["net_owed"],
                 "is_paused": v.is_paused,
                 # === END v40 ===
             }
@@ -638,13 +675,15 @@ def admin_set_status(
 
 
 def _commission_receivable_for_vendor(db: Session, vendor: models.Vendor, default_rate: Decimal) -> dict:
-    """Outstanding commission for completed cash orders, separate from vendor payouts."""
+    """Outstanding commission for completed direct-payment orders (cash,
+    Zelle, Venmo — money the customer paid the vendor directly), separate
+    from vendor payouts."""
     orders = list(db.scalars(
         select(models.Order)
         .where(
             models.Order.vendor_id == vendor.id,
             models.Order.status == "completed",
-            func.lower(models.Order.payment_method) == "cash",
+            func.lower(func.trim(models.Order.payment_method)).in_(DIRECT_PAYMENT_METHODS),
         )
         .order_by(models.Order.created_at.desc(), models.Order.id.desc())
     ))
@@ -664,8 +703,8 @@ def _commission_receivable_for_vendor(db: Session, vendor: models.Vendor, defaul
         "vendor_id": vendor.id,
         "vendor_name": vendor.name,
         "commission_rate": float(rate),
-        "cash_order_count": len(orders),
-        "cash_sales": float(sum((Decimal(str(o.total or 0)) for o in orders), Decimal("0.00"))),
+        "direct_order_count": len(orders),
+        "direct_sales": float(sum((Decimal(str(o.total or 0)) for o in orders), Decimal("0.00"))),
         "commission_due": float(commission_due),
         "commission_collected": float(collected),
         "outstanding_commission": float(outstanding),
@@ -673,6 +712,7 @@ def _commission_receivable_for_vendor(db: Session, vendor: models.Vendor, defaul
             {
                 "order_id": o.id,
                 "created_at": o.created_at.isoformat() if o.created_at else None,
+                "payment_method": o.payment_method,
                 "total": float(o.total or 0),
                 "commission_due": float(commission_due_for_order(o, vendor, default_rate)),
                 "refunded_amount": float(o.refunded_amount or 0),
@@ -684,7 +724,8 @@ def _commission_receivable_for_vendor(db: Session, vendor: models.Vendor, defaul
 
 @router.get("/commission-receivables")
 def list_commission_receivables(db: Session = Depends(get_db), admin: models.User = Depends(_admin)):
-    """Weekly collection worklist; only completed cash orders create receivables."""
+    """Weekly collection worklist; only completed direct-payment orders
+    (cash, Zelle, Venmo) create receivables."""
     default_rate = _commission_default(db)
     return [
         _commission_receivable_for_vendor(db, vendor, default_rate)

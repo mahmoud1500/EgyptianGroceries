@@ -3086,24 +3086,24 @@ async function vPayouts() {
     ]);
     let html = '<h2 class="section-title">' + esc(t('payout_title')) + '</h2>' +
       '<p class="hint">' + esc(t('payout_vendor_sub')) + '</p>';
-    html += '<h3 class="section-title">Marketplace commission balance</h3>' +
-      '<p class="hint">Commission is collected weekly for completed orders where customers pay cash directly to your shop. This balance is separate from customer payments and marketplace payouts.</p>';
+    html += '<h3 class="section-title">' + esc(t('comm_balance_h')) + '</h3>' +
+      '<p class="hint">' + esc(t('comm_vendor_hint')) + '</p>';
     html += receivables.length
-      ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Shop</th><th>Completed cash orders</th><th>Commission accrued</th><th>Commission collected</th><th>Outstanding</th></tr></thead><tbody>' +
-        receivables.map(r => '<tr><td><b>' + esc(r.vendor_name) + '</b></td><td>' + esc(r.cash_order_count) +
+      ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('comm_shop')) + '</th><th>' + esc(t('comm_direct_orders')) + '</th><th>' + esc(t('comm_accrued')) + '</th><th>' + esc(t('comm_collected')) + '</th><th>' + esc(t('comm_outstanding')) + '</th></tr></thead><tbody>' +
+        receivables.map(r => '<tr><td><b>' + esc(r.vendor_name) + '</b></td><td>' + esc(r.direct_order_count) +
           '</td><td>' + money(r.commission_due) + '</td><td>' + money(r.commission_collected) +
           '</td><td><strong>' + money(r.outstanding_commission) + '</strong></td></tr>').join('') +
         '</tbody></table></div>'
       : '<div class="empty">No shops are linked to this vendor account.</div>';
     const commissionRows = settlements.filter(s => s.source === 'commission_collection');
-    html += '<h3 class="section-title">Commission settlement history</h3>';
+    html += '<h3 class="section-title">' + esc(t('comm_history_h')) + '</h3>';
     html += commissionRows.length
       ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Date</th><th>Shop</th><th>Amount</th><th>Method</th><th>Reference / note</th></tr></thead><tbody>' +
         commissionRows.map(s => '<tr><td>' + esc(fmtDate(s.created_at)) + '</td><td>' + esc(s.vendor_name) +
           '</td><td><strong>' + money(s.amount) + '</strong></td><td>' + esc(s.method) +
           '</td><td>' + esc(s.note || '—') + '</td></tr>').join('') + '</tbody></table></div>'
-      : '<div class="empty">No commission collections have been recorded yet.</div>';
-    html += '<h3 class="section-title">Marketplace payouts to you</h3>';
+      : '<div class="empty">' + esc(t('comm_history_none')) + '</div>';
+    html += '<h3 class="section-title">' + esc(t('comm_payouts_to_you')) + '</h3>';
     html += payouts.length
       ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('tbl_date')) + '</th><th>' +
         esc(t('tbl_amount')) + '</th><th>' + esc(t('tbl_note')) + '</th></tr></thead><tbody>' +
@@ -3648,18 +3648,22 @@ async function admPayouts() {
     esc(t('an_owed')) + '</th><th></th></tr></thead><tbody>' +
     vendors.map(v => {
       const owed = Number(v.owed || 0);
+      const directOut = Number(v.direct_commission_outstanding || 0);
       return '<tr><td><b>' + esc(v.name) + '</b><br><small>' + esc(t('an_rate', { n: v.commission_rate })) + '</small></td>' +
         '<td>' + money(v.gross || 0) + '</td><td>' + money(v.commission || 0) + '</td>' +
-        '<td>' + money(v.paid || 0) + '</td><td><strong>' + money(owed) + '</strong></td>' +
+        '<td>' + money(v.paid || 0) + '</td><td><strong>' + money(owed) + '</strong>' +
+        (directOut > 0 ? '<br><small>' + esc(t('an_incl_direct', { amount: money(directOut) })) + '</small>' : '') + '</td>' +
         '<td>' + (owed > 0
           ? '<button class="btn small" onclick="payoutPrefill(' + v.id + ',' + owed.toFixed(2) + ')">' +
             esc(t('payout_prefill_btn')) + '</button>'
-          : '<span class="vendor-tag">' + esc(t('an_settled')) + '</span>') + '</td></tr>';
+          : owed < 0
+            ? '<span class="vendor-tag">' + esc(t('an_vendor_owes')) + '</span>'
+            : '<span class="vendor-tag">' + esc(t('an_settled')) + '</span>') + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   // === END v40 ===
   // Weekly commission collection is a receivable, not a vendor payout.
-  html += '<h3 class="section-title">Weekly commission collection</h3>' +
-    '<p class="hint">Only completed cash orders paid directly to vendors accrue commission receivables. Recording a collection never changes the customer payment flag or vendor payout ledger.</p>' +
+  html += '<h3 class="section-title">' + esc(t('comm_weekly_h')) + '</h3>' +
+    '<p class="hint">' + esc(t('comm_admin_hint')) + '</p>' +
     '<div class="form-card"><div id="commission-err"></div>' +
     '<label class="field">Vendor</label><select id="commission-vendor">' +
     vendors.map(v => '<option value="' + v.id + '">' + esc(v.name) + '</option>').join('') + '</select>' +
@@ -3667,32 +3671,34 @@ async function admPayouts() {
     '<div><label class="field">Collection method</label><select id="commission-method"><option value="cash">Cash</option><option value="zelle">Zelle</option><option value="venmo">Venmo</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div></div>' +
     '<label class="field">Reference / note</label><input type="text" id="commission-note" maxlength="2000" placeholder="Weekly settlement date, receipt number, or note">' +
     '<div class="mt"><button class="btn" onclick="recordCommissionCollection()">Record commission collection</button></div></div>';
-  html += '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Vendor</th><th>Completed cash orders</th><th>Cash sales</th><th>Commission accrued</th><th>Collected</th><th>Outstanding</th><th></th></tr></thead><tbody>' +
-    receivables.map(r => '<tr><td><b>' + esc(r.vendor_name) + '</b></td><td>' + esc(r.cash_order_count) +
-      '</td><td>' + money(r.cash_sales) + '</td><td>' + money(r.commission_due) + '</td><td>' +
+  html += '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('tbl_vendor')) + '</th><th>' + esc(t('comm_direct_orders')) + '</th><th>' + esc(t('comm_direct_sales')) + '</th><th>' + esc(t('comm_accrued')) + '</th><th>' + esc(t('comm_collected')) + '</th><th>' + esc(t('comm_outstanding')) + '</th><th></th></tr></thead><tbody>' +
+    receivables.map(r => '<tr><td><b>' + esc(r.vendor_name) + '</b></td><td>' + esc(r.direct_order_count) +
+      '</td><td>' + money(r.direct_sales) + '</td><td>' + money(r.commission_due) + '</td><td>' +
       money(r.commission_collected) + '</td><td><strong>' + money(r.outstanding_commission) + '</strong></td><td>' +
       (r.outstanding_commission > 0 ? '<button class="btn small" onclick="commissionPrefill(' + r.vendor_id + ',' + Number(r.outstanding_commission).toFixed(2) + ')">Collect</button>' : '<span class="vendor-tag">Settled</span>') +
       '</td></tr>').join('') + '</tbody></table></div>';
   const commissionOrders = receivables.flatMap(r => (r.orders || []).map(o => ({
     vendor_name: r.vendor_name, order_id: o.order_id, created_at: o.created_at,
+    payment_method: o.payment_method,
     total: o.total, commission_due: o.commission_due, refunded_amount: o.refunded_amount,
   })));
-  html += '<h3 class="section-title">Cash-order commission detail</h3>';
+  html += '<h3 class="section-title">' + esc(t('comm_detail_h')) + '</h3>';
   html += commissionOrders.length
-    ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Order</th><th>Vendor</th><th>Completed</th><th>Order total</th><th>Refunded</th><th>Commission due</th></tr></thead><tbody>' +
+    ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Order</th><th>Vendor</th><th>Completed</th><th>' + esc(t('comm_method')) + '</th><th>Order total</th><th>Refunded</th><th>Commission due</th></tr></thead><tbody>' +
       commissionOrders.map(o => '<tr><td>#' + esc(o.order_id) + '</td><td>' + esc(o.vendor_name) +
-        '</td><td>' + esc(fmtDate(o.created_at)) + '</td><td>' + money(o.total) +
+        '</td><td>' + esc(fmtDate(o.created_at)) + '</td><td>' + esc(o.payment_method || '—') +
+        '</td><td>' + money(o.total) +
         '</td><td>' + money(o.refunded_amount) + '</td><td><strong>' + money(o.commission_due) +
         '</strong></td></tr>').join('') + '</tbody></table></div>'
-    : '<div class="empty">No completed cash orders have accrued commission yet.</div>';
+    : '<div class="empty">' + esc(t('comm_detail_none')) + '</div>';
   const commissionHistory = settlements.filter(s => s.source === 'commission_collection');
-  html += '<h3 class="section-title">Commission collection history</h3>';
+  html += '<h3 class="section-title">' + esc(t('comm_history_h')) + '</h3>';
   html += commissionHistory.length
     ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>Date</th><th>Vendor</th><th>Amount</th><th>Method</th><th>Reference / note</th></tr></thead><tbody>' +
       commissionHistory.map(s => '<tr><td>' + esc(fmtDate(s.created_at)) + '</td><td>' + esc(s.vendor_name) +
         '</td><td><strong>' + money(s.amount) + '</strong></td><td>' + esc(s.method) +
         '</td><td>' + esc(s.note || '—') + '</td></tr>').join('') + '</tbody></table></div>'
-    : '<div class="empty">No commission collections recorded yet.</div>';
+    : '<div class="empty">' + esc(t('comm_history_none')) + '</div>';
   html += '<h3 class="section-title">' + esc(t('payout_history_h')) + '</h3>';
   html += payouts.length
     ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('tbl_id')) + '</th><th>' + esc(t('tbl_date')) +

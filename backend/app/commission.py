@@ -4,6 +4,33 @@ from decimal import Decimal, ROUND_HALF_UP
 
 CENT = Decimal("0.01")
 
+# Payment methods whose money flows straight from the customer to the
+# vendor (the checkout code records them the same way: "Cash/Zelle/Venmo
+# remain direct-to-vendor methods"). The marketplace never holds these
+# funds, so a completed direct-payment order accrues a commission
+# RECEIVABLE against the vendor instead of a payout balance.
+DIRECT_PAYMENT_METHODS = ("cash", "zelle", "venmo")
+
+# Payment methods the marketplace itself collects (all ride on Stripe).
+# The platform holds this money and settles it to the vendor minus
+# commission, so these orders feed the payout side of the ledger only —
+# they never create receivables.
+PLATFORM_PAYMENT_METHODS = ("credit_card", "apple_pay", "google_pay")
+
+
+def payment_method_key(value) -> str:
+    """Normalize a stored payment_method for comparison (legacy rows may
+    differ in case/whitespace)."""
+    return str(value or "").strip().lower()
+
+
+def is_direct_payment_method(value) -> bool:
+    return payment_method_key(value) in DIRECT_PAYMENT_METHODS
+
+
+def is_platform_payment_method(value) -> bool:
+    return payment_method_key(value) in PLATFORM_PAYMENT_METHODS
+
 
 def effective_commission_rate(vendor, default_rate: Decimal) -> Decimal:
     """Return the vendor-specific rate or the configured marketplace default."""
