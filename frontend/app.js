@@ -1847,6 +1847,8 @@ function cartCount() {
 /* Cart lines are keyed "dishId|sig" so the SAME dish with DIFFERENT sides /
    customizations lives on separate lines instead of overwriting each other. */
 function lineSig(entry) {
+  // Fish units carry unique identities so identical side selections never merge.
+  const fishUnit = entry && entry.fishUnitId ? '#fish-unit:' + entry.fishUnitId : '';
   // === F5: bundle lines have no customizations — one line per bundle ===
   if (entry && entry.bundleId) return 'bundle';
   // === END F5 ===
@@ -1862,7 +1864,14 @@ function lineSig(entry) {
   }).sort().join(',');
   const leg = entry && entry.modifier && entry.modifier.choice_label
     ? entry.modifier.choice_label + '~' + (Number(entry.modifier.delta) || 0) : '';
-  return mods + '#' + rem + '#' + add + '#' + leg;
+  return mods + '#' + rem + '#' + add + '#' + leg + fishUnit;
+}
+function isWholeGrilledFish(dish) {
+  return !!dish && String(dish.name || '').trim().toLowerCase() === 'whole grilled fish' && Number(dish.price) === 18;
+}
+function newFishUnitId() {
+  S.fishUnitSeq = (Number(S.fishUnitSeq) || 0) + 1;
+  return String(Date.now()) + '-' + S.fishUnitSeq;
 }
 function lineKey(dishId, entry) { return dishId + '|' + lineSig(entry); }
 function entryDishId(key, entry) {
@@ -1932,10 +1941,17 @@ window.addToCart = async function (dishId) {
       }
     }
   }
-  // Same dish + same customizations merge; different sides stay separate lines.
-  const key = lineKey(dish.id, { cust: cust });
+  // Each Whole Grilled Fish is an independently customizable unit, even when
+  // its sides match another fish in the cart. The checkout payload therefore
+  // sends one order line per fish with that fish's own sides.
+  const fishUnitId = isWholeGrilledFish(dish) ? newFishUnitId() : null;
+  const entry = { dishId: dish.id, qty: 1, modifier: null, cust: cust };
+  if (fishUnitId) entry.fishUnitId = fishUnitId;
+  const key = lineKey(dish.id, entry);
   const cur = S.cart.items[key];
-  S.cart.items[key] = { dishId: dish.id, qty: (cur ? cur.qty : 0) + 1, modifier: null, cust: cust };
+  S.cart.items[key] = cur && !fishUnitId
+    ? { dishId: dish.id, qty: cur.qty + 1, modifier: null, cust: cust }
+    : entry;
   touchLine(key);
   saveCart();
   refreshSteppers(dish.id);
@@ -1948,7 +1964,20 @@ window.setQty = function (dishId, qty) {
   qty = Math.max(0, Math.min(50, qty | 0));
   const key = lastDishLineKey(dishId);
   if (!key) return;
-  if (qty === 0) delete S.cart.items[key];
+  const dish = S.dishById[dishId];
+  if (isWholeGrilledFish(dish)) {
+    const current = cartQty(dishId);
+    if (qty < current) {
+      const e = S.cart.items[key];
+      if (e.qty > 1) e.qty -= 1;
+      else delete S.cart.items[key];
+    } else if (qty > current) {
+      const source = S.cart.items[key];
+      const copy = { dishId: source.dishId, qty: 1, modifier: source.modifier || null,
+        cust: JSON.parse(JSON.stringify(source.cust || emptyCust())), fishUnitId: newFishUnitId() };
+      S.cart.items[lineKey(dishId, copy)] = copy;
+    }
+  } else if (qty === 0) delete S.cart.items[key];
   else {
     S.cart.items[key].qty = qty;
     touchLine(key);
@@ -1966,9 +1995,18 @@ window.setLineQty = function (key, qty) {
   const e = S.cart.items[key];
   if (!e) return;
   const dishId = e.dishId;
-  if (qty === 0) delete S.cart.items[key];
+  const dish = S.dishById[dishId];
+  if (isWholeGrilledFish(dish) && qty > 1) {
+    // A line quantity above one would force every fish to share its sides.
+    // Convert the increment into a new, independently editable fish line.
+    e.qty = 1;
+    const copy = { dishId: e.dishId, qty: 1, modifier: e.modifier || null,
+      cust: JSON.parse(JSON.stringify(e.cust || emptyCust())), fishUnitId: newFishUnitId() };
+    S.cart.items[lineKey(dishId, copy)] = copy;
+    touchLine(lineKey(dishId, copy));
+  } else if (qty === 0) delete S.cart.items[key];
   else {
-    e.qty = qty;
+    e.qty = isWholeGrilledFish(dish) ? 1 : qty;
     touchLine(key);
   }
   saveCart();
@@ -2152,12 +2190,16 @@ function applyLineEdit(id) {
   const e = key && S.cart.items[key];
   if (!e) return;
   const cust = readLineEdit(id);
-  const newKey = lineKey(e.dishId, { cust: cust });
+  const editedEntry = { cust: cust };
+  if (e.fishUnitId) editedEntry.fishUnitId = e.fishUnitId;
+  const newKey = lineKey(e.dishId, editedEntry);
   if (newKey === key) return; // max/min guard reverted the toggle — DOM already correct
   const target = S.cart.items[newKey];
-  if (target) { target.qty += e.qty; touchLine(newKey); }
+  if (target && !e.fishUnitId) { target.qty += e.qty; touchLine(newKey); }
   else {
-    S.cart.items[newKey] = { dishId: e.dishId, qty: e.qty, modifier: e.modifier || null, cust: cust };
+    const replacement = { dishId: e.dishId, qty: e.fishUnitId ? 1 : e.qty, modifier: e.modifier || null, cust: cust };
+    if (e.fishUnitId) replacement.fishUnitId = e.fishUnitId;
+    S.cart.items[newKey] = replacement;
     touchLine(newKey);
   }
   delete S.cart.items[key];
