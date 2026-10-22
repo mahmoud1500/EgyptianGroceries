@@ -978,6 +978,22 @@ def _prepare_order(
         delivery_fee = Decimal("0")
     # === END v46 ===
     tax = (subtotal * _current_tax_rate(db)).quantize(Decimal("0.01"))
+    # Snapshot the applicable commission at order creation. Cash/Zelle/Venmo
+    # remain direct-to-vendor methods; the receivable is collected separately.
+    rate_row = db.scalar(
+        select(models.Setting).where(models.Setting.key == "commission_percent")
+    )
+    try:
+        default_commission_rate = Decimal(str(rate_row.value)) if rate_row is not None else Decimal("0")
+    except (ValueError, TypeError):
+        default_commission_rate = Decimal("0")
+    commission_rate = (
+        Decimal(str(vendor.commission_rate))
+        if vendor.commission_rate is not None
+        else default_commission_rate
+    )
+    order_total = subtotal - discount - points_discount + delivery_fee + tax
+    commission_due = (order_total * commission_rate / Decimal("100")).quantize(Decimal("0.01"))
     order = models.Order(
         customer_id=user.id if user is not None else None,
         vendor_id=vendor.id,
@@ -994,7 +1010,8 @@ def _prepare_order(
         subtotal=subtotal,
         delivery_fee=delivery_fee,
         tax=tax,
-        total=subtotal - discount - points_discount + delivery_fee + tax,
+        total=order_total,
+        commission_due=commission_due,
         guest_name=guest.name if guest is not None else None,
         guest_phone=guest.phone if guest is not None else None,
         # === FEATURE 2: referral attribution — server-validated only ===
