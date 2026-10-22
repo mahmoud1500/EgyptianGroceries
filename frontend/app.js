@@ -1414,8 +1414,11 @@ function fmtDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   if (isNaN(d)) return String(iso);
-  try { return d.toLocaleString(lang() === 'ar' ? 'ar-EG' : 'en-US'); }
-  catch (e) { return d.toLocaleString(); }
+  try {
+    return d.toLocaleString(lang() === 'ar' ? 'ar-EG' : 'en-US', {
+      timeZone: MARKET_TIME_ZONE,
+    });
+  } catch (e) { return d.toLocaleString(); }
 }
 function fmtPickupDate(iso) {
   if (!iso) return '—';
