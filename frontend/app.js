@@ -1487,6 +1487,142 @@ window.imgFallback = function (el) {
   el.replaceWith(d);
 };
 
+/* ================= v49: FULL MOTION PACKAGE =================
+   Hero video, scroll reveals, dish marquee, stories carousel, badge pop.
+   Vanilla only. Safety rules:
+   - Content is VISIBLE BY DEFAULT. JS only *arms* hidden states when
+     motion is allowed, and every armed element is force-revealed by a
+     timer even if IntersectionObserver never fires — nothing can get
+     stuck invisible.
+   - prefers-reduced-motion: nothing is armed, the hero video never
+     autoplays (poster only), the carousel never auto-advances. */
+const MOTION_REDUCED = !!(window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function motionRTL() { return document.documentElement.dir === 'rtl'; }
+
+/* ---------- scroll reveals ---------- */
+const REVEAL_SELECTOR = '.dish-card, .vendor-card, .home-section, .testi-card, ' +
+  '.home-video-card, .chef-card, .order-card, .section-title';
+const revealArmed = new WeakSet();
+let revealIO = null;
+if (!MOTION_REDUCED && 'IntersectionObserver' in window) {
+  revealIO = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting) { finishReveal(en.target); revealIO.unobserve(en.target); }
+    });
+  }, { threshold: 0.06, rootMargin: '0px 0px -3% 0px' });
+}
+function finishReveal(el) {
+  if (!el.classList.contains('reveal-init') || el.classList.contains('revealed')) return;
+  el.classList.add('revealed');
+  setTimeout(function () {
+    el.classList.remove('reveal-init');
+    el.style.transitionDelay = '';
+  }, 800);
+}
+function armReveal(el) {
+  if (MOTION_REDUCED || revealArmed.has(el)) return;
+  revealArmed.add(el);
+  if (!revealIO) return; // no observer support → leave visible, never arm
+  const idx = el.parentElement ? Array.prototype.indexOf.call(el.parentElement.children, el) : 0;
+  el.style.transitionDelay = Math.min(Math.max(idx, 0), 6) * 55 + 'ms';
+  el.classList.add('reveal-init');
+  revealIO.observe(el);
+  setTimeout(function () { finishReveal(el); }, 2800); // safety sweep
+}
+
+/* ---------- hero video: play/pause with visibility ---------- */
+function wireHeroVideo(v) {
+  if (!v || v.dataset.wired) return;
+  v.dataset.wired = '1';
+  if (MOTION_REDUCED) { try { v.pause(); } catch (e) { /* noop */ } return; }
+  const tryPlay = function () { const p = v.play && v.play(); if (p && p.catch) p.catch(function () {}); };
+  tryPlay();
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(function (es) {
+      es.forEach(function (en) {
+        if (!v.isConnected) { io.disconnect(); return; }
+        if (en.isIntersecting) tryPlay(); else { try { v.pause(); } catch (e) { /* noop */ } }
+      });
+    }, { threshold: 0.05 });
+    io.observe(v);
+  }
+}
+
+/* ---------- stories carousel (testimonials) ---------- */
+function mountCarousel(el) {
+  if (!el || el.dataset.mounted) return;
+  el.dataset.mounted = '1';
+  const track = el.querySelector('.stories-track');
+  const slides = el.querySelectorAll('.stories-slide');
+  if (!track || slides.length < 2) return;
+  const dotsWrap = el.querySelector('.stories-dots');
+  let idx = 0, timer = null;
+  const dots = [];
+  slides.forEach(function (_, i) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'stories-dot';
+    b.setAttribute('aria-label', (i + 1) + ' / ' + slides.length);
+    b.addEventListener('click', function () { goTo(i); restart(); });
+    if (dotsWrap) dotsWrap.appendChild(b);
+    dots.push(b);
+  });
+  function paint() {
+    const sign = motionRTL() ? 1 : -1;
+    track.style.transform = 'translateX(' + (sign * idx * 100) + '%)';
+    dots.forEach(function (d, i) { d.classList.toggle('active', i === idx); });
+    slides.forEach(function (s, i) { s.setAttribute('aria-hidden', i === idx ? 'false' : 'true'); });
+  }
+  function goTo(i) { idx = (i + slides.length) % slides.length; paint(); }
+  function step(d) { goTo(idx + d); }
+  const prev = el.querySelector('.stories-prev');
+  const next = el.querySelector('.stories-next');
+  if (prev) prev.addEventListener('click', function () { step(-1); restart(); });
+  if (next) next.addEventListener('click', function () { step(1); restart(); });
+  function start() {
+    if (MOTION_REDUCED || timer) return;
+    timer = setInterval(function () {
+      if (!el.isConnected) { clearInterval(timer); timer = null; return; }
+      if (document.hidden) return;
+      step(1);
+    }, 6000);
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
+  function restart() { stop(); start(); }
+  el.addEventListener('mouseenter', stop);
+  el.addEventListener('mouseleave', start);
+  el.addEventListener('focusin', stop);
+  el.addEventListener('focusout', start);
+  paint();
+  start();
+}
+
+/* ---------- one scan wires every motion piece in a subtree ---------- */
+function scanMotion(root) {
+  const scope = root || document;
+  if (!MOTION_REDUCED && revealIO) {
+    scope.querySelectorAll(REVEAL_SELECTOR).forEach(armReveal);
+  }
+  scope.querySelectorAll('video.hero-video').forEach(wireHeroVideo);
+  scope.querySelectorAll('.stories-carousel').forEach(mountCarousel);
+}
+/* Views render by swapping innerHTML (home, grids on filter, the async
+   testimonial injection) — watch #app and wire whatever appears. */
+(function () {
+  const appEl = document.getElementById('app');
+  if (!appEl || !('MutationObserver' in window)) { scanMotion(document); return; }
+  let queued = false;
+  const mo = new MutationObserver(function () {
+    if (queued) return;
+    queued = true;
+    setTimeout(function () { queued = false; scanMotion(appEl); }, 30);
+  });
+  mo.observe(appEl, { childList: true, subtree: true });
+  scanMotion(appEl);
+})();
+/* ================= END v49 motion package ================= */
+
 function fulfillBadge(v) {
   const f = (v.fulfillment || 'pickup').toLowerCase();
   const label = f === 'pickup' ? t('fulfill_pickup') : f === 'delivery' ? t('fulfill_delivery') : t('fulfill_both');
@@ -1649,12 +1785,19 @@ async function loadPublicSettings() {
     }
   } catch (e) { /* keep defaults */ }
 }
+let _lastCartN = null; // v49: badge pop only when the count grows
 function updateAuthArea() {
   const area = $('#auth-area');
   const badge = $('#cart-badge');
   const n = cartCount();
   badge.textContent = n;
   badge.classList.toggle('hidden', n === 0);
+  if (_lastCartN !== null && n > _lastCartN && !MOTION_REDUCED) {
+    badge.classList.remove('badge-pop');
+    void badge.offsetWidth; // restart the keyframe animation
+    badge.classList.add('badge-pop');
+  }
+  _lastCartN = n;
   const cartLink = $('#nav-cart');
   if (cartLink) cartLink.setAttribute('aria-label', t('cart_live_count', { count: n }));
   const cartLive = $('#cart-live');
@@ -2576,8 +2719,21 @@ async function vHome() {
          ratedVendors.reduce((a, x) => a + x.rating_count, 0)).toFixed(1)
       : null;
 
+    // === v49: hero video (chef clip, web-optimized). Reduced motion or
+    // small screens get the lighter file / poster-only treatment; the
+    // headline, CTAs and ZIP form below are unchanged real content. ===
+    const heroVideoHtml = (function () {
+      const small = typeof window !== 'undefined' && window.innerWidth && window.innerWidth < 760;
+      const sources = small
+        ? '<source src="img/hero-sm.mp4" type="video/mp4">'
+        : '<source src="img/hero.webm" type="video/webm"><source src="img/hero.mp4" type="video/mp4">';
+      return '<video class="hero-video" ' + (MOTION_REDUCED ? '' : 'autoplay ') +
+        'muted loop playsinline preload="' + (MOTION_REDUCED ? 'none' : 'metadata') + '"' +
+        ' poster="img/hero-poster.jpg" aria-hidden="true" tabindex="-1">' + sources + '</video>';
+    })();
+
     let html =
-      '<section class="hero"><div class="hero-overlay">' +
+      '<section class="hero">' + heroVideoHtml + '<div class="hero-overlay">' +
       '<h1>' + esc(t('hero_title')) + '</h1>' +
       '<p>' + esc(t('hero_sub')) + '</p>' +
       '<a class="btn" href="/dishes" data-go="dishes"><span>' + esc(t('hero_browse')) + '</span></a> ' +
@@ -2604,6 +2760,31 @@ async function vHome() {
       })() + '</div>' +
       // === END ZIP banner ===
       '</div></section>';
+
+    // === v49: moving gallery — auto-scrolling ribbon of real dish
+    // photos (available food dishes only; the second half is a visual
+    // duplicate for the seamless loop, rendered non-interactive). ===
+    (function () {
+      const seenIds = new Set();
+      const picks = [...bestFood, ...featuredFood, ...foodOnly.filter(d => d.available)]
+        .filter(d => d.available && !seenIds.has(d.id) && seenIds.add(d.id))
+        .filter(d => d.photo_url || !photoFor(d).tile)
+        .slice(0, 14);
+      if (picks.length < 5) return;
+      const itemHtml = function (d, dup) {
+        const src = d.photo_url || imgUrl(photoFor(d).img);
+        const inner = '<img class="mq-img" src="' + esc(src) + '" alt="' + (dup ? '' : esc(d.name)) + '" loading="lazy" decoding="async" onerror="imgFallback(this)">' +
+          '<span>' + esc(d.name) + '</span>';
+        return dup
+          ? '<span class="marquee-item" aria-hidden="true">' + inner + '</span>'
+          : '<a class="marquee-item" href="#" onclick="go(\'dish\',' + d.id + ');return false;">' + inner + '</a>';
+      };
+      html += '<section class="marquee-section"><h2 class="marquee-title">' + esc(t('home_marquee_title')) + '</h2>' +
+        '<div class="marquee"><div class="marquee-track">' +
+        '<div class="marquee-half">' + picks.map(d => itemHtml(d, false)).join('') + '</div>' +
+        '<div class="marquee-half" aria-hidden="true">' + picks.map(d => itemHtml(d, true)).join('') + '</div>' +
+        '</div></div></section>';
+    })();
 
     html += '<section class="home-section" id="home-dishes"><div class="section-heading">' +
       '<div><h2 class="section-title">' + esc(t('popular_dishes')) + '</h2><p class="section-intro">' + esc(t('home_dishes_sub')) + '</p></div>' +
@@ -2679,13 +2860,30 @@ async function vHome() {
           });
         });
         if (quotes.length && document.getElementById('testi-slot')) {
-          slot.innerHTML = '<h2 class="section-title">' + esc(t('testi_h')) + ' <span class="sub">' + esc(t('testi_sub')) + '</span></h2>' +
-            '<div class="testi-grid">' + quotes.map(q =>
-              '<div class="testi-card"><div class="stars">★★★★★</div>' +
+          // === v49: stories carousel — same real 5-star reviews, one at
+          // a time, auto-advancing with arrows + dots (mounted by
+          // scanMotion). A single story renders as a plain card. ===
+          const cardHtml = function (q) {
+            return '<div class="testi-card"><div class="stars">★★★★★</div>' +
               '<p>“' + esc(q.r.text) + '”</p>' +
               '<div class="testi-who">— ' + esc(q.r.user_name || t('review_fallback_name')) +
-              ' <span class="vendor-tag">' + esc(t('from_vendor')) + ' ' + esc(q.v.name) + '</span></div></div>'
-            ).join('') + '</div>';
+              ' <span class="vendor-tag">' + esc(t('from_vendor')) + ' ' + esc(q.v.name) + '</span></div></div>';
+          };
+          if (quotes.length === 1) {
+            slot.innerHTML = '<h2 class="section-title">' + esc(t('testi_h')) + ' <span class="sub">' + esc(t('testi_sub')) + '</span></h2>' +
+              '<div class="testi-grid">' + cardHtml(quotes[0]) + '</div>';
+          } else {
+            slot.innerHTML = '<h2 class="section-title">' + esc(t('testi_h')) + ' <span class="sub">' + esc(t('testi_sub')) + '</span></h2>' +
+              '<div class="stories-carousel" role="region" aria-roledescription="carousel" aria-label="' + esc(t('stories_label')) + '">' +
+              '<div class="stories-viewport"><div class="stories-track">' +
+              quotes.map(function (q, i) {
+                return '<div class="stories-slide" role="group" aria-roledescription="slide" aria-label="' + (i + 1) + ' / ' + quotes.length + '">' + cardHtml(q) + '</div>';
+              }).join('') +
+              '</div></div>' +
+              '<button type="button" class="stories-btn stories-prev" aria-label="' + esc(t('carousel_prev')) + '">‹</button>' +
+              '<button type="button" class="stories-btn stories-next" aria-label="' + esc(t('carousel_next')) + '">›</button>' +
+              '<div class="stories-dots"></div></div>';
+          }
         }
       } catch (e) { /* testimonials are a bonus — never break the homepage */ }
     })();

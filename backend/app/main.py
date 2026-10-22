@@ -140,7 +140,7 @@ def _create_tables():
 
 # Bump this on every release (egypt-v<N>) — the footers display it so the
 # running build can be confirmed at a glance during debugging.
-APP_VERSION = "v48"
+APP_VERSION = "v49"
 
 
 @app.get("/api/health")
