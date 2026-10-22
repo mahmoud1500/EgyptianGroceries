@@ -636,6 +636,65 @@ def admin_set_status(
     return _serialize(order)
 
 
+@router.get("/settlements")
+def list_settlements(db: Session = Depends(get_db), admin: models.User = Depends(_admin)):
+    """Ledger of all recorded money movements involving a vendor."""
+    rows = db.execute(
+        select(models.VendorSettlement, models.Vendor.name)
+        .join(models.Vendor, models.Vendor.id == models.VendorSettlement.vendor_id)
+        .order_by(models.VendorSettlement.created_at.desc(), models.VendorSettlement.id.desc())
+    ).all()
+    return [
+        {
+            "id": s.id, "vendor_id": s.vendor_id, "vendor_name": name,
+            "order_id": s.order_id, "source": s.source, "amount": float(s.amount),
+            "method": s.method, "note": s.note,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s, name in rows
+    ]
+
+
+@router.post("/settlements", response_model=schemas.SettlementOut, status_code=201)
+def create_settlement(
+    payload: schemas.SettlementCreate,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(_admin),
+):
+    """Record a verified money movement. This does not alter Order.paid."""
+    vendor = db.get(models.Vendor, payload.vendor_id)
+    if vendor is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    if payload.order_id is not None:
+        order = db.get(models.Order, payload.order_id)
+        if order is None:
+            raise HTTPException(status_code=404, detail="Order not found")
+        if order.vendor_id != vendor.id:
+            raise HTTPException(status_code=422, detail="Order does not belong to this vendor")
+    settlement = models.VendorSettlement(
+        vendor_id=vendor.id,
+        order_id=payload.order_id,
+        source=payload.source,
+        amount=payload.amount,
+        method=payload.method,
+        note=(payload.note or "").strip() or None,
+    )
+    db.add(settlement)
+    db.commit()
+    db.refresh(settlement)
+    log_admin_action(
+        db, admin, "create", "vendor_settlement", settlement.id,
+        {"vendor_id": vendor.id, "order_id": settlement.order_id,
+         "source": settlement.source, "amount": str(settlement.amount)},
+    )
+    return {
+        "id": settlement.id, "vendor_id": vendor.id, "vendor_name": vendor.name,
+        "order_id": settlement.order_id, "source": settlement.source,
+        "amount": settlement.amount, "method": settlement.method,
+        "note": settlement.note, "created_at": settlement.created_at,
+    }
+
+
 @router.get("/payouts")
 def list_payouts(db: Session = Depends(get_db), admin: models.User = Depends(_admin)):
     """Ledger of every off-system settlement with vendors (see VendorPayout)."""
