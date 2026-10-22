@@ -429,7 +429,7 @@ en: {
   status_on_the_way: 'On the way',
   mark_on_the_way: '🚚 Mark on the way',
   paid_badge_yes: 'Paid ✅',
-  paid_badge_no: 'Unpaid',
+  paid_badge_no: 'Customer payment unpaid',
 
   pause_shop: '⏸️ Pause shop',
   resume_shop: '▶️ Resume shop',
