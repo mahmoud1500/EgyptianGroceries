@@ -1859,6 +1859,53 @@ class PayoutOut(_Out):
     created_at: dt.datetime
 
 
+# ---------- vendor settlement ledger ----------
+SETTLEMENT_SOURCES = ("admin_payout", "direct_customer_payment", "commission_collection")
+SETTLEMENT_METHODS = ("cash", "zelle", "venmo", "bank_transfer", "credit_card", "other")
+
+
+class SettlementCreate(BaseModel):
+    vendor_id: int
+    order_id: int | None = None
+    source: str
+    amount: Decimal = Field(gt=0, le=1000000)
+    method: str = "other"
+    note: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("source")
+    @classmethod
+    def _source_ok(cls, value: str) -> str:
+        value = (value or "").strip().lower()
+        if value not in SETTLEMENT_SOURCES:
+            raise ValueError("source must be admin_payout, direct_customer_payment, or commission_collection")
+        return value
+
+    @field_validator("method")
+    @classmethod
+    def _method_ok(cls, value: str) -> str:
+        value = (value or "other").strip().lower()
+        if value not in SETTLEMENT_METHODS:
+            raise ValueError("unsupported settlement method")
+        return value
+
+    @field_validator("amount")
+    @classmethod
+    def _settlement_amount_round(cls, value: Decimal) -> Decimal:
+        return round(value, 2)
+
+
+class SettlementOut(_Out):
+    id: int
+    vendor_id: int
+    vendor_name: str = ""
+    order_id: int | None = None
+    source: str
+    amount: Decimal
+    method: str
+    note: str | None = None
+    created_at: dt.datetime
+
+
 # ---------- loyalty points ----------
 class LoyaltyBalanceOut(BaseModel):
     balance: int
