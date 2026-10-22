@@ -13,6 +13,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, emailer, loyalty, models, notifier, schemas
+from ..commission import commission_due_for_order
 from ..database import engine, get_db
 from .dishes import (
     _attach_ingredient_options,
@@ -634,6 +635,128 @@ def admin_set_status(
     except Exception as exc:  # noqa: BLE001
         print(f"[admin] status SMS failed: {exc}")
     return _serialize(order)
+
+
+def _commission_receivable_for_vendor(db: Session, vendor: models.Vendor, default_rate: Decimal) -> dict:
+    """Outstanding commission for completed cash orders, separate from vendor payouts."""
+    orders = list(db.scalars(
+        select(models.Order)
+        .where(
+            models.Order.vendor_id == vendor.id,
+            models.Order.status == "completed",
+            func.lower(models.Order.payment_method) == "cash",
+        )
+        .order_by(models.Order.created_at.desc(), models.Order.id.desc())
+    ))
+    commission_due = sum(
+        (commission_due_for_order(order, vendor, default_rate) for order in orders),
+        Decimal("0.00"),
+    ).quantize(Decimal("0.01"))
+    collected = Decimal(str(db.scalar(
+        select(func.coalesce(func.sum(models.VendorSettlement.amount), 0)).where(
+            models.VendorSettlement.vendor_id == vendor.id,
+            models.VendorSettlement.source == "commission_collection",
+        )
+    ) or 0)).quantize(Decimal("0.01"))
+    outstanding = max(Decimal("0.00"), commission_due - collected)
+    rate = Decimal(str(vendor.commission_rate)) if vendor.commission_rate is not None else default_rate
+    return {
+        "vendor_id": vendor.id,
+        "vendor_name": vendor.name,
+        "commission_rate": float(rate),
+        "cash_order_count": len(orders),
+        "cash_sales": float(sum((Decimal(str(o.total or 0)) for o in orders), Decimal("0.00"))),
+        "commission_due": float(commission_due),
+        "commission_collected": float(collected),
+        "outstanding_commission": float(outstanding),
+        "orders": [
+            {
+                "order_id": o.id,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+                "total": float(o.total or 0),
+                "commission_due": float(commission_due_for_order(o, vendor, default_rate)),
+                "refunded_amount": float(o.refunded_amount or 0),
+            }
+            for o in orders
+        ],
+    }
+
+
+@router.get("/commission-receivables")
+def list_commission_receivables(db: Session = Depends(get_db), admin: models.User = Depends(_admin)):
+    """Weekly collection worklist; only completed cash orders create receivables."""
+    default_rate = _commission_default(db)
+    return [
+        _commission_receivable_for_vendor(db, vendor, default_rate)
+        for vendor in db.scalars(select(models.Vendor).order_by(models.Vendor.name))
+    ]
+
+@router.get("/settlements")
+def list_settlements(db: Session = Depends(get_db), admin: models.User = Depends(_admin)):
+    """Ledger of all recorded money movements involving a vendor."""
+    rows = db.execute(
+        select(models.VendorSettlement, models.Vendor.name)
+        .join(models.Vendor, models.Vendor.id == models.VendorSettlement.vendor_id)
+        .order_by(models.VendorSettlement.created_at.desc(), models.VendorSettlement.id.desc())
+    ).all()
+    return [
+        {
+            "id": s.id, "vendor_id": s.vendor_id, "vendor_name": name,
+            "order_id": s.order_id, "source": s.source, "amount": float(s.amount),
+            "method": s.method, "note": s.note,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s, name in rows
+    ]
+
+
+@router.post("/settlements", response_model=schemas.SettlementOut, status_code=201)
+def create_settlement(
+    payload: schemas.SettlementCreate,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(_admin),
+):
+    """Record a verified money movement. This does not alter Order.paid."""
+    vendor = db.get(models.Vendor, payload.vendor_id)
+    if vendor is None:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    if payload.order_id is not None:
+        order = db.get(models.Order, payload.order_id)
+        if order is None:
+            raise HTTPException(status_code=404, detail="Order not found")
+        if order.vendor_id != vendor.id:
+            raise HTTPException(status_code=422, detail="Order does not belong to this vendor")
+    if payload.source == "commission_collection":
+        current = _commission_receivable_for_vendor(db, vendor, _commission_default(db))
+        outstanding = Decimal(str(current["outstanding_commission"]))
+        if payload.amount > outstanding:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Collection exceeds outstanding commission ({outstanding:.2f})",
+            )
+    settlement = models.VendorSettlement(
+        vendor_id=vendor.id,
+        order_id=payload.order_id,
+        source=payload.source,
+        amount=payload.amount,
+        method=payload.method,
+        note=(payload.note or "").strip() or None,
+    )
+    db.add(settlement)
+    db.flush()
+    log_admin_action(
+        db, admin, "create", "vendor_settlement", settlement.id,
+        {"vendor_id": vendor.id, "order_id": settlement.order_id,
+         "source": settlement.source, "amount": str(settlement.amount)},
+    )
+    db.commit()
+    db.refresh(settlement)
+    return {
+        "id": settlement.id, "vendor_id": vendor.id, "vendor_name": vendor.name,
+        "order_id": settlement.order_id, "source": settlement.source,
+        "amount": settlement.amount, "method": settlement.method,
+        "note": settlement.note, "created_at": settlement.created_at,
+    }
 
 
 @router.get("/payouts")

@@ -10,6 +10,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, emailer, flash_sales, loyalty, models, notifier, referrals, schemas
+from ..commission import commission_for_amount
 from ..database import get_db
 from ..photo_uploads import delete_uploaded_file, save_uploaded_photo
 from ..ratelimit import check_rate_limit
@@ -978,6 +979,22 @@ def _prepare_order(
         delivery_fee = Decimal("0")
     # === END v46 ===
     tax = (subtotal * _current_tax_rate(db)).quantize(Decimal("0.01"))
+    # Snapshot the applicable commission at order creation. Cash/Zelle/Venmo
+    # remain direct-to-vendor methods; the receivable is collected separately.
+    rate_row = db.scalar(
+        select(models.Setting).where(models.Setting.key == "commission_percent")
+    )
+    try:
+        default_commission_rate = Decimal(str(rate_row.value)) if rate_row is not None else Decimal("0")
+    except (ValueError, TypeError):
+        default_commission_rate = Decimal("0")
+    commission_rate = (
+        Decimal(str(vendor.commission_rate))
+        if vendor.commission_rate is not None
+        else default_commission_rate
+    )
+    order_total = subtotal - discount - points_discount + delivery_fee + tax
+    commission_due = commission_for_amount(order_total, commission_rate)
     order = models.Order(
         customer_id=user.id if user is not None else None,
         vendor_id=vendor.id,
@@ -994,7 +1011,8 @@ def _prepare_order(
         subtotal=subtotal,
         delivery_fee=delivery_fee,
         tax=tax,
-        total=subtotal - discount - points_discount + delivery_fee + tax,
+        total=order_total,
+        commission_due=commission_due,
         guest_name=guest.name if guest is not None else None,
         guest_phone=guest.phone if guest is not None else None,
         # === FEATURE 2: referral attribution — server-validated only ===

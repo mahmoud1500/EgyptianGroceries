@@ -298,6 +298,9 @@ class Order(Base):
     delivery_fee: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     tax: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     total: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    # Commission amount captured at checkout so later rate changes do not rewrite history.
+    # Nullable for legacy orders; receivable reporting computes a safe fallback.
+    commission_due: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
     # Promo code applied at checkout (Oct 2026): the code and the per-order
     # discount amount (discount = round(subtotal * pct/100, 2)).
     promo_code: Mapped[str | None] = mapped_column(String(40), nullable=True, default=None)
@@ -566,6 +569,29 @@ class VendorPayout(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, server_default=func.now())
 
     vendor: Mapped["Vendor"] = relationship("Vendor", back_populates="payouts")
+
+
+class VendorSettlement(Base):
+    """Auditable money movement for either payment direction.
+
+    source values:
+      admin_payout: marketplace paid the vendor
+      direct_customer_payment: customer paid the vendor directly
+      commission_collection: vendor paid marketplace commission
+    """
+    __tablename__ = "vendor_settlements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    vendor_id: Mapped[int] = mapped_column(ForeignKey("vendors.id"), nullable=False, index=True)
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id"), nullable=True, index=True)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    method: Mapped[str] = mapped_column(String(30), nullable=False, default="other")
+    note: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, server_default=func.now())
+
+    vendor: Mapped["Vendor"] = relationship("Vendor")
+    order: Mapped["Order | None"] = relationship("Order")
 
 
 class PromoCode(Base):
