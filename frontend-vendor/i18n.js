@@ -262,7 +262,7 @@ en: {
   adm_tab_retention: 'Retention',
   adm_tab_payouts: 'Payouts',
   payout_title: '💰 Payouts',
-  payout_vendor_sub: 'Payments the admin has recorded for your shop.',
+  payout_vendor_sub: 'Payments the admin has recorded for your shop. The Paid/Customer payment unpaid badge on an order tracks customer payment, not vendor payouts.'
   payout_loading: 'Loading payouts…',
   payout_none: 'No payouts recorded yet.',
   f_name: 'Name',
@@ -1109,7 +1109,7 @@ ar: {
   adm_tab_retention: 'الاحتفاظ',
   adm_tab_payouts: 'المدفوعات',
   payout_title: '💰 المدفوعات',
-  payout_vendor_sub: 'المدفوعات اللي الإدارة سجلتها لمحلك.',
+  payout_vendor_sub: 'المدفوعات اللي الإدارة سجلتها لمحلك. علامة مدفوع/دفع العميل غير مكتمل في الطلب تخص دفع العميل، مش مستحقات المحل.',
   payout_loading: 'جارٍ تحميل المدفوعات…',
   payout_none: 'لا توجد مدفوعات مسجلة بعد.',
   f_name: 'الاسم',
