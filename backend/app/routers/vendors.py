@@ -174,6 +174,32 @@ def my_payouts(
     ]
 
 
+@router.get("/mine/settlements")
+def my_settlements(
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_vendor),
+):
+    """Read-only money-movement history for shops owned by the logged-in vendor."""
+    owned_ids = [v.id for v in user.vendors]
+    if not owned_ids:
+        return []
+    rows = db.execute(
+        select(models.VendorSettlement, models.Vendor.name)
+        .join(models.Vendor, models.Vendor.id == models.VendorSettlement.vendor_id)
+        .where(models.VendorSettlement.vendor_id.in_(owned_ids))
+        .order_by(models.VendorSettlement.created_at.desc(), models.VendorSettlement.id.desc())
+    ).all()
+    return [
+        {
+            "id": s.id, "vendor_id": s.vendor_id, "vendor_name": name,
+            "order_id": s.order_id, "source": s.source, "amount": float(s.amount),
+            "method": s.method, "note": s.note,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s, name in rows
+    ]
+
+
 @router.get("/mine/reviews")
 def my_reviews(
     db: Session = Depends(get_db),
