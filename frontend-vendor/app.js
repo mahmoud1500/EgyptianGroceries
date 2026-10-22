@@ -64,7 +64,12 @@ function mapsLink(addr, label) {
 function fmtDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return isNaN(d) ? String(iso) : d.toLocaleString();
+  if (isNaN(d)) return String(iso);
+  return d.toLocaleString(lang() === 'ar' ? 'ar-EG' : 'en-US', {
+    timeZone: 'America/Los_Angeles',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 }
 function fmtPickupDate(iso) {
   if (!iso) return '—';
