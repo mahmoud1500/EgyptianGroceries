@@ -1583,7 +1583,7 @@ function dishImg(dish, extraCls) {
   const cls = 'dish-img' + (extraCls ? ' ' + extraCls : '');
   if (dish.photo_url) {
     // vendor-supplied photo wins over the name-matched rules
-    return '<img class="' + cls + '" src="' + esc(dish.photo_url) + '" alt="' + esc(dish.name) +
+    return '<img class="' + cls + '" src="' + esc(dish.photo_url) + '" alt="' + esc(dishName(dish)) +
       '" loading="lazy" decoding="async" onerror="imgFallback(this)">';
   }
   const p = photoFor(dish);
@@ -1591,7 +1591,7 @@ function dishImg(dish, extraCls) {
     // emoji tile rendered directly — no photo to load
     return '<div class="' + cls + ' fallback">' + esc(p.emoji || '🍽️') + '</div>';
   }
-  return '<img class="' + cls + '" src="' + imgUrl(p.img) + '" alt="' + esc(dish.name) +
+  return '<img class="' + cls + '" src="' + imgUrl(p.img) + '" alt="' + esc(dishName(dish)) +
     '" loading="lazy" decoding="async" data-emoji="' + p.emoji + '" onerror="imgFallback(this)">';
 }
 window.imgFallback = function (el) {
@@ -2933,8 +2933,8 @@ async function vHome() {
       if (picks.length < 5) return;
       const itemHtml = function (d, dup) {
         const src = d.photo_url || imgUrl(photoFor(d).img);
-        const inner = '<img class="mq-img" src="' + esc(src) + '" alt="' + (dup ? '' : esc(d.name)) + '" loading="lazy" decoding="async" onerror="imgFallback(this)">' +
-          '<span>' + esc(d.name) + '</span>';
+        const inner = '<img class="mq-img" src="' + esc(src) + '" alt="' + (dup ? '' : esc(dishName(d))) + '" loading="lazy" decoding="async" onerror="imgFallback(this)">' +
+          '<span>' + esc(dishName(d)) + '</span>';
         return dup
           ? '<span class="marquee-item" aria-hidden="true">' + inner + '</span>'
           : '<a class="marquee-item" href="#" onclick="go(\'dish\',' + d.id + ');return false;">' + inner + '</a>';
@@ -2971,8 +2971,8 @@ async function vHome() {
       (cookingVideos.length
         ? '<div class="home-video-grid">' + cookingVideos.map(d =>
           '<article class="home-video-card"><video src="' + esc(d.video_url) + '" controls playsinline preload="metadata"' +
-          (d.photo_url ? ' poster="' + esc(d.photo_url) + '"' : '') + ' aria-label="' + esc(d.name) + '"></video>' +
-          '<h3>' + esc(d.name) + '</h3><button class="linklike" type="button" onclick="go(\'' +
+          (d.photo_url ? ' poster="' + esc(d.photo_url) + '"' : '') + ' aria-label="' + esc(dishName(d)) + '"></video>' +
+          '<h3>' + esc(dishName(d)) + '</h3><button class="linklike" type="button" onclick="go(\'' +
           (d.id ? 'dish' : 'vendor') + '\',' + (d.id || d.vendor_id) + ')">' +
           esc(t('home_video_dish_link')) + '</button></article>').join('') + '</div>'
         : '<div class="home-video-placeholder"><span aria-hidden="true">▶</span><div><strong>' + esc(t('home_video_empty_title')) +
@@ -3473,8 +3473,8 @@ async function vDishDetail(dishId) {
       try { v = await api('/vendors/' + dish.vendor_id); } catch (e) { v = null; }
     }
     if (v) S.vendorById[v.id] = v;
-    setPageSEO(dish.name + ' | ' + (v ? v.name : 'Egyptian Home Food'),
-      dish.description || ('Order ' + dish.name + ' from a local home cook for pickup or delivery.'),
+    setPageSEO(dishName(dish) + ' | ' + (v ? v.name : 'Egyptian Home Food'),
+      dish.description || (lang() === 'ar' ? 'اطلب ' + dishName(dish) + ' من طاهٍ منزلي محلي للاستلام أو التوصيل.' : 'Order ' + dish.name + ' from a local home cook for pickup or delivery.'),
       dish.photo_url || null, '/dish/' + dish.id);
     let rev = { reviews: [], avg_rating: 0, count: 0 };
     try { rev = await api('/dishes/' + dish.id + '/reviews'); } catch (e) { /* no reviews */ }
@@ -3521,7 +3521,7 @@ async function vDishDetail(dishId) {
     if (dish.video_url) {
       html += '<div class="dish-video"><video src="' + esc(dish.video_url) + '" controls playsinline preload="metadata"' +
         (dish.photo_url ? ' poster="' + esc(dish.photo_url) + '"' : '') +
-        ' aria-label="' + esc(dish.name) + '"></video></div>';
+        ' aria-label="' + esc(dishName(dish)) + '"></video></div>';
     }
     // === END dish video ===
 
