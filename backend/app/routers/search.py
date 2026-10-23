@@ -166,8 +166,8 @@ def smart_search(
 
     scored: list[tuple[int, models.Dish]] = []
     for d in dishes:
-        haystack = normalize(f"{d.name} {d.description or ''}")
-        name = normalize(d.name)
+        haystack = normalize(f"{d.name} {d.name_ar or ''} {d.description or ''}")
+        name = normalize(f"{d.name} {d.name_ar or ''}")
         score = _match_score(qn, needles, haystack, name)
         if score:
             scored.append((score, d))

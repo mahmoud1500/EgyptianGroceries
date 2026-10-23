@@ -56,6 +56,7 @@ def list_dishes(
         like = f"%{safe}%"
         stmt = stmt.where(
             models.Dish.name.ilike(like, escape="\\")
+            | models.Dish.name_ar.ilike(like, escape="\\")
             | models.Dish.description.ilike(like, escape="\\")
         )
     if featured is not None:

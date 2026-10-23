@@ -1988,6 +1988,7 @@ function addDishForm() {
     '<div class="row2"><div><label class="field">' + esc(t('f_dish')) + '</label><input type="text" id="nd-name" required maxlength="160" oninput="previewDishPhoto(\'nd-photo\',\'nd-preview\',\'nd-name\')"></div>' +
     '<div><label class="field">' + esc(t('f_cat')) + '</label><input type="text" id="nd-cat" value="Mains" maxlength="60" list="cat-list">' +
     '<datalist id="cat-list">' + S.categories.map(c => '<option value="' + esc(c) + '">').join('') + '</datalist></div></div>' +
+    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="nd-name-ar" maxlength="160" dir="rtl" placeholder="مثال: كشري">' +
     '<label class="field">' + esc(t('f_desc')) + '</label><textarea id="nd-desc" rows="2" maxlength="2000"></textarea>' +
     '<label class="field">' + esc(t('f_photo')) + '</label>' +
     '<input type="url" id="nd-photo" maxlength="2000" placeholder="' + esc(t('f_photo_ph')) + '" oninput="previewDishPhoto(\'nd-photo\',\'nd-preview\',\'nd-name\')">' +
@@ -2021,6 +2022,7 @@ window.submitDish = async function (ev) {
     const stockRaw = $('#nd-stock').value.trim();
     const body = {
       name: $('#nd-name').value.trim(),
+      name_ar: $('#nd-name-ar').value.trim() || null,
       description: $('#nd-desc').value.trim(),
       price: parseFloat($('#nd-price').value),
       category: $('#nd-cat').value.trim() || 'Mains',
@@ -2072,6 +2074,7 @@ window.editDish = function (id) {
     '<form class="add-dish-form" onsubmit="return submitDishEdit(event,' + d.id + ')">' +
     '<div class="row2"><div><label class="field">' + esc(t('f_dish')) + '</label><input type="text" id="ed-name" required maxlength="160" value="' + esc(d.name) + '" oninput="previewDishPhoto(\'ed-photo\',\'ed-preview\',\'ed-name\')"></div>' +
     '<div><label class="field">' + esc(t('f_cat')) + '</label><input type="text" id="ed-cat" maxlength="60" value="' + esc(d.category || 'Mains') + '" list="cat-list"></div></div>' +
+    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="ed-name-ar" maxlength="160" dir="rtl" value="' + esc(d.name_ar || '') + '" placeholder="مثال: كشري">' +
     '<label class="field">' + esc(t('f_desc')) + '</label><textarea id="ed-desc" rows="2" maxlength="2000">' + esc(d.description || '') + '</textarea>' +
     '<label class="field">' + esc(t('f_photo')) + '</label><input type="url" id="ed-photo" maxlength="2000" placeholder="' + esc(t('f_photo_ph')) + '" value="' + esc(d.photo_url || '') + '" oninput="previewDishPhoto(\'ed-photo\',\'ed-preview\',\'ed-name\')">' +
     '<label class="field upload-label">' + esc(t('f_upload_or')) + ' <input type="file" id="ed-file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="photoFilePicked(\'ed-file\',\'ed-photo\',\'ed-preview\')"></label>' +
@@ -2170,6 +2173,7 @@ window.submitDishEdit = async function (ev, id) {
     // === END SIGNATURE DISH ===
     const body = {
       name: $('#ed-name').value.trim(),
+      name_ar: $('#ed-name-ar').value.trim() || null,
       description: $('#ed-desc').value.trim(),
       price: parseFloat($('#ed-price').value),
       category: $('#ed-cat').value.trim() || 'Mains',

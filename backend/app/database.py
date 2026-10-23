@@ -196,6 +196,9 @@ def ensure_schema():
     if "dishes" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("dishes")}
         with engine.begin() as conn:
+            # Optional Arabic product name; existing English catalogs remain unchanged.
+            if "name_ar" not in cols:
+                conn.execute(text("ALTER TABLE dishes ADD COLUMN name_ar VARCHAR(160)"))
             if "photo_url" not in cols:
                 conn.execute(text("ALTER TABLE dishes ADD COLUMN photo_url TEXT"))
             # Older rows migrated before photo_url existed carry NULL; backfill.
