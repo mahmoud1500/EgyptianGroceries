@@ -1852,7 +1852,10 @@ function updateAuthArea() {
     a.classList.toggle('active', a.dataset.go === S.route);
   });
   if (S.user) {
-    area.innerHTML = '<span>👋 ' + esc(S.user.name) + '</span>' +
+    area.innerHTML = (S.user.role === 'admin'
+      ? '<a class="btn small secondary" href="/admin/delivery" data-go="delivery-admin">🚚 Delivery Management</a>'
+      : '') +
+      '<span>👋 ' + esc(S.user.name) + '</span>' +
       '<button class="btn small secondary" onclick="logout()">' + esc(t('nav_logout')) + '</button>';
   } else {
     area.innerHTML = '<a href="#" data-go="login">' + esc(t('nav_login')) + '</a>' +
@@ -1880,6 +1883,7 @@ function routePath(route, arg) {
     forgot: '/forgot-password', reset: '/reset-password', 'verify-email': '/verify-email',
     about: '/about', faq: '/faq', terms: '/terms', privacy: '/privacy', help: '/help',
     apply: '/apply', catering: '/catering', 'paid-checkout': '/payment-complete',
+    'delivery-admin': '/admin/delivery',
   };
   return paths[route] || '/';
 }
@@ -1910,7 +1914,7 @@ function parsePathRoute() {
     '/reset-password': 'reset', '/reset': 'reset', '/verify-email': 'verify-email',
     '/about': 'about', '/faq': 'faq', '/terms': 'terms', '/privacy': 'privacy',
     '/help': 'help', '/apply': 'apply', '/catering': 'catering',
-    '/payment-complete': 'paid-checkout',
+    '/payment-complete': 'paid-checkout', '/admin/delivery': 'delivery-admin',
   };
   const route = pages[path];
   if (!route) return null;
@@ -1998,6 +2002,7 @@ function render() {
       case 'help': html = '<div id="view"></div>'; break;
       case 'apply': html = '<div id="view"></div>'; break;
       case 'catering': html = '<div id="view"></div>'; break;
+      case 'delivery-admin': html = '<div id="view"></div>'; break;
       default: html = '<div id="view"></div>';
     }
   } catch (e) {
@@ -2027,6 +2032,7 @@ function render() {
   else if (S.route === 'verify-email') vVerifyEmail(S.routeArg);
   else if (S.route === 'apply') vApply();
   else if (S.route === 'catering') vCatering();
+  else if (S.route === 'delivery-admin') vDeliveryAdmin();
 }
 
 /* ================= cart ================= */
@@ -5292,6 +5298,220 @@ window.submitHelpTicket = async function () {
     vHelp();
   } catch (e) { errEl.innerHTML = '<div class="error">' + esc(e.message) + '</div>'; }
 };
+
+
+
+/* ================= Admin: hybrid delivery management ================= */
+const DELIVERY_STATUSES = ['pending', 'assigned', 'picked_up', 'delivered', 'failed', 'cancelled'];
+const DELIVERY_STATUS_LABELS = {
+  pending: 'Pending', assigned: 'Assigned', picked_up: 'Picked up',
+  delivered: 'Delivered', failed: 'Failed', cancelled: 'Cancelled'
+};
+let _deliveryAdminCache = { jobs: [], orders: [], filter: 'all', loading: false, error: '' };
+
+function deliveryMoney(value) {
+  const n = Number(value);
+  return money(Number.isFinite(n) ? n : 0);
+}
+function deliveryStatusPill(status) {
+  const s = DELIVERY_STATUSES.includes(status) ? status : 'pending';
+  return '<span class="delivery-status-pill status-' + esc(s) + '">' +
+    esc(DELIVERY_STATUS_LABELS[s] || s) + '</span>';
+}
+function deliveryOrderLabel(order) {
+  const customer = order.customer_name || order.customer?.name || order.customer_email || '';
+  const date = order.created_at ? new Date(order.created_at).toLocaleDateString() : '';
+  return 'Order #' + order.id + (customer ? ' · ' + customer : '') + (date ? ' · ' + date : '');
+}
+function deliveryJobOrder(job) {
+  return _deliveryAdminCache.orders.find(o => Number(o.id) === Number(job.order_id)) || { id: job.order_id };
+}
+function deliveryAdminSummary(jobs) {
+  const active = jobs.filter(j => ['pending', 'assigned', 'picked_up'].includes(j.status)).length;
+  const delivered = jobs.filter(j => j.status === 'delivered').length;
+  const subsidy = jobs.reduce((sum, j) => sum + Math.max(0, Number(j.platform_subsidy) || 0), 0);
+  const actual = jobs.reduce((sum, j) => sum + Math.max(0, Number(j.actual_cost) || 0), 0);
+  return '<div class="delivery-kpis">' +
+    '<div class="delivery-kpi"><span>Active deliveries</span><strong>' + active + '</strong></div>' +
+    '<div class="delivery-kpi"><span>Delivered</span><strong>' + delivered + '</strong></div>' +
+    '<div class="delivery-kpi"><span>Actual delivery cost</span><strong>' + esc(deliveryMoney(actual)) + '</strong></div>' +
+    '<div class="delivery-kpi"><span>Platform subsidy</span><strong>' + esc(deliveryMoney(subsidy)) + '</strong></div>' +
+    '</div>';
+}
+function deliveryCreateForm() {
+  const jobsOrderIds = new Set(_deliveryAdminCache.jobs.map(j => Number(j.order_id)));
+  const eligible = _deliveryAdminCache.orders.filter(o =>
+    String(o.fulfillment || '').toLowerCase() === 'delivery' &&
+    !jobsOrderIds.has(Number(o.id)) &&
+    String(o.status || '').toLowerCase() !== 'cancelled'
+  );
+  return '<section class="delivery-panel"><div class="delivery-panel-heading"><div><h2>Create a delivery job</h2>' +
+    '<p class="hint">Select an existing delivery order that does not already have a delivery job.</p></div></div>' +
+    (eligible.length
+      ? '<div class="delivery-create-grid"><label class="field">Delivery order<select id="delivery-new-order">' +
+        eligible.map(o => '<option value="' + Number(o.id) + '">' + esc(deliveryOrderLabel(o)) + '</option>').join('') +
+        '</select></label><label class="field">Delivery mode<select id="delivery-new-mode"><option value="third_party">Third-party delivery</option><option value="vendor">Vendor delivery</option></select></label>' +
+        '<label class="field">Provider<input id="delivery-new-provider" maxlength="40" value="manual" placeholder="e.g. in-house, courier name"></label>' +
+        '<label class="field">Provider reference<input id="delivery-new-reference" maxlength="120" placeholder="Optional tracking/reference ID"></label>' +
+        '<label class="field">Quoted cost ($)<input id="delivery-new-quoted" type="number" min="0" step="0.01" value="0"></label>' +
+        '<label class="field">Customer delivery fee ($)<input id="delivery-new-fee" type="number" min="0" step="0.01" placeholder="Use order fee if blank"></label>' +
+        '<label class="field delivery-notes-field">Notes<textarea id="delivery-new-notes" rows="2" maxlength="2000" placeholder="Optional dispatch notes"></textarea></label>' +
+        '</div><div class="delivery-actions"><button class="btn" type="button" onclick="createDeliveryJob()">Create delivery job</button><span id="delivery-create-msg" role="status"></span></div>'
+      : '<div class="notice">No eligible delivery orders found. A job may already exist for each delivery order, or no delivery orders are available.</div>') +
+    '</section>';
+}
+function deliveryJobCard(job) {
+  const order = deliveryJobOrder(job);
+  const id = Number(job.id);
+  const mode = job.mode === 'vendor' ? 'vendor' : 'third_party';
+  const provider = job.provider || 'manual';
+  const status = DELIVERY_STATUSES.includes(job.status) ? job.status : 'pending';
+  return '<article class="delivery-job-card" data-delivery-job="' + id + '">' +
+    '<div class="delivery-job-top"><div><div class="delivery-order-id">Order #' + Number(job.order_id) +
+      ' <span class="delivery-job-id">· Job #' + id + '</span></div><div class="delivery-order-meta">' +
+      esc(order.customer_name || order.customer?.name || order.customer_email || 'Customer details unavailable') +
+      (order.created_at ? ' · ' + esc(new Date(order.created_at).toLocaleDateString()) : '') +
+      '</div></div>' + deliveryStatusPill(status) + '</div>' +
+    '<div class="delivery-edit-grid">' +
+      '<label class="field">Status<select data-delivery-field="status">' +
+        DELIVERY_STATUSES.map(s => '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + esc(DELIVERY_STATUS_LABELS[s]) + '</option>').join('') +
+      '</select></label>' +
+      '<label class="field">Delivery mode<select data-delivery-field="mode"><option value="third_party"' + (mode === 'third_party' ? ' selected' : '') + '>Third-party</option><option value="vendor"' + (mode === 'vendor' ? ' selected' : '') + '>Vendor</option></select></label>' +
+      '<label class="field">Provider<input data-delivery-field="provider" maxlength="40" value="' + esc(provider) + '"></label>' +
+      '<label class="field">Provider reference<input data-delivery-field="provider_reference" maxlength="120" value="' + esc(job.provider_reference || '') + '" placeholder="Tracking/reference"></label>' +
+      '<label class="field">Quoted cost ($)<input data-delivery-field="quoted_cost" type="number" min="0" step="0.01" value="' + esc(job.quoted_cost ?? '0') + '"></label>' +
+      '<label class="field">Actual cost ($)<input data-delivery-field="actual_cost" type="number" min="0" step="0.01" value="' + esc(job.actual_cost ?? '0') + '"></label>' +
+      '<label class="field">Customer fee ($)<input data-delivery-field="customer_fee" type="number" min="0" step="0.01" value="' + esc(job.customer_fee ?? '0') + '"></label>' +
+      '<label class="field">Cost payment status<select data-delivery-field="payment_status">' +
+        ['unpaid', 'paid', 'waived'].map(s => '<option value="' + s + '"' + (s === job.payment_status ? ' selected' : '') + '>' + esc(s.charAt(0).toUpperCase() + s.slice(1)) + '</option>').join('') +
+      '</select></label>' +
+      '<label class="field delivery-notes-field">Notes<textarea data-delivery-field="notes" rows="2" maxlength="2000">' + esc(job.notes || '') + '</textarea></label>' +
+    '</div>' +
+    '<div class="delivery-financials"><span>Actual cost <strong>' + esc(deliveryMoney(job.actual_cost)) + '</strong></span>' +
+      '<span>Customer fee <strong>' + esc(deliveryMoney(job.customer_fee)) + '</strong></span>' +
+      '<span>Platform subsidy <strong>' + esc(deliveryMoney(job.platform_subsidy)) + '</strong></span></div>' +
+    '<div class="delivery-actions"><button class="btn small" type="button" onclick="saveDeliveryJob(' + id + ')">Save changes</button>' +
+      '<span class="delivery-save-msg" id="delivery-save-msg-' + id + '" role="status"></span></div>' +
+    '</article>';
+}
+async function vDeliveryAdmin() {
+  const view = $('#view');
+  if (!view) return;
+  if (!S.user || S.user.role !== 'admin') {
+    S.flash = 'Please sign in with an administrator account to manage deliveries.';
+    go('login');
+    return;
+  }
+  view.innerHTML = '<section class="delivery-admin"><div class="delivery-page-header"><div><p class="eyebrow">ADMINISTRATION</p><h1>Delivery Management</h1><p class="hint">Dispatch orders and track delivery costs and platform subsidies.</p></div>' +
+    '<button class="btn secondary" type="button" onclick="refreshDeliveryAdmin()">↻ Refresh</button></div><div id="delivery-admin-content"><p class="hint">Loading delivery data…</p></div></section>';
+  await refreshDeliveryAdmin();
+}
+window.refreshDeliveryAdmin = async function () {
+  const content = document.getElementById('delivery-admin-content');
+  if (!content) return;
+  content.innerHTML = '<p class="hint">Loading delivery data…</p>';
+  try {
+    const result = await Promise.all([
+      api('/delivery/jobs'),
+      api('/admin/orders')
+    ]);
+    _deliveryAdminCache.jobs = Array.isArray(result[0]) ? result[0] : [];
+    _deliveryAdminCache.orders = Array.isArray(result[1]) ? result[1] : [];
+    _deliveryAdminCache.error = '';
+    const jobs = _deliveryAdminCache.filter === 'all'
+      ? _deliveryAdminCache.jobs
+      : _deliveryAdminCache.jobs.filter(j => j.status === _deliveryAdminCache.filter);
+    content.innerHTML = deliveryAdminSummary(_deliveryAdminCache.jobs) +
+      deliveryCreateForm() +
+      '<section class="delivery-panel"><div class="delivery-panel-heading"><div><h2>Delivery jobs</h2><p class="hint">' +
+      _deliveryAdminCache.jobs.length + ' total job' + (_deliveryAdminCache.jobs.length === 1 ? '' : 's') +
+      '</p></div><label class="delivery-filter-label">Filter by status<select id="delivery-status-filter" onchange="filterDeliveryJobs(this.value)">' +
+      [['all','All statuses'], ...DELIVERY_STATUSES.map(s => [s, DELIVERY_STATUS_LABELS[s]])]
+        .map(([v,l]) => '<option value="' + v + '"' + (v === _deliveryAdminCache.filter ? ' selected' : '') + '>' + esc(l) + '</option>').join('') +
+      '</select></label></div>' +
+      (jobs.length ? '<div class="delivery-job-list">' + jobs.map(deliveryJobCard).join('') + '</div>' :
+        '<div class="delivery-empty"><span>🚚</span><strong>No delivery jobs' +
+        (_deliveryAdminCache.filter === 'all' ? ' yet' : ' with this status') +
+        '</strong><p class="hint">Create a job above for an existing delivery order.</p></div>') +
+      '</section>';
+  } catch (e) {
+    content.innerHTML = '<div class="error">' + esc(errText(e)) + '</div>' +
+      '<button class="btn" type="button" onclick="refreshDeliveryAdmin()">Try again</button>';
+  }
+};
+window.filterDeliveryJobs = function (status) {
+  _deliveryAdminCache.filter = DELIVERY_STATUSES.includes(status) ? status : 'all';
+  refreshDeliveryAdmin();
+};
+window.createDeliveryJob = async function () {
+  const msg = document.getElementById('delivery-create-msg');
+  if (msg) msg.textContent = '';
+  const orderEl = document.getElementById('delivery-new-order');
+  const modeEl = document.getElementById('delivery-new-mode');
+  const providerEl = document.getElementById('delivery-new-provider');
+  const referenceEl = document.getElementById('delivery-new-reference');
+  const quotedEl = document.getElementById('delivery-new-quoted');
+  const feeEl = document.getElementById('delivery-new-fee');
+  const notesEl = document.getElementById('delivery-new-notes');
+  if (!orderEl) return;
+  const quoted = Number(quotedEl.value);
+  const fee = feeEl.value.trim() === '' ? null : Number(feeEl.value);
+  if (!Number.isFinite(quoted) || quoted < 0 || (fee !== null && (!Number.isFinite(fee) || fee < 0))) {
+    if (msg) msg.textContent = 'Enter valid non-negative costs.';
+    return;
+  }
+  const button = document.querySelector('#delivery-create-msg')?.previousElementSibling;
+  if (button) button.disabled = true;
+  try {
+    await api('/delivery/orders/' + Number(orderEl.value) + '/job', {
+      method: 'POST',
+      body: JSON.stringify({
+        mode: modeEl.value,
+        provider: providerEl.value.trim() || 'manual',
+        provider_reference: referenceEl.value.trim() || null,
+        quoted_cost: quoted,
+        customer_fee: fee,
+        notes: notesEl.value.trim() || null
+      })
+    });
+    await refreshDeliveryAdmin();
+  } catch (e) {
+    if (msg) msg.textContent = errText(e);
+    if (button) button.disabled = false;
+  }
+};
+window.saveDeliveryJob = async function (jobId) {
+  const card = document.querySelector('[data-delivery-job="' + Number(jobId) + '"]');
+  const msg = document.getElementById('delivery-save-msg-' + Number(jobId));
+  if (!card) return;
+  const payload = {};
+  card.querySelectorAll('[data-delivery-field]').forEach(el => {
+    const key = el.getAttribute('data-delivery-field');
+    if (['quoted_cost', 'actual_cost', 'customer_fee'].includes(key)) {
+      payload[key] = Number(el.value);
+    } else {
+      payload[key] = el.value.trim();
+    }
+  });
+  if (['quoted_cost', 'actual_cost', 'customer_fee'].some(k => !Number.isFinite(payload[k]) || payload[k] < 0)) {
+    if (msg) msg.textContent = 'Enter valid non-negative costs.';
+    return;
+  }
+  const button = card.querySelector('button.btn');
+  if (button) button.disabled = true;
+  if (msg) msg.textContent = 'Saving…';
+  try {
+    await api('/delivery/jobs/' + Number(jobId), {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+    await refreshDeliveryAdmin();
+  } catch (e) {
+    if (msg) msg.textContent = errText(e);
+    if (button) button.disabled = false;
+  }
+};
+/* ================= END Admin: hybrid delivery management ================= */
 
 /* ================= vendor applications (#/apply) ================= */
 async function vApply() {
