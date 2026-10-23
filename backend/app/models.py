@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
