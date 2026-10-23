@@ -1389,6 +1389,12 @@ function effDiscPct(dish) {
   return Number(dish.discount_percent) || 0;
 }
 /* === END FEATURE 7 === */
+/* Return the language-appropriate product name; English remains the safe fallback. */
+function dishName(dish) {
+  return lang() === 'ar' && dish && typeof dish.name_ar === 'string' && dish.name_ar.trim()
+    ? dish.name_ar.trim()
+    : (dish && dish.name) || '';
+}
 /* Prep time: dish-level minutes override the vendor's shop default (30). */
 function prepMins(dish, vendor) {
   if (dish && dish.prep_minutes !== null && dish.prep_minutes !== undefined && dish.prep_minutes !== '') {
@@ -2481,12 +2487,12 @@ function dishCard(dish) {
     ? '<span class="stars">★ ' + Number(dish.avg_rating).toFixed(1) + '</span> <span class="rating-count">(' + dish.rating_count + ')</span>'
     : '<span class="no-rating">' + esc(t('no_reviews_yet')) + '</span>';
   return '<div class="dish-card clickable" data-dishid="' + dish.id + '" onclick="go(\'dish\',' + dish.id + ')" ' +
-    'onkeydown="if(event.key===\'Enter\')go(\'dish\',' + dish.id + ')" tabindex="0" role="link" aria-label="' + esc(dish.name) + '">' +
+    'onkeydown="if(event.key===\'Enter\')go(\'dish\',' + dish.id + ')" tabindex="0" role="link" aria-label="' + esc(dishName(dish)) + '">' +
     favBtn(dish.id) + shareBtn(dish.id) + dishImg(dish) +
     '<div class="dish-body">' +
     '<span class="cat-pill">' + esc(catLabel(dish.category)) + '</span>' + dietBadges(dish) + availBadge(dish) + sigPill(dish) +
     '<span class="prep-pill">⏱ ~' + esc(fmtDur(prepMins(dish, v))) + '</span>' +
-    '<h3 class="dish-name">' + esc(dish.name) + '</h3>' +
+    '<h3 class="dish-name">' + esc(dishName(dish)) + '</h3>' +
     '<div class="dish-rating">' + rating + '</div>' +
     (dish.description ? '<p class="dish-desc">' + esc(dish.description) + '</p>' : '') +
     (v ? '<span class="vendor-tag">' + esc(t('from_vendor')) + ' <a href="#" onclick="event.stopPropagation();go(\'vendor\',' + v.id + ');return false;">' + esc(v.name) + '</a></span>' : '') +
@@ -3171,7 +3177,7 @@ async function vGroceries() {
       const q = gq.trim().toLowerCase();
       const list = groceries.filter(d =>
         (!gcat || d.category === gcat) &&
-        (!q || ((d.name || '') + ' ' + (d.description || '')).toLowerCase().includes(q)));
+        (!q || ((d.name || '') + ' ' + (d.name_ar || '') + ' ' + (d.description || '')).toLowerCase().includes(q)));
       const grid = $('#grocery-grid');
       if (!grid) return;
       grid.innerHTML = list.length
@@ -3285,7 +3291,7 @@ async function vVendor(vendorId) {
             '<video src="' + esc(d.video_url) + '" controls playsinline preload="metadata"' +
             (d.photo_url ? ' poster="' + esc(d.photo_url) + '"' : '') +
             ' aria-label="' + esc(d.name) + '"></video>' +
-            '<div class="dish-body"><h3 class="dish-name">' + esc(d.name) + '</h3></div></div>';
+            '<div class="dish-body"><h3 class="dish-name">' + esc(dishName(d)) + '</h3></div></div>';
         }).join('') + '</div></section>';
     }
     // === END videos ===
@@ -3439,7 +3445,7 @@ async function vDishDetail(dishId) {
       '<div class="dd-photo">' + dishImg(dish) + '</div>' +
       '<div class="dd-info">' +
       '<span class="cat-pill">' + esc(catLabel(dish.category)) + '</span>' + dietBadges(dish) + availBadge(dish) + sigPill(dish) +
-      '<h1>' + esc(dish.name) + '</h1>' +
+      '<h1>' + esc(dishName(dish)) + '</h1>' +
       '<div class="dish-rating">' + rating + '</div>' +
       (dish.description ? '<p class="dd-desc">' + esc(dish.description) + '</p>' : '') +
       '<div class="dd-price-row">' + priceHTML(dish) + dishPageStepperHTML(dish) + shareBtn(dish.id) + '</div>' +
@@ -3669,7 +3675,7 @@ async function vCart() {
         ? '<button class="btn small ghost" onclick="event.stopPropagation();toggleLineEdit(\'' + leSafe(l.key) + '\')">🧩 ' + esc(t('sides_extras')) + '</button>'
         : '';
       html += '<div class="cart-line"><span' + openDish + '>' + dishImg(l.dish) + '</span>' +
-        '<div class="info"><div class="dish-name"' + openDish + '>' + esc(l.dish.name) + '</div>' +
+        '<div class="info"><div class="dish-name"' + openDish + '>' + esc(dishName(l.dish)) + '</div>' +
         custLinesHTML(l) + bundleLinesHTML(l) + // === F5: bundle components ===
         '<div class="vendor-tag">' + priceHTML(l.dish) + ' ' + esc(t('each')) + '</div>' +
         leBtn + (leOpen ? lineEditHTML(l) : '') + '</div>' +
@@ -4068,7 +4074,7 @@ async function vReview() {
       const rleBtn = (!l.bundle && l.dish && l.dish.id && dishCustomizable(l.dish))
         ? ' <button class="btn small ghost" onclick="toggleLineEdit(\'' + leSafe(l.key) + '\')">🧩 ' + esc(t('sides_extras')) + '</button>'
         : '';
-      return '<li class="review-line"><div class="review-line-head"><strong>' + l.qty + ' × ' + esc(l.dish.name) + '</strong>' + rleBtn +
+      return '<li class="review-line"><div class="review-line-head"><strong>' + l.qty + ' × ' + esc(dishName(l.dish)) + '</strong>' + rleBtn +
         '<span class="price">' + money(l.unit * l.qty) + '</span></div>' +
         (picks ? '<div class="pick-highlight">' + picks + '</div>' : '') +
         (rleOpen ? lineEditHTML(l) : '') + '</li>';
