@@ -448,9 +448,10 @@ function renderCustSection(dishId, groups, ings) {
   box.innerHTML = h;
 }
 
-function optChoiceRowHTML(dishId, fid, i, label, delta, linkDishId) {
+function optChoiceRowHTML(dishId, fid, i, label, delta, linkDishId, labelAr) {
   return '<div class="opt-row"><input type="text" maxlength="60" data-clabel placeholder="' + esc(t('opt_choice_lbl')) + ' ' + (i + 1) +
     '" value="' + esc(label || '') + '">' +
+    '<input type="text" maxlength="40" data-clabel-ar placeholder="اسم الخيار بالعربية" value="' + esc(labelAr || '') + '">' +
     '<select data-cdish onchange="onChoiceDishLink(this)" title="' + esc(t('opt_link_dish')) + '">' +
     dishLinkOptionsHTML(linkDishId, dishId) + '</select>' +
     '<span class="opt-delta-lbl">' + esc(t('opt_delta_lbl')) + '</span>' +
@@ -484,11 +485,12 @@ function optGroupFormHTML(dishId, g) {
   g = g || { name: '', selection_type: 'single', min_select: 0, max_select: null, choices: [] };
   const fid = isNew ? 'new' : g.id;
   const choices = (g.choices || []).map(function (c, i) {
-    return optChoiceRowHTML(dishId, fid, i, c.label, c.delta, c.dish_id);
+    return optChoiceRowHTML(dishId, fid, i, c.label, c.delta, c.dish_id, c.label_ar);
   }).join('');
   return '<div class="opt-editor">' +
     '<label class="field">' + esc(t('opt_grp_name_ph')) + '</label>' +
     '<input type="text" id="og-name-' + fid + '" maxlength="80" value="' + esc(g.name || '') + '">' +
+    '<label class="field">اسم المجموعة (العربية)</label><input type="text" id="og-name-ar-' + fid + '" maxlength="80" dir="rtl" value="' + esc(g.name_ar || '') + '">' +
     '<div class="row2"><div><label class="field">' + esc(t('opt_type_single')) + ' / ' + esc(t('opt_type_multi')) + '</label>' +
     '<select id="og-type-' + fid + '">' +
     '<option value="single"' + (g.selection_type !== 'multiple' ? ' selected' : '') + '>' + esc(t('opt_type_single')) + '</option>' +
@@ -556,9 +558,10 @@ window.saveOptGroup = async function (dishId, gid) {
     if (!label) return;
     const linkSel = r.querySelector('[data-cdish]');
     const linkId = linkSel && linkSel.value ? Number(linkSel.value) : null;
-    choices.push({ label: label, delta: Number((r.querySelector('[data-cdelta]') || {}).value) || 0, dish_id: linkId });
+    choices.push({ label: label, label_ar: (((r.querySelector('[data-clabel-ar]') || {}).value) || '').trim() || null, delta: Number((r.querySelector('[data-cdelta]') || {}).value) || 0, dish_id: linkId });
   });
-  const body = { name: name, selection_type: typeEl ? typeEl.value : 'single', min_select: min, max_select: max, choices: choices };
+  const nameArEl = document.getElementById('og-name-ar-' + fid);
+  const body = { name: name, name_ar: (nameArEl && nameArEl.value || '').trim() || null, selection_type: typeEl ? typeEl.value : 'single', min_select: min, max_select: max, choices: choices };
   try {
     if (gid === null || gid === undefined) {
       await api('/dishes/' + dishId + '/options', { method: 'POST', body: JSON.stringify(body) });
@@ -607,6 +610,7 @@ function ingRowHTML(dishId, ig) {
   return '<div class="ing-editor" id="ing-' + fid + '">' +
     '<div class="row2"><div><label class="field">' + esc(t('ing_name')) + '</label>' +
     '<input type="text" id="ig-name-' + fid + '" maxlength="120" value="' + esc(ig.name || '') + '"></div>' +
+    '<div><label class="field">' + esc(t('ing_name')) + ' (العربية)</label><input type="text" id="ig-name-ar-' + fid + '" maxlength="80" dir="rtl" value="' + esc(ig.name_ar || '') + '"></div>' +
     '<div><label class="field">' + esc(t('ing_extra_price')) + '</label>' +
     '<input type="number" id="ig-price-' + fid + '" step="0.01" min="0" value="' + (Number(ig.extra_price) || '') + '"></div></div>' +
     '<div class="check-grid">' +
@@ -618,6 +622,8 @@ function ingRowHTML(dishId, ig) {
     '</div>' +
     '<label class="field">' + esc(t('ing_allergen_ph')) + '</label>' +
     '<input type="text" id="ig-algname-' + fid + '" maxlength="120" value="' + esc(ig.allergen_name || '') + '">' +
+    '<label class="field">' + esc(t('ing_allergen_ph')) + ' (العربية)</label>' +
+    '<input type="text" id="ig-algname-ar-' + fid + '" maxlength="80" dir="rtl" value="' + esc(ig.allergen_name_ar || '') + '">' +
     '<div class="order-actions" style="margin-top:.4rem"><button type="button" class="btn small" onclick="saveIngRow(' + dishId + ',' +
     (isNew ? 'null' : ig.id) + ')">' + esc(t('opt_save')) + '</button> ' +
     (isNew
@@ -639,6 +645,7 @@ window.saveIngRow = async function (dishId, iid) {
   if (!name) { alert(t('ing_need_name')); return; }
   const body = {
     name: name,
+    name_ar: (val('ig-name-ar-' + fid) || '').trim() || null,
     included_by_default: chk('ig-inc-' + fid),
     removable: chk('ig-rem-' + fid),
     extra_price: Number(val('ig-price-' + fid)) || 0,
@@ -646,6 +653,7 @@ window.saveIngRow = async function (dishId, iid) {
     is_vegan: chk('ig-vgn-' + fid),
     is_allergen: chk('ig-alg-' + fid),
     allergen_name: (val('ig-algname-' + fid) || '').trim() || null,
+    allergen_name_ar: (val('ig-algname-ar-' + fid) || '').trim() || null,
   };
   try {
     if (iid === null || iid === undefined) {
