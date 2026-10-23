@@ -319,7 +319,7 @@ DISH_INGREDIENTS: dict[str, str] = {
     "Chicken Pane (Sandwich)": "Breaded chicken, baladi bread, garlic sauce",
     "Grilled Chicken (Plate)": "Grilled chicken, garlic, lemon, spices, served with rice and salad",
     "Grilled Chicken (Sandwich)": "Grilled chicken, garlic, lemon, baladi bread",
-    "Charcoal-Grilled Hawawshi": "Minced beef, onions, peppers, baked in baladi bread",
+    "Charcoal-Grilled Hawawshi (Plate)": "Baladi bread, minced beef, onions, bell peppers, tomatoes, parsley, hawawshi spices, ghee",
     # --- Omar Caboose: casseroles & baked ---
     "Cow Trotters Casserole (Kaware')": "Cow trotters, tomato sauce, onions, baked",
     "Oxtail Casserole (Akawi)": "Oxtail, onions, tomato sauce, baked",
@@ -341,10 +341,20 @@ DISH_INGREDIENTS: dict[str, str] = {
     "Mixed Mahshi Tray (Half Tray)": "Mixed vegetables stuffed with rice, herbs and tomato",
     "Mixed Mahshi Tray (Full Tray)": "Mixed vegetables stuffed with rice, herbs and tomato",
     "Dolma": "Grape leaves stuffed with rice and minced meat",
+    # --- Mama Samia's Kitchen ---
+    "Molokhia with Chicken": "Molokhia leaves, chicken, chicken broth, garlic, ground coriander, rice, lemon",
+    "Koshary": "Rice, brown lentils, macaroni pasta, chickpeas, crispy fried onions, spicy tomato sauce, garlic vinegar (da'ah), cumin",
+    "Fatta": "Rice, baladi bread, beef, tomato sauce, garlic, vinegar, beef broth, ghee",
+    "Om Ali": "Puff pastry, milk, cream, sugar, raisins, shredded coconut, almonds, pistachio, vanilla",
     # --- v50 additions (Mama Samia's Kitchen) ---
     "Konafa": "Shredded konafa pastry, sweet cheese, cream, ghee, syrup, pistachio",
     "Qatayef": "Pancake batter, walnuts, cream, syrup, pistachio",
     "Ta'ameya (Egyptian Falafel)": "Fava beans, leeks, herbs, coriander, sesame, baladi bread, tahini",
+    # --- Nile Bakery ---
+    "Baladi Bread (5 pc)": "Whole wheat flour, water, yeast, salt, wheat bran",
+    "Feteer Meshaltet": "Flour, water, baladi ghee, salt, sugar",
+    "Kahk": "Flour, ghee, powdered sugar, honey-nut filling (agameya), kahk spice (mahlab), sesame seeds, yeast",
+    "Basbousa": "Semolina, yogurt, sugar syrup, shredded coconut, ghee, almonds, baking powder",
     # --- Um Sohaib's Kitchen ---
     "Mansaf": "Lamb, jameed yogurt sauce, shrak bread, rice, almonds",
     "Maqlouba": "Chicken or meat, rice, cauliflower, eggplant, potatoes",
