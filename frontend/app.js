@@ -1418,10 +1418,10 @@ function arabicCatalogText(value, type) {
   return String(value).split(/([,;])/).map(function (part) {
     if (part === ',' || part === ';') return part === ',' ? '،' : '؛';
     const raw = part.trim();
-    const key = raw.toLowerCase().replace(/^[•\\s]+|[.!?\\s]+$/g, '');
+    const key = raw.toLowerCase().replace(/^[•\s]+|[.!?\s]+$/g, '');
     if (!key) return raw;
     const translated = dictionary[key];
-    return translated ? (part.match(/^\\s/) ? ' ' : '') + translated + (part.match(/\\s$/) ? ' ' : '') : raw;
+    return translated ? (part.match(/^\s/) ? ' ' : '') + translated + (part.match(/\s$/) ? ' ' : '') : raw;
   }).join('');
 }
 function dishIngredientsText(dish) {
