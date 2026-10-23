@@ -379,7 +379,7 @@ function availBadge(dish) {
 function orderWindowBlockMsg(dish) {
   var w = dishWindow(dish);
   return t('order_window_closed', {
-    name: dish.name, days: availDaysStr(w.days),
+    name: dname(dish), days: availDaysStr(w.days),
     cutoff: fmtCutoffLA(w.cutoffMs),
     serving: wdName(w.servingWd, false), opens: wdName(w.opensWd, false),
   });
@@ -1365,6 +1365,12 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+/* v52: display name for a dish object — Arabic name in AR mode when the
+   dish has one (mirrors the bundle pattern), else the English name. */
+function dname(d) { return (lang() === 'ar' && d && d.name_ar) ? d.name_ar : (d ? d.name : ''); }
+/* v52: display name for an ORDER ITEM — renders the Arabic snapshot taken
+   at order time; pre-v52 orders have NULL there and fall back to English. */
+function iname(i) { return (lang() === 'ar' && i && i.dish_name_ar) ? i.dish_name_ar : (i ? i.dish_name : ''); }
 function money(v) {
   const n = Number(v);
   return '$' + (isNaN(n) ? '0.00' : n.toFixed(2));
@@ -1389,77 +1395,6 @@ function effDiscPct(dish) {
   return Number(dish.discount_percent) || 0;
 }
 /* === END FEATURE 7 === */
-/* Common built-in translations keep the seeded catalog useful immediately.
-   Vendor-supplied name_ar always takes priority; unknown/custom names fall back to English. */
-const AR_PRODUCT_NAMES = {
-  "egyptian baladi salad": "سلطة بلدي مصرية", "tahini salad": "سلطة طحينة",
-  "baba ghanoush": "بابا غنوج", "hummus": "حمص", "tabbouleh": "تبولة",
-  "fattoush": "فتوش", "greek salad": "سلطة يونانية", "caesar salad": "سلطة سيزر",
-  "chicken caesar salad": "سلطة سيزر بالدجاج", "coleslaw": "سلطة كول سلو",
-  "cucumber yogurt salad": "سلطة خيار بالزبادي", "beet salad": "سلطة بنجر",
-  "potato salad": "سلطة بطاطس", "corn salad": "سلطة ذرة", "pickled eggplant": "باذنجان مخلل",
-  "egyptian pickles": "مخلل مشكل مصري", "kaware' broth (cow trotters soup)": "شوربة كوارع",
-  "orzo soup (lisan asfour)": "شوربة لسان عصفور", "egyptian lentil soup": "شوربة عدس مصرية",
-  "vegetable soup": "شوربة خضار", "beef & pasta soup": "شوربة لحم بالمكرونة",
-  "whole fried fish": "سمك كامل مقلي", "whole grilled fish": "سمك كامل مشوي",
-  "fish fillet": "فيليه سمك", "fried shrimp": "جمبري مقلي", "grilled shrimp": "جمبري مشوي",
-  "shrimp sauteed": "جمبري سوتيه", "spicy shrimp": "جمبري حار",
-  "fried calamari": "كاليماري مقلي", "grilled calamari": "كاليماري مشوي",
-  "mixed seafood platter": "طبق مأكولات بحرية مشكل", "seafood rice": "أرز بالمأكولات البحرية",
-  "shrimp rice": "أرز بالجمبري", "fish rice": "أرز بالسمك", "seafood pasta": "مكرونة بالمأكولات البحرية",
-  "shrimp pasta": "مكرونة بالجمبري", "calamari pasta": "مكرونة بالكاليماري",
-  "seafood soup": "شوربة سي فود", "rice": "أرز", "french fries": "بطاطس مقلية",
-  "garlic bread": "خبز بالثوم", "extra sauce": "صوص إضافي",
-  "egyptian kofta (plate)": "كفتة مصرية (طبق)", "egyptian kofta (sandwich)": "ساندويتش كفتة مصرية",
-  "alexandrian liver (plate)": "كبدة إسكندراني (طبق)", "alexandrian liver (sandwich)": "ساندويتش كبدة إسكندراني",
-  "charcoal-grilled sausage (plate)": "سجق مشوي على الفحم (طبق)",
-  "charcoal-grilled sausage (sandwich)": "ساندويتش سجق مشوي على الفحم",
-  "egyptian-style sausage (plate)": "سجق على الطريقة المصرية (طبق)",
-  "egyptian-style sausage (sandwich)": "ساندويتش سجق مصري",
-  "grilled beef (plate)": "لحم بقري مشوي (طبق)", "grilled beef (sandwich)": "ساندويتش لحم بقري مشوي",
-  "charcoal-grilled kebab (plate)": "كباب مشوي على الفحم (طبق)",
-  "charcoal-grilled kebab (sandwich)": "ساندويتش كباب مشوي",
-  "chicken pane (plate)": "بانيه دجاج (طبق)", "chicken pane (sandwich)": "ساندويتش بانيه دجاج",
-  "grilled chicken (plate)": "دجاج مشوي (طبق)", "grilled chicken (sandwich)": "ساندويتش دجاج مشوي",
-  "charcoal-grilled hawawshi (plate)": "حواوشي مشوي على الفحم",
-  "cow trotters casserole (kaware')": "طاجن كوارع", "oxtail casserole (akawi)": "طاجن عكاوي",
-  "okra with beef (bamia)": "بامية باللحم", "egyptian baked rice with lamb (rice ma'amar)": "أرز معمر باللحم الضأن",
-  "egyptian béchemel pasta (macarona bechamel)": "مكرونة بالبشاميل",
-  "egyptian mombar": "ممبار مصري", "stuffed grape leaves (half tray)": "ورق عنب محشي (صينية نصف)",
-  "stuffed grape leaves (full tray)": "ورق عنب محشي (صينية كاملة)",
-  "stuffed cabbage rolls (half tray)": "محشي كرنب (صينية نصف)", "stuffed cabbage rolls (full tray)": "محشي كرنب (صينية كاملة)",
-  "stuffed eggplant (half tray)": "باذنجان محشي (صينية نصف)", "stuffed eggplant (full tray)": "باذنجان محشي (صينية كاملة)",
-  "stuffed zucchini (half tray)": "كوسة محشية (صينية نصف)", "stuffed zucchini (full tray)": "كوسة محشية (صينية كاملة)",
-  "stuffed tomatoes (half tray)": "طماطم محشية (صينية نصف)", "stuffed tomatoes (full tray)": "طماطم محشية (صينية كاملة)",
-  "mixed mahshi tray (half tray)": "صينية محشي مشكل (نصف)", "mixed mahshi tray (full tray)": "صينية محشي مشكل (كاملة)",
-  "dolma": "دولمة", "baladi bread (5 pc)": "عيش بلدي (٥ أرغفة)", "feteer meshaltet": "فطير مشلتت",
-  "kahk": "كحك", "basbousa": "بسبوسة", "molokhia with chicken": "ملوخية بالدجاج",
-  "koshary": "كشري", "fatta": "فتة", "om ali": "أم علي", "konafa": "كنافة",
-  "qatayef": "قطايف", "ta'ameya (egyptian falafel)": "طعمية مصرية",
-  "koshary": "كشري", "molokhia": "ملوخية", "halva": "حلاوة طحينية",
-  "ground cumin": "كمون مطحون", "cumin": "كمون", "ground coriander": "كزبرة مطحونة",
-  "coriander": "كزبرة", "dried mint": "نعناع مجفف", "dried molokhia": "ملوخية ناشفة",
-  "dried okra": "بامية مجففة", "dukkah": "دقة مصرية", "fava beans": "فول",
-  "fenugreek": "حلبة", "frozen fava beans": "فول مجمد", "grape leaves": "ورق عنب",
-  "green olives": "زيتون أخضر", "medjool dates": "تمر مجدول", "mish cheese": "جبنة مش",
-  "molasses": "دبس", "qamar aldin": "قمر الدين", "red lentils": "عدس أحمر",
-  "sahlab": "سحلب", "short grain rice": "أرز قصير الحبة", "torshi": "طرشي",
-  "turmeric": "كركم", "white beans": "فاصوليا بيضاء", "white cheese": "جبنة بيضاء",
-  "black tea": "شاي أسود", "black seed": "حبة البركة", "canned ful": "فول معلب",
-  "chickpeas": "حمص حب", "frozen molokhia": "ملوخية مجمدة", "frozen okra": "بامية مجمدة",
-  "macaroni": "مكرونة", "greek salad": "سلطة يونانية", "grilled fish": "سمك مشوي",
-  "grilled shrimp": "جمبري مشوي", "hummus": "حمص", "tahini": "طحينة",
-  "pickles": "مخلل", "okra": "بامية", "lentil soup": "شوربة عدس"
-};
-function dishName(dish) {
-  if (!dish) return '';
-  if (lang() === 'ar') {
-    if (typeof dish.name_ar === 'string' && dish.name_ar.trim()) return dish.name_ar.trim();
-    const key = String(dish.name || '').trim().toLowerCase();
-    if (AR_PRODUCT_NAMES[key]) return AR_PRODUCT_NAMES[key];
-  }
-  return dish.name || '';
-}
 /* Prep time: dish-level minutes override the vendor's shop default (30). */
 function prepMins(dish, vendor) {
   if (dish && dish.prep_minutes !== null && dish.prep_minutes !== undefined && dish.prep_minutes !== '') {
@@ -1583,7 +1518,7 @@ function dishImg(dish, extraCls) {
   const cls = 'dish-img' + (extraCls ? ' ' + extraCls : '');
   if (dish.photo_url) {
     // vendor-supplied photo wins over the name-matched rules
-    return '<img class="' + cls + '" src="' + esc(dish.photo_url) + '" alt="' + esc(dishName(dish)) +
+    return '<img class="' + cls + '" src="' + esc(dish.photo_url) + '" alt="' + esc(dname(dish)) +
       '" loading="lazy" decoding="async" onerror="imgFallback(this)">';
   }
   const p = photoFor(dish);
@@ -1591,7 +1526,7 @@ function dishImg(dish, extraCls) {
     // emoji tile rendered directly — no photo to load
     return '<div class="' + cls + ' fallback">' + esc(p.emoji || '🍽️') + '</div>';
   }
-  return '<img class="' + cls + '" src="' + imgUrl(p.img) + '" alt="' + esc(dishName(dish)) +
+  return '<img class="' + cls + '" src="' + imgUrl(p.img) + '" alt="' + esc(dname(dish)) +
     '" loading="lazy" decoding="async" data-emoji="' + p.emoji + '" onerror="imgFallback(this)">';
 }
 window.imgFallback = function (el) {
@@ -2552,12 +2487,12 @@ function dishCard(dish) {
     ? '<span class="stars">★ ' + Number(dish.avg_rating).toFixed(1) + '</span> <span class="rating-count">(' + dish.rating_count + ')</span>'
     : '<span class="no-rating">' + esc(t('no_reviews_yet')) + '</span>';
   return '<div class="dish-card clickable" data-dishid="' + dish.id + '" onclick="go(\'dish\',' + dish.id + ')" ' +
-    'onkeydown="if(event.key===\'Enter\')go(\'dish\',' + dish.id + ')" tabindex="0" role="link" aria-label="' + esc(dishName(dish)) + '">' +
+    'onkeydown="if(event.key===\'Enter\')go(\'dish\',' + dish.id + ')" tabindex="0" role="link" aria-label="' + esc(dname(dish)) + '">' +
     favBtn(dish.id) + shareBtn(dish.id) + dishImg(dish) +
     '<div class="dish-body">' +
     '<span class="cat-pill">' + esc(catLabel(dish.category)) + '</span>' + dietBadges(dish) + availBadge(dish) + sigPill(dish) +
     '<span class="prep-pill">⏱ ~' + esc(fmtDur(prepMins(dish, v))) + '</span>' +
-    '<h3 class="dish-name">' + esc(dishName(dish)) + '</h3>' +
+    '<h3 class="dish-name">' + esc(dname(dish)) + '</h3>' +
     '<div class="dish-rating">' + rating + '</div>' +
     (dish.description ? '<p class="dish-desc">' + esc(dish.description) + '</p>' : '') +
     (v ? '<span class="vendor-tag">' + esc(t('from_vendor')) + ' <a href="#" onclick="event.stopPropagation();go(\'vendor\',' + v.id + ');return false;">' + esc(v.name) + '</a></span>' : '') +
@@ -2578,7 +2513,7 @@ window.shareDish = function (ev, dishId) {
   if (!dish) return;
   const v = S.vendorById[dish.vendor_id];
   const url = window.location.origin + '/dish/' + dishId;
-  const text = t('share_msg', { dish: dish.name, vendor: v ? v.name : '', url: url });
+  const text = t('share_msg', { dish: dname(dish), vendor: v ? v.name : '', url: url });
   const waSVG = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="#fff" d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-32.4 3.4-7.4 1.7-13.9-1-19.8-2.1-4.5-12.5-30.2-17.1-41.4-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>';
   const fbSVG = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="#fff" d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z"/></svg>';
   const pop = document.createElement('div');
@@ -2627,7 +2562,7 @@ window.addBundleToCart = async function (bundleId) {
 };
 function bundleItemsText(b) {
   return (b.items || []).map(function (i) {
-    return i.dish_name + ((i.quantity || 1) > 1 ? ' ×' + i.quantity : '');
+    return ((lang() === 'ar' && i.dish_name_ar) ? i.dish_name_ar : i.dish_name) + ((i.quantity || 1) > 1 ? ' ×' + i.quantity : '');
   }).join(', ');
 }
 function bundleCard(b) {
@@ -2933,8 +2868,8 @@ async function vHome() {
       if (picks.length < 5) return;
       const itemHtml = function (d, dup) {
         const src = d.photo_url || imgUrl(photoFor(d).img);
-        const inner = '<img class="mq-img" src="' + esc(src) + '" alt="' + (dup ? '' : esc(dishName(d))) + '" loading="lazy" decoding="async" onerror="imgFallback(this)">' +
-          '<span>' + esc(dishName(d)) + '</span>';
+        const inner = '<img class="mq-img" src="' + esc(src) + '" alt="' + (dup ? '' : esc(dname(d))) + '" loading="lazy" decoding="async" onerror="imgFallback(this)">' +
+          '<span>' + esc(dname(d)) + '</span>';
         return dup
           ? '<span class="marquee-item" aria-hidden="true">' + inner + '</span>'
           : '<a class="marquee-item" href="#" onclick="go(\'dish\',' + d.id + ');return false;">' + inner + '</a>';
@@ -2971,8 +2906,8 @@ async function vHome() {
       (cookingVideos.length
         ? '<div class="home-video-grid">' + cookingVideos.map(d =>
           '<article class="home-video-card"><video src="' + esc(d.video_url) + '" controls playsinline preload="metadata"' +
-          (d.photo_url ? ' poster="' + esc(d.photo_url) + '"' : '') + ' aria-label="' + esc(dishName(d)) + '"></video>' +
-          '<h3>' + esc(dishName(d)) + '</h3><button class="linklike" type="button" onclick="go(\'' +
+          (d.photo_url ? ' poster="' + esc(d.photo_url) + '"' : '') + ' aria-label="' + esc(dname(d)) + '"></video>' +
+          '<h3>' + esc(dname(d)) + '</h3><button class="linklike" type="button" onclick="go(\'' +
           (d.id ? 'dish' : 'vendor') + '\',' + (d.id || d.vendor_id) + ')">' +
           esc(t('home_video_dish_link')) + '</button></article>').join('') + '</div>'
         : '<div class="home-video-placeholder"><span aria-hidden="true">▶</span><div><strong>' + esc(t('home_video_empty_title')) +
@@ -3355,8 +3290,8 @@ async function vVendor(vendorId) {
           return '<div class="dish-card video-card">' +
             '<video src="' + esc(d.video_url) + '" controls playsinline preload="metadata"' +
             (d.photo_url ? ' poster="' + esc(d.photo_url) + '"' : '') +
-            ' aria-label="' + esc(d.name) + '"></video>' +
-            '<div class="dish-body"><h3 class="dish-name">' + esc(dishName(d)) + '</h3></div></div>';
+            ' aria-label="' + esc(dname(d)) + '"></video>' +
+            '<div class="dish-body"><h3 class="dish-name">' + esc(dname(d)) + '</h3></div></div>';
         }).join('') + '</div></section>';
     }
     // === END videos ===
@@ -3473,8 +3408,8 @@ async function vDishDetail(dishId) {
       try { v = await api('/vendors/' + dish.vendor_id); } catch (e) { v = null; }
     }
     if (v) S.vendorById[v.id] = v;
-    setPageSEO(dishName(dish) + ' | ' + (v ? v.name : 'Egyptian Home Food'),
-      dish.description || (lang() === 'ar' ? 'اطلب ' + dishName(dish) + ' من طاهٍ منزلي محلي للاستلام أو التوصيل.' : 'Order ' + dish.name + ' from a local home cook for pickup or delivery.'),
+    setPageSEO(dish.name + ' | ' + (v ? v.name : 'Egyptian Home Food'),
+      dish.description || ('Order ' + dish.name + ' from a local home cook for pickup or delivery.'),
       dish.photo_url || null, '/dish/' + dish.id);
     let rev = { reviews: [], avg_rating: 0, count: 0 };
     try { rev = await api('/dishes/' + dish.id + '/reviews'); } catch (e) { /* no reviews */ }
@@ -3510,7 +3445,7 @@ async function vDishDetail(dishId) {
       '<div class="dd-photo">' + dishImg(dish) + '</div>' +
       '<div class="dd-info">' +
       '<span class="cat-pill">' + esc(catLabel(dish.category)) + '</span>' + dietBadges(dish) + availBadge(dish) + sigPill(dish) +
-      '<h1>' + esc(dishName(dish)) + '</h1>' +
+      '<h1>' + esc(dname(dish)) + '</h1>' +
       '<div class="dish-rating">' + rating + '</div>' +
       (dish.description ? '<p class="dd-desc">' + esc(dish.description) + '</p>' : '') +
       '<div class="dd-price-row">' + priceHTML(dish) + dishPageStepperHTML(dish) + shareBtn(dish.id) + '</div>' +
@@ -3521,7 +3456,7 @@ async function vDishDetail(dishId) {
     if (dish.video_url) {
       html += '<div class="dish-video"><video src="' + esc(dish.video_url) + '" controls playsinline preload="metadata"' +
         (dish.photo_url ? ' poster="' + esc(dish.photo_url) + '"' : '') +
-        ' aria-label="' + esc(dishName(dish)) + '"></video></div>';
+        ' aria-label="' + esc(dname(dish)) + '"></video></div>';
     }
     // === END dish video ===
 
@@ -3740,7 +3675,7 @@ async function vCart() {
         ? '<button class="btn small ghost" onclick="event.stopPropagation();toggleLineEdit(\'' + leSafe(l.key) + '\')">🧩 ' + esc(t('sides_extras')) + '</button>'
         : '';
       html += '<div class="cart-line"><span' + openDish + '>' + dishImg(l.dish) + '</span>' +
-        '<div class="info"><div class="dish-name"' + openDish + '>' + esc(dishName(l.dish)) + '</div>' +
+        '<div class="info"><div class="dish-name"' + openDish + '>' + esc(dname(l.dish)) + '</div>' +
         custLinesHTML(l) + bundleLinesHTML(l) + // === F5: bundle components ===
         '<div class="vendor-tag">' + priceHTML(l.dish) + ' ' + esc(t('each')) + '</div>' +
         leBtn + (leOpen ? lineEditHTML(l) : '') + '</div>' +
@@ -4139,7 +4074,7 @@ async function vReview() {
       const rleBtn = (!l.bundle && l.dish && l.dish.id && dishCustomizable(l.dish))
         ? ' <button class="btn small ghost" onclick="toggleLineEdit(\'' + leSafe(l.key) + '\')">🧩 ' + esc(t('sides_extras')) + '</button>'
         : '';
-      return '<li class="review-line"><div class="review-line-head"><strong>' + l.qty + ' × ' + esc(dishName(l.dish)) + '</strong>' + rleBtn +
+      return '<li class="review-line"><div class="review-line-head"><strong>' + l.qty + ' × ' + esc(dname(l.dish)) + '</strong>' + rleBtn +
         '<span class="price">' + money(l.unit * l.qty) + '</span></div>' +
         (picks ? '<div class="pick-highlight">' + picks + '</div>' : '') +
         (rleOpen ? lineEditHTML(l) : '') + '</li>';
@@ -4314,7 +4249,7 @@ async function vConfirm() {
     html += '<div class="order-card"><div class="order-head"><strong>' + esc(t('order_num')) + o.id + '</strong>' +
       '<span>' + esc(o.vendor_name) + '</span></div>';
     html += '<ul class="order-items">' + o.items.map(i =>
-      '<li>' + i.quantity + ' × ' + esc(i.dish_name) + orderItemExtraHTML(i) +
+      '<li>' + i.quantity + ' × ' + esc(iname(i)) + orderItemExtraHTML(i) +
       ' — ' + money(Number(i.unit_price) * i.quantity) + '</li>').join('') + '</ul>';
     if (o.fulfillment === 'pickup' && o.pickup_at) html += '<p><strong>' + esc(t('pickup_time_is')) + '</strong> ' + esc(fmtPickupDate(o.pickup_at)) + '</p>';
     if (o.fulfillment === 'pickup') {
@@ -4690,7 +4625,7 @@ function orderCard(o) {
     '<div><strong>' + esc(t('order_num')) + o.id + '</strong> · ' + esc(o.vendor_name) + '</div>' +
     '<span class="status-pill status-' + esc(o.status) + '">' + esc(statusLabel(o.status)) + '</span></div>' +
     '<ul class="order-items">' + o.items.map(i =>
-      '<li>' + i.quantity + ' × ' + esc(i.dish_name) + orderItemExtraHTML(i) +
+      '<li>' + i.quantity + ' × ' + esc(iname(i)) + orderItemExtraHTML(i) +
       ' — ' + money(Number(i.unit_price) * i.quantity) + probLineBtn(o.id, i.id) + '</li>').join('') + '</ul>' +
     '<div id="prob-form-' + o.id + '"></div>' + // === F6: report-a-problem inline form lands here ===
     '<div class="vendor-tag">' +
@@ -4890,7 +4825,7 @@ async function vCustomerOrder(orderId) {
     html += steps;
     html += '<div class="order-card"><div class="order-head"><strong>' + esc(order.vendor_name) + '</strong></div>' +
       '<ul class="order-items">' + order.items.map(i =>
-        '<li>' + i.quantity + ' × ' + esc(i.dish_name) + orderItemExtraHTML(i) +
+        '<li>' + i.quantity + ' × ' + esc(iname(i)) + orderItemExtraHTML(i) +
         ' — ' + money(Number(i.unit_price) * i.quantity) + probLineBtn(order.id, i.id) + '</li>').join('') + '</ul>' +
       '<div id="prob-form-' + order.id + '"></div>' + // === F6: report-a-problem inline form lands here ===
       '<div class="vendor-tag">' +
@@ -4993,7 +4928,7 @@ window.reorder = async function (orderId) {
       if (i.bundle_id) {
         let b = null;
         try { b = await api('/bundles/' + i.bundle_id); } catch (e) { b = null; }
-        if (!b || !b.available) { skipped.push(i.dish_name); continue; }
+        if (!b || !b.available) { skipped.push(b ? ((lang() === 'ar' && b.name_ar) ? b.name_ar : b.name) : iname(i)); continue; }
         S.bundleById = S.bundleById || {};
         S.bundleById[b.id] = b;
         const bkey = 'b' + b.id;
@@ -5008,10 +4943,10 @@ window.reorder = async function (orderId) {
       // === END F5 ===
       let d = null;
       try { d = await api('/dishes/' + i.dish_id); } catch (e) { d = null; }
-      if (!d || !d.available) { skipped.push(i.dish_name); continue; }
+      if (!d || !d.available) { skipped.push(iname(i)); continue; }
       // Advance ordering: skip dishes whose order window is currently closed
       // (checkout would 400 on them anyway).
-      if (dishRestricted(d) && !dishWindow(d).open) { skipped.push(i.dish_name); continue; }
+      if (dishRestricted(d) && !dishWindow(d).open) { skipped.push(dname(d)); continue; }
       const cust = emptyCust();
       const pastLabel = i.modifier_label || (i.modifier && i.modifier.choice_label);
       if (pastLabel) {
@@ -5129,12 +5064,14 @@ window.submitProblem = async function (orderId, itemId) {
 /* "Time to reorder? 🍲" — dishes the customer hasn't ordered in a while, with
    one-tap reorder via quickAdd (fetches the full dish, honors option groups). */
 function nudgeCard(n) {
+  // v52: the nudge payload carries the dish's current name_ar.
+  const nName = (lang() === 'ar' && n.dish_name_ar) ? n.dish_name_ar : n.dish_name;
   return '<div class="dish-card nudge-card">' +
     (n.photo_url
-      ? '<img class="dish-img" src="' + esc(n.photo_url) + '" alt="' + esc(n.dish_name) + '" loading="lazy" onerror="this.style.display=\'none\'">'
+      ? '<img class="dish-img" src="' + esc(n.photo_url) + '" alt="' + esc(nName) + '" loading="lazy" onerror="this.style.display=\'none\'">'
       : '<div class="dish-img fallback">🍲</div>') +
     '<div class="dish-body">' +
-    '<h3 class="dish-name">' + esc(n.dish_name) + '</h3>' +
+    '<h3 class="dish-name">' + esc(nName) + '</h3>' +
     '<div class="vendor-tag">' + esc(n.vendor_name) + '</div>' +
     '<div class="vendor-tag">💰 ' + money(Number(n.last_price) || 0) + ' · ' + esc(t('days_ago', { n: n.days_since_last })) + '</div>' +
     '<button class="btn small" onclick="quickAdd(' + Number(n.dish_id) + ')">' + esc(t('nudge_reorder_btn')) + '</button>' +
@@ -5174,7 +5111,7 @@ function annCard(a) {
     '<div class="dish-img fallback">🎉</div>' +
     '<div class="dish-body">' +
     '<h3 class="dish-name" onclick="go(\'dish\',' + Number(a.dish_id) + ')" style="cursor:pointer">' +
-    esc(a.dish_name) + (a.unseen ? ' <span class="sig-pill">●</span>' : '') + '</h3>' +
+    esc((lang() === 'ar' && a.dish_name_ar) ? a.dish_name_ar : a.dish_name) + (a.unseen ? ' <span class="sig-pill">●</span>' : '') + '</h3>' +
     '<div class="vendor-tag">' + esc(a.vendor_name) + ' · ' + esc(fmtDay((a.created_at || '').slice(0, 10))) + '</div>' +
     '<button class="btn small" onclick="go(\'dish\',' + Number(a.dish_id) + ')">' + esc(t('ann_view_dish')) + '</button>' +
     '</div></div>';

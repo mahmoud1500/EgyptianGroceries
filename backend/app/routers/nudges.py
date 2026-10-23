@@ -141,6 +141,8 @@ def eligible_nudges(db: Session, user: models.User) -> list[dict]:
             {
                 "dish_id": dish.id,
                 "dish_name": dish.name,
+                # v52: current Arabic name from the dish (see NudgeOut).
+                "dish_name_ar": dish.name_ar,
                 "vendor_id": dish.vendor_id,
                 "vendor_name": vendor.name if vendor else "",
                 "last_price": last_line.unit_price if last_line else dish.price,

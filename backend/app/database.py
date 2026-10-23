@@ -196,9 +196,6 @@ def ensure_schema():
     if "dishes" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("dishes")}
         with engine.begin() as conn:
-            # Optional Arabic product name; existing English catalogs remain unchanged.
-            if "name_ar" not in cols:
-                conn.execute(text("ALTER TABLE dishes ADD COLUMN name_ar VARCHAR(160)"))
             if "photo_url" not in cols:
                 conn.execute(text("ALTER TABLE dishes ADD COLUMN photo_url TEXT"))
             # Older rows migrated before photo_url existed carry NULL; backfill.
@@ -261,6 +258,12 @@ def ensure_schema():
             if "video_url" not in cols:
                 conn.execute(text("ALTER TABLE dishes ADD COLUMN video_url TEXT"))
             # === END v29 ===
+            # === v52: Arabic dish name. Nullable by design — NULL = no
+            # Arabic name; old dishes keep NULL until fill_seed_data (or a
+            # vendor edit) fills it. No backfill UPDATE here. ===
+            if "name_ar" not in cols:
+                conn.execute(text("ALTER TABLE dishes ADD COLUMN name_ar VARCHAR(200)"))
+            # === END v52 ===
             # === v29: signature dishes (Oct 2026). All nullable: NULL
             # is_signature is treated as false; NULL signature_rank =
             # unordered. Old dishes keep NULL — no backfill is needed. ===
@@ -436,6 +439,11 @@ def ensure_schema():
             # before bundles still have NOT NULL, migrated below. ===
             if "bundle_id" not in cols:
                 conn.execute(text("ALTER TABLE order_items ADD COLUMN bundle_id INTEGER"))
+            # === v52: Arabic dish-name snapshot. Nullable — old rows keep
+            # NULL and clients fall back to dish_name. ===
+            if "dish_name_ar" not in cols:
+                conn.execute(text("ALTER TABLE order_items ADD COLUMN dish_name_ar VARCHAR(200)"))
+            # === END v52 ===
         # The nullability change runs after this block's ALTERs commit, on
         # its own connection (same FK-rebuild concern as customer_id) —
         # see the helper.

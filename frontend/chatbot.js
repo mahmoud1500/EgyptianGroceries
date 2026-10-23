@@ -143,7 +143,7 @@
     if (!all.length) return [];
     var scored = [];
     cache.dishes.forEach(function (d) {
-      var hay = ((d.name || '') + ' ' + (d.description || '')).toLowerCase();
+      var hay = ((d.name || '') + ' ' + (d.name_ar || '') + ' ' + (d.description || '')).toLowerCase();
       var score = 0;
       all.forEach(function (w) {
         if (hay.indexOf(w) !== -1) { score += 2; return; }
@@ -178,7 +178,9 @@
     var price = disc > 0
       ? '<s>' + money(d.price) + '</s> <strong>' + money(effPrice(d)) + '</strong> (-' + disc + '%)'
       : money(d.price);
-    return '• <a href="#" data-chat-vendor="' + d.vendor_id + '"><strong>' + esc(d.name) + '</strong></a>' +
+    // v52: Arabic dish name in AR mode when the dish has one.
+    var dName = (isAr() && d.name_ar) ? d.name_ar : d.name;
+    return '• <a href="#" data-chat-vendor="' + d.vendor_id + '"><strong>' + esc(dName) + '</strong></a>' +
       ' — ' + price + P(' at ', ' عند ') + esc(vname) + avail;
   }
 

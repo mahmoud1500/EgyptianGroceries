@@ -59,6 +59,8 @@ def list_announcements(
             schemas.AnnouncementOut(
                 dish_id=ann.dish_id,
                 dish_name=dish.name if dish else "",
+                # v52: current Arabic name from the dish.
+                dish_name_ar=dish.name_ar if dish else None,
                 vendor_name=vendor.name if vendor else "",
                 created_at=ann.created_at,
                 unseen=(seen_at is None) or (ann.created_at > seen_at),

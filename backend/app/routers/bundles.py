@@ -91,6 +91,8 @@ def _serialize(
             id=i.id,
             dish_id=i.dish_id,
             dish_name=i.dish.name if i.dish else "",
+            # v52: component dish's Arabic name for AR-mode rendering.
+            dish_name_ar=i.dish.name_ar if i.dish else None,
             quantity=i.quantity,
         )
         for i in (bundle.items or [])

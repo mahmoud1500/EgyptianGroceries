@@ -173,8 +173,10 @@ class Dish(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     vendor_id: Mapped[int] = mapped_column(ForeignKey("vendors.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
-    # Optional Arabic display name; English name remains canonical for legacy integrations.
-    name_ar: Mapped[str | None] = mapped_column(String(160), nullable=True, default=None)
+    # === v52: Arabic dish name (mirrors Bundle.name_ar). NULL = no Arabic
+    # name; storefronts fall back to `name` in AR mode. Filled for seeded
+    # dishes by fill_seed_data (only-when-empty); vendor-editable. ===
+    name_ar: Mapped[str | None] = mapped_column(String(200), nullable=True, default=None)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     category: Mapped[str] = mapped_column(String(60), nullable=False, default="Mains", index=True)
@@ -440,6 +442,9 @@ class OrderItem(Base):
     )
     # === END FEATURE 5 ===
     dish_name: Mapped[str] = mapped_column(String(160), nullable=False)  # snapshot at order time
+    # === v52: Arabic dish-name snapshot at order time (NULL on bundle lines
+    # and on orders placed before v52 — clients fall back to dish_name). ===
+    dish_name_ar: Mapped[str | None] = mapped_column(String(200), nullable=True, default=None)
     unit_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)  # snapshot at order time
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     # Modifier snapshot (Oct 2026), e.g. "Spice level: Extra hot (+$1.50)".

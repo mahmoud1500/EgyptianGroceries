@@ -8,6 +8,12 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+/* v52: display name for a dish — Arabic name in AR mode when the dish has
+   one (mirrors the bundle pattern), else the English name. */
+function dname(d) { return (lang() === 'ar' && d && d.name_ar) ? d.name_ar : (d ? d.name : ''); }
+/* v52: display name for an ORDER ITEM — the Arabic snapshot taken at order
+   time; older orders have NULL there and fall back to the English snapshot. */
+function iname(i) { return (lang() === 'ar' && i && i.dish_name_ar) ? i.dish_name_ar : (i ? i.dish_name : ''); }
 
 function money(v) {
   const n = Number(v);
@@ -460,7 +466,7 @@ function dishLinkOptionsHTML(selectedId, excludeId) {
   menu.forEach(function (d) {
     if (d.id === excludeId) return;
     h += '<option value="' + d.id + '"' + (Number(selectedId) === d.id ? ' selected' : '') + '>' +
-      esc(d.name) + '</option>';
+      esc(dname(d)) + '</option>';
   });
   return h;
 }
@@ -980,7 +986,7 @@ function renderPortalShell() {
   const low = lowStockDishes();
   if (low.length) {
     html += '<div class="low-stock-box"><h3 class="section-title">⚠️ ' + esc(t('low_stock_title')) + '</h3>' +
-      '<ul>' + low.map(d => '<li><strong>' + esc(d.name) + '</strong> — ' +
+      '<ul>' + low.map(d => '<li><strong>' + esc(dname(d)) + '</strong> — ' +
         esc(t('low_stock_left', { n: d.stock_quantity, t: stockThreshold(d) })) + '</li>').join('') + '</ul>' +
       '<button class="btn" onclick="go(\'stock\')">' + esc(t('low_stock_goto')) + '</button></div>';
   }
@@ -1099,7 +1105,7 @@ function portalRefreshDynamic() {
     '<th>' + esc(t('th_stock')) + '</th>' +
     '<th>' + esc(t('th_available')) + '</th><th></th></tr></thead><tbody>' +
     S.portal.menu.map(d =>
-      '<tr><td>' + dishThumb(d) + '</td><td><strong>' + esc(d.name) + '</strong><br><small style="color:var(--muted)">' + esc(d.description || '') + '</small></td>' +
+      '<tr><td>' + dishThumb(d) + '</td><td><strong>' + esc(dname(d)) + '</strong><br><small style="color:var(--muted)">' + esc(d.description || '') + '</small></td>' +
       '<td>' + esc(catLabel(d.category)) + '</td><td>' + vPriceHTML(d) + '</td>' +
       '<td>' + (discOf(d) > 0 ? '<span class="disc-badge">-' + discOf(d) + '%</span>' : '—') + (d.sale_active ? ' ⚡' : '') + '</td>' +
       '<td>' + (d.stock_quantity == null ? '—' : esc(d.stock_quantity) + (isLowStock(d) ? ' ⚠️' : '')) + '</td>' +
@@ -1139,7 +1145,7 @@ function renderPortalBundles() {
           ? '<img class="thumb" src="' + esc(b.photo_url) + '" alt="" onerror="this.style.display=\'none\'">'
           : '🎁') + '</td>' +
         '<td><strong>' + esc(b.name) + '</strong>' + (b.ended ? ' <span class="ended-badge">' + esc(t('feast_ended')) + '</span>' : '') + (b.name_ar ? '<br><small>' + esc(b.name_ar) + '</small>' : '') + '</td>' +
-        '<td><small>' + esc((b.items || []).map(i => i.dish_name + ((i.quantity || 1) > 1 ? ' ×' + i.quantity : '')).join(', ')) + '</small></td>' +
+        '<td><small>' + esc((b.items || []).map(i => ((lang() === 'ar' && i.dish_name_ar) ? i.dish_name_ar : i.dish_name) + ((i.quantity || 1) > 1 ? ' ×' + i.quantity : '')).join(', ')) + '</small></td>' +
         '<td>' + money(b.price) + '</td>' +
         '<td><label class="switch"><input type="checkbox" ' + (b.available ? 'checked' : '') +
         ' onchange="toggleBundleAvail(' + b.id + ', this.checked)"><span class="slider"></span></label></td>' +
@@ -1169,7 +1175,7 @@ function bundleFormHTML(b) {
     '<label class="field">' + esc(t('bundle_pick_dishes')) + '</label>' +
     '<div class="check-list">' + (menu.length ? menu.map(d =>
       '<label class="check"><input type="checkbox" class="bd-dish" value="' + d.id + '"' +
-      (sel.indexOf(d.id) >= 0 ? ' checked' : '') + '> ' + esc(d.name) + ' <small>' + money(d.price) + '</small></label>'
+      (sel.indexOf(d.id) >= 0 ? ' checked' : '') + '> ' + esc(dname(d)) + ' <small>' + money(d.price) + '</small></label>'
     ).join('') : '<div class="empty">' + esc(t('bundles_none')) + '</div>') + '</div>' +
     '<div class="hint">' + esc(t('bundle_pick_hint')) + '</div>' +
     // === Holiday feast (Oct 2026) — toggle reveals holiday fields ===
@@ -1453,7 +1459,7 @@ window.toggleDropOrders = async function (id) {
       html += '<div class="empty">' + esc(t('no_match')) + '</div>';
     } else {
       html += '<ul class="order-items">' + orders.map(function (o) {
-        const items = (o.items || []).map(function (i) { return i.quantity + ' × ' + i.dish_name; }).join(', ');
+        const items = (o.items || []).map(function (i) { return i.quantity + ' × ' + iname(i); }).join(', ');
         return '<li><strong>#' + o.id + '</strong> · ' + esc(o.customer_name || t('customer_fb')) +
           ' · <span class="status-pill status-' + esc(o.status) + '">' + esc(statusLabel(o.status)) + '</span>' +
           ' · <strong>' + money(o.total) + '</strong><br><small>' + esc(items) + '</small></li>';
@@ -1503,7 +1509,7 @@ function renderStockView() {
         const low = isLowStock(d);
         const status = d.stock_quantity == null ? t('stock_untracked')
           : low ? '⚠️ ' + t('stock_low') : '✅ ' + t('stock_ok');
-        return '<tr><td><strong>' + esc(d.name) + '</strong><br><small style="color:var(--muted)">' + esc(catLabel(d.category)) + '</small></td>' +
+        return '<tr><td><strong>' + esc(dname(d)) + '</strong><br><small style="color:var(--muted)">' + esc(catLabel(d.category)) + '</small></td>' +
           '<td><input type="number" class="stock-qty" data-dish="' + d.id + '" min="0" step="1" style="width:5rem" value="' +
           (d.stock_quantity != null ? esc(d.stock_quantity) : '') + '" placeholder="' + esc(t('stock_untracked_short')) + '"></td>' +
           '<td><input type="number" class="stock-thr" data-dish="' + d.id + '" min="0" step="1" style="width:4rem" value="' +
@@ -1555,7 +1561,7 @@ window.saveAllStock = async function () {
 
 window.restockDish = async function (id) {
   const d = S.portal.menu.find(x => x.id === id);
-  const q = prompt(t('stock_restock_prompt', { name: d ? d.name : '' }));
+  const q = prompt(t('stock_restock_prompt', { name: d ? dname(d) : '' }));
   if (q === null) return;
   const n = parseInt(q, 10);
   if (isNaN(n) || n <= 0) { alert(t('stock_restock_invalid')); return; }
@@ -1572,7 +1578,7 @@ window.showStockHistory = async function (id) {
   el.innerHTML = '<div class="empty">' + esc(t('detail_loading')) + '</div>';
   try {
     const moves = await api('/dishes/' + id + '/stock-movements');
-    let html = '<h3 class="section-title">' + esc(t('stock_history_h', { name: d ? d.name : '' })) + '</h3>';
+    let html = '<h3 class="section-title">' + esc(t('stock_history_h', { name: d ? dname(d) : '' })) + '</h3>';
     if (!moves.length) {
       html += '<div class="empty">' + esc(t('stock_no_history')) + '</div>';
     } else {
@@ -1596,7 +1602,7 @@ function filteredPortalOrders() {
     if (st !== 'all' && o.status !== st) return false;
     if (!q) return true;
     const hay = ('#' + o.id + ' ' + (o.customer_name || '') + ' ' +
-      (o.items || []).map(i => i.dish_name).join(' ')).toLowerCase();
+      (o.items || []).map(i => (i.dish_name || '') + ' ' + (i.dish_name_ar || '')).join(' ')).toLowerCase();
     return hay.indexOf(q) !== -1;
   });
 }
@@ -1614,7 +1620,7 @@ function portalOrderCard(o) {
     '<div><strong>' + esc(t('order_num')) + o.id + '</strong> · ' + esc(o.customer_name || t('customer_fb')) + ' ' + paidBadgeHTML(o.paid) + '</div>' +
     '<span class="status-pill status-' + esc(o.status) + '">' + esc(statusLabel(o.status)) + '</span></div>' +
     '<ul class="order-items">' + o.items.map(i =>
-      '<li>' + i.quantity + ' × ' + esc(i.dish_name) +
+      '<li>' + i.quantity + ' × ' + esc(iname(i)) +
       vendorItemExtraHTML(i, null) +
       ' — ' + money(Number(i.unit_price) * i.quantity) + '</li>').join('') + '</ul>' +
     '<div class="vendor-tag">' +
@@ -1756,7 +1762,7 @@ function renderOrderDetail() {
     esc(o.customer_name || t('customer_fb')) + '</strong></div><div class="vendor-tag">' +
     esc(fmtDate(o.created_at)) + '</div></div>' +
     '<ul class="order-items">' + o.items.map(i =>
-      '<li>' + i.quantity + ' × ' + esc(i.dish_name) +
+      '<li>' + i.quantity + ' × ' + esc(iname(i)) +
       vendorItemExtraHTML(i, S.portal.ingPrices) +
       ' — ' + money(Number(i.unit_price) * i.quantity) + '</li>').join('') + '</ul>' +
     '<div class="vendor-tag">' +
@@ -1988,7 +1994,8 @@ function addDishForm() {
     '<div class="row2"><div><label class="field">' + esc(t('f_dish')) + '</label><input type="text" id="nd-name" required maxlength="160" oninput="previewDishPhoto(\'nd-photo\',\'nd-preview\',\'nd-name\')"></div>' +
     '<div><label class="field">' + esc(t('f_cat')) + '</label><input type="text" id="nd-cat" value="Mains" maxlength="60" list="cat-list">' +
     '<datalist id="cat-list">' + S.categories.map(c => '<option value="' + esc(c) + '">').join('') + '</datalist></div></div>' +
-    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="nd-name-ar" maxlength="160" dir="rtl" placeholder="مثال: كشري">' +
+    // v52: optional Arabic dish name (shown to customers in Arabic mode).
+    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="nd-name-ar" maxlength="200" dir="auto">' +
     '<label class="field">' + esc(t('f_desc')) + '</label><textarea id="nd-desc" rows="2" maxlength="2000"></textarea>' +
     '<label class="field">' + esc(t('f_photo')) + '</label>' +
     '<input type="url" id="nd-photo" maxlength="2000" placeholder="' + esc(t('f_photo_ph')) + '" oninput="previewDishPhoto(\'nd-photo\',\'nd-preview\',\'nd-name\')">' +
@@ -2022,6 +2029,7 @@ window.submitDish = async function (ev) {
     const stockRaw = $('#nd-stock').value.trim();
     const body = {
       name: $('#nd-name').value.trim(),
+      // v52: optional Arabic name (empty -> null).
       name_ar: $('#nd-name-ar').value.trim() || null,
       description: $('#nd-desc').value.trim(),
       price: parseFloat($('#nd-price').value),
@@ -2074,7 +2082,8 @@ window.editDish = function (id) {
     '<form class="add-dish-form" onsubmit="return submitDishEdit(event,' + d.id + ')">' +
     '<div class="row2"><div><label class="field">' + esc(t('f_dish')) + '</label><input type="text" id="ed-name" required maxlength="160" value="' + esc(d.name) + '" oninput="previewDishPhoto(\'ed-photo\',\'ed-preview\',\'ed-name\')"></div>' +
     '<div><label class="field">' + esc(t('f_cat')) + '</label><input type="text" id="ed-cat" maxlength="60" value="' + esc(d.category || 'Mains') + '" list="cat-list"></div></div>' +
-    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="ed-name-ar" maxlength="160" dir="rtl" value="' + esc(d.name_ar || '') + '" placeholder="مثال: كشري">' +
+    // v52: optional Arabic dish name (shown to customers in Arabic mode).
+    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="ed-name-ar" maxlength="200" dir="auto" value="' + esc(d.name_ar || '') + '">' +
     '<label class="field">' + esc(t('f_desc')) + '</label><textarea id="ed-desc" rows="2" maxlength="2000">' + esc(d.description || '') + '</textarea>' +
     '<label class="field">' + esc(t('f_photo')) + '</label><input type="url" id="ed-photo" maxlength="2000" placeholder="' + esc(t('f_photo_ph')) + '" value="' + esc(d.photo_url || '') + '" oninput="previewDishPhoto(\'ed-photo\',\'ed-preview\',\'ed-name\')">' +
     '<label class="field upload-label">' + esc(t('f_upload_or')) + ' <input type="file" id="ed-file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="photoFilePicked(\'ed-file\',\'ed-photo\',\'ed-preview\')"></label>' +
@@ -2173,6 +2182,7 @@ window.submitDishEdit = async function (ev, id) {
     // === END SIGNATURE DISH ===
     const body = {
       name: $('#ed-name').value.trim(),
+      // v52: optional Arabic name (empty -> null clears it).
       name_ar: $('#ed-name-ar').value.trim() || null,
       description: $('#ed-desc').value.trim(),
       price: parseFloat($('#ed-price').value),
@@ -2390,7 +2400,7 @@ function openStockAdjust(dish) {
     '<h3 class="section-title">' + esc(t('scan_stock_h')) + '</h3>' +
     '<div style="display:flex;gap:.6rem;align-items:center;margin-bottom:.6rem">' +
     '<img src="' + esc(dish.photo_url || vendorImg(photoFor(dish).img)) + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px" onerror="this.style.display=\'none\'">' +
-    '<div><strong>' + esc(dish.name) + '</strong><br><small>' + esc(t('scan_stock_now')) + ': ' +
+    '<div><strong>' + esc(dname(dish)) + '</strong><br><small>' + esc(t('scan_stock_now')) + ': ' +
     (dish.stock_quantity != null ? esc(dish.stock_quantity) : esc(t('scan_stock_unlimited'))) + '</small></div></div>' +
     '<label class="field">' + esc(t('scan_delta')) + '</label>' +
     '<input type="number" id="stock-delta" step="1" placeholder="+5">' +
@@ -3433,7 +3443,7 @@ window.admOrderDetail = async function (id) {
       (o.paid ? ' · ' + esc(t('paid_badge_yes')) : ' · ' + esc(t('paid_badge_no'))) + cardPaidHTML(o) +
       (Number(o.refunded_amount) > 0 ? ' · ' + esc(t('adm_refunded', { amount: money(o.refunded_amount) })) : '') + '</p>';
     html += '<h4>' + esc(t('adm_items')) + '</h4><ul class="order-items">' +
-      o.items.map(i => '<li>' + i.quantity + ' × ' + esc(i.dish_name) + ' — ' + money(Number(i.unit_price) * i.quantity) + '</li>').join('') + '</ul>';
+      o.items.map(i => '<li>' + i.quantity + ' × ' + esc(iname(i)) + ' — ' + money(Number(i.unit_price) * i.quantity) + '</li>').join('') + '</ul>';
     html += '<h4>' + esc(t('adm_timeline')) + '</h4><ul class="order-items">' +
       (det.events.length ? det.events.map(e => '<li><small>' + esc(fmtDate(e.created_at)) + '</small> — ' + esc(e.message || e.event_type) + '</li>').join('')
         : '<li>' + esc(t('adm_no_events')) + '</li>') + '</ul>';
@@ -4408,7 +4418,7 @@ async function admDishes() {
     ? '<div class="table-wrap"><table class="menu-table"><thead><tr><th>' + esc(t('th_dish')) + '</th><th>' +
       esc(t('tbl_vendor')) + '</th><th>' + esc(t('th_price')) + '</th><th>' + esc(t('th_stock')) +
       '</th><th>' + esc(t('adm_dish_status')) + '</th><th></th></tr></thead><tbody>' +
-      dishes.map(d => '<tr><td><strong>' + esc(d.name) + '</strong><br><small style="color:var(--muted)">' + esc(catLabel(d.category)) + '</small></td>' +
+      dishes.map(d => '<tr><td><strong>' + esc(dname(d)) + '</strong><br><small style="color:var(--muted)">' + esc(catLabel(d.category)) + '</small></td>' +
         '<td>' + esc(vById[d.vendor_id] || '') + '</td><td>' + money(d.price) + '</td>' +
         '<td>' + (d.stock_quantity == null ? '—' : esc(d.stock_quantity)) + '</td>' +
         '<td>' + (d.is_hidden ? '🙈 ' + esc(t('adm_dish_hidden')) : (d.available ? '✅ ' + esc(t('adm_dish_visible')) : '⏸️ ' + esc(t('adm_dish_unavailable')))) + '</td>' +

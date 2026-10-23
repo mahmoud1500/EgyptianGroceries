@@ -978,6 +978,8 @@ def _prepare_order(
             models.OrderItem(
                 dish_id=dish.id,
                 dish_name=dish.name,
+                # v52: Arabic name snapshot (NULL when the dish has none).
+                dish_name_ar=dish.name_ar,
                 unit_price=price,
                 quantity=item.quantity,
                 modifier_label=modifier_label,

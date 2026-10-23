@@ -417,6 +417,7 @@ class DishOut(_Out):
     id: int
     vendor_id: int
     name: str
+    # v52: Arabic dish name; NULL = none (clients fall back to `name`).
     name_ar: str | None = None
     description: str
     price: Decimal
@@ -525,6 +526,8 @@ class AnnouncementOut(BaseModel):
     """
     dish_id: int
     dish_name: str
+    # v52: the dish's current Arabic name; NULL when it has none.
+    dish_name_ar: str | None = None
     vendor_name: str
     created_at: dt.datetime
     unseen: bool
@@ -728,7 +731,8 @@ def _sale_dt_to_la(value: dt.datetime | None) -> dt.datetime | None:
 
 class DishCreate(BaseModel):
     name: str = Field(min_length=1, max_length=160)
-    name_ar: str | None = Field(default=None, max_length=160)
+    # v52: optional Arabic dish name; blank normalizes to None.
+    name_ar: str | None = Field(default=None, max_length=200)
     description: str = Field(default="", max_length=2000)
     price: Decimal = Field(ge=0, le=100000)
     category: str = Field(default="Mains", max_length=60)
@@ -764,6 +768,13 @@ class DishCreate(BaseModel):
     def _sale_ok(self):
         _validate_flash_sale(self.sale_percent, self.sale_start, self.sale_end)
         return self
+
+    @field_validator("name_ar")
+    @classmethod
+    def _name_ar_blank(cls, v: str | None) -> str | None:
+        # v52: whitespace-only Arabic name means "no Arabic name".
+        v = (v or "").strip()
+        return v or None
 
     @field_validator("barcode")
     @classmethod
@@ -801,7 +812,8 @@ class BulkImportOut(BaseModel):
 
 class DishUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=160)
-    name_ar: str | None = Field(default=None, max_length=160)
+    # v52: optional Arabic dish name; explicit blank/null clears it.
+    name_ar: str | None = Field(default=None, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
     price: Decimal | None = Field(default=None, ge=0, le=100000)
     category: str | None = Field(default=None, max_length=60)
@@ -834,6 +846,14 @@ class DishUpdate(BaseModel):
     video_url: str | None = Field(default=None, max_length=2000)
     is_signature: bool | None = None
     signature_rank: int | None = Field(default=None, ge=1, le=1000)
+
+    @field_validator("name_ar")
+    @classmethod
+    def _name_ar_blank(cls, v: str | None) -> str | None:
+        # v52: whitespace-only Arabic name means "no Arabic name".
+        if v is None:
+            return None
+        return v.strip() or None
 
     @field_validator("video_url")
     @classmethod
@@ -1159,6 +1179,8 @@ class OrderItemOut(_Out):
     dish_id: int | None  # === FEATURE 5: NULL on bundle lines ===
     bundle_id: int | None = None  # === FEATURE 5: bundle line items ===
     dish_name: str
+    # v52: Arabic dish-name snapshot; NULL on bundle lines / pre-v52 orders.
+    dish_name_ar: str | None = None
     unit_price: Decimal
     quantity: int
     modifier_label: str | None = None
@@ -2215,6 +2237,8 @@ class BundleItemOut(_Out):
     id: int
     dish_id: int
     dish_name: str = ""
+    # v52: the component dish's Arabic name; NULL when it has none.
+    dish_name_ar: str | None = None
     quantity: int
 
 
@@ -2332,6 +2356,9 @@ class NudgeOut(BaseModel):
 
     dish_id: int
     dish_name: str
+    # v52: the dish's CURRENT Arabic name (payload derives from dishes,
+    # not order items) — NULL when the dish has none.
+    dish_name_ar: str | None = None
     vendor_id: int
     vendor_name: str
     last_price: Decimal  # unit price of the most recent order line

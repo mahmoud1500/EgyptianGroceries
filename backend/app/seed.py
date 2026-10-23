@@ -377,6 +377,159 @@ DISH_INGREDIENTS: dict[str, str] = {
 }
 
 
+# (dish_name -> Arabic name) — v52: fills Dish.name_ar so the storefront
+# can render dish names in Arabic mode (mirrors Bundle.name_ar). Source:
+# hidden_files/builds/dish-names-ar.py (keys verified character-exact
+# against the live dish names). Only fills when empty, so vendor edits
+# in the portal are never overwritten.
+DISH_NAMES_AR: dict[str, str] = {
+    "Dolma": "دولمة",
+    "Baladi Bread (5 pc)": "عيش بلدي (٥ قطع)",
+    "Feteer Meshaltet": "فطير مشلتت",
+    "Egyptian Black Tea (El Arosa) - 100 bags": "شاي أسود مصري (العروسة) - ١٠٠ كيس",
+    "Sahlab Mix - 7 oz": "خلطة سحلب - ٧ أوقية",
+    "Cow Trotters Casserole (Kaware')": "طاجن كوارع",
+    "Egyptian Baked Rice with Lamb (Rice Ma'amar)": "رز معمر باللحمة الضاني",
+    "Egyptian Béchemel Pasta (Macarona Bechamel)": "مكرونة بشاميل",
+    "Okra with Beef (Bamia)": "بامية باللحمة",
+    "Oxtail Casserole (Akawi)": "طاجن عكاوي",
+    "Aged Mish Cheese - 16 oz jar": "جبنة مش معتقة - برطمان ١٦ أوقية",
+    "Egyptian White Cheese (Gibna Beida) - per lb": "جبنة بيضاء مصرية - بالرطل",
+    "Karish Cheese - per lb": "جبنة قريش - بالرطل",
+    "Basbousa": "بسبوسة",
+    "Kahk": "كحك",
+    "Konafa": "كنافة",
+    "Om Ali": "أم علي",
+    "Qatayef": "قطايف",
+    "Frozen Green Fava Beans - 14 oz": "فول أخضر مجمد - ١٤ أوقية",
+    "Frozen Molokhia - 14 oz": "ملوخية مجمدة - ١٤ أوقية",
+    "Frozen Okra - 14 oz": "بامية مجمدة - ١٤ أوقية",
+    "Alexandrian Liver (Plate)": "كبدة إسكندراني (طبق)",
+    "Alexandrian Liver (Sandwich)": "كبدة إسكندراني (ساندويتش)",
+    "Charcoal-Grilled Hawawshi (Plate)": "حواوشي على الفحم (طبق)",
+    "Charcoal-Grilled Kebab (Plate)": "كباب على الفحم (طبق)",
+    "Charcoal-Grilled Kebab (Sandwich)": "كباب على الفحم (ساندويتش)",
+    "Charcoal-Grilled Sausage (Plate)": "سجق على الفحم (طبق)",
+    "Charcoal-Grilled Sausage (Sandwich)": "سجق على الفحم (ساندويتش)",
+    "Chicken Pane (Plate)": "فراخ بانيه (طبق)",
+    "Chicken Pane (Sandwich)": "فراخ بانيه (ساندويتش)",
+    "Egyptian Kofta (Plate)": "كفتة مصرية (طبق)",
+    "Egyptian Kofta (Sandwich)": "كفتة مصرية (ساندويتش)",
+    "Egyptian-Style Sausage (Plate)": "سجق بلدي (طبق)",
+    "Egyptian-Style Sausage (Sandwich)": "سجق بلدي (ساندويتش)",
+    "Grilled Beef (Plate)": "لحمة مشوية (طبق)",
+    "Grilled Beef (Sandwich)": "لحمة مشوية (ساندويتش)",
+    "Grilled Chicken (Plate)": "فراخ مشوية (طبق)",
+    "Grilled Chicken (Sandwich)": "فراخ مشوية (ساندويتش)",
+    "Egyptian Mombar": "ممبار",
+    "Mixed Mahshi Tray (Full Tray)": "محشي مشكل (صينية كاملة)",
+    "Mixed Mahshi Tray (Half Tray)": "محشي مشكل (نص صينية)",
+    "Stuffed Cabbage Rolls (Full Tray)": "محشي كرنب (صينية كاملة)",
+    "Stuffed Cabbage Rolls (Half Tray)": "محشي كرنب (نص صينية)",
+    "Stuffed Eggplant (Full Tray)": "محشي بتنجان (صينية كاملة)",
+    "Stuffed Eggplant (Half Tray)": "محشي بتنجان (نص صينية)",
+    "Stuffed Grape Leaves (Full Tray)": "محشي ورق عنب (صينية كاملة)",
+    "Stuffed Grape Leaves (Half Tray)": "محشي ورق عنب (نص صينية)",
+    "Stuffed Tomatoes (Full Tray)": "محشي طماطم (صينية كاملة)",
+    "Stuffed Tomatoes (Half Tray)": "محشي طماطم (نص صينية)",
+    "Stuffed Zucchini (Full Tray)": "محشي كوسة (صينية كاملة)",
+    "Stuffed Zucchini (Half Tray)": "محشي كوسة (نص صينية)",
+    "Biryani": "برياني",
+    "Chicken Tray with Rice": "صينية فراخ بالرز",
+    "Fatta": "فتة",
+    "Freekeh with Chicken": "فريك بالفراخ",
+    "Kibbeh": "كبة",
+    "Kofta with Tahini & Rice": "كفتة بالطحينة والرز",
+    "Koshary": "كشري",
+    "Mansaf": "منسف",
+    "Maqlouba": "مقلوبة",
+    "Molokhia with Chicken": "ملوخية بالفراخ",
+    "Musakhan": "مسخن",
+    "Ouzi": "أوزي",
+    "Shish Barak": "شيشبرك",
+    "Stuffed Cabbage Rolls": "محشي كرنب",
+    "Stuffed Grape Leaves": "محشي ورق عنب",
+    "Ta'ameya (Egyptian Falafel)": "طعمية",
+    "Yalanji (Stuffed Vegetables)": "يالنجي",
+    "Canned Ful Medames - 14 oz": "فول مدمس معلب - ١٤ أوقية",
+    "Dried Chickpeas (Hummus) - 2 lb bag": "حمص جاف - كيس ٢ رطل",
+    "Dried Molokhia Leaves - 7 oz bag": "ورق ملوخية جاف - كيس ٧ أوقية",
+    "Dried Okra (Bamia) - 7 oz bag": "بامية جافة - كيس ٧ أوقية",
+    "Egyptian Pickles (Torshi) - 32 oz jar": "طرشي مصري - برطمان ٣٢ أوقية",
+    "Egyptian Short-Grain Rice - 5 lb bag": "رز مصري - كيس ٥ رطل",
+    "Fava Beans (Ful Medames) - 2 lb bag": "فول مدمس - كيس ٢ رطل",
+    "Grape Leaves Jar (for Mahshi) - 16 oz": "ورق عنب للمحشي - برطمان ١٦ أوقية",
+    "Green Olives - 16 oz jar": "زيتون أخضر - برطمان ١٦ أوقية",
+    "Macaroni Pasta - 1 lb": "مكرونة - ١ رطل",
+    "Red Lentils - 2 lb bag": "عدس أحمر - كيس ٢ رطل",
+    "White Beans (Fasolia) - 2 lb bag": "فاصوليا بيضاء - كيس ٢ رطل",
+    "Cheese Pastry": "فطاير جبنة",
+    "Meat Sfiha": "صفيحة لحمة",
+    "Mini Pizza": "ميني بيتزا",
+    "Spinach Pastry": "فطاير سبانخ",
+    "Salad": "سلطة",
+    "Baba Ghanoush": "بابا غنوج",
+    "Beet Salad": "سلطة بنجر",
+    "Caesar Salad": "سلطة سيزر",
+    "Chicken Caesar Salad": "سلطة سيزر بالفراخ",
+    "Coleslaw": "سلطة كول سلو",
+    "Corn Salad": "سلطة ذرة",
+    "Cucumber Yogurt Salad": "سلطة خيار بالزبادي",
+    "Egyptian Baladi Salad": "سلطة بلدي",
+    "Egyptian Pickles": "مخلل مصري",
+    "Fattoush": "فتوش",
+    "Greek Salad": "سلطة يونانية",
+    "Hummus": "حمص",
+    "Pickled Eggplant": "بتنجان مخلل",
+    "Potato Salad": "سلطة بطاطس",
+    "Tabbouleh": "تبولة",
+    "Tahini Salad": "سلطة طحينة",
+    "Blue Crab (Seasonal)": "كابوريا (موسمي)",
+    "Calamari Pasta": "مكرونة كاليماري",
+    "Deluxe Platter": "صينية ديلوكس",
+    "Extra Sauce": "صوص إضافي",
+    "Fish Fillet": "فيليه سمك",
+    "Fish Rice": "رز صيادية",
+    "French Fries": "بطاطس مقلية",
+    "Fried Calamari": "كاليماري مقلي",
+    "Fried Shrimp": "جمبري مقلي",
+    "Garlic Bread": "خبز بالثوم",
+    "Grilled Calamari": "كاليماري مشوي",
+    "Grilled Shrimp": "جمبري مشوي",
+    "King Crab Legs": "أرجل كينج كراب",
+    "Mixed Seafood Platter": "صينية سي فود مشكلة",
+    "Rice": "رز أبيض",
+    "Seafood Pasta": "مكرونة سي فود",
+    "Seafood Rice": "رز سي فود",
+    "Seafood Soup": "شوربة سي فود",
+    "Shrimp & Calamari Platter": "صينية جمبري وكاليماري",
+    "Shrimp Pasta": "مكرونة جمبري",
+    "Shrimp Rice": "رز جمبري",
+    "Shrimp Sauteed": "جمبري سوتيه",
+    "Spicy Shrimp": "جمبري حار",
+    "Whole Fried Fish": "سمكة كاملة مقلية",
+    "Whole Grilled Fish": "سمكة كاملة مشوية",
+    "Beef & Pasta Soup": "شوربة لحمة بالمكرونة",
+    "Egyptian Lentil Soup": "شوربة عدس",
+    "Kaware' Broth (Cow Trotters Soup)": "شوربة كوارع",
+    "Orzo Soup (Lisan Asfour)": "شوربة لسان عصفور",
+    "Vegetable Soup": "شوربة خضار",
+    "Baharat (7-Spice Blend) - 4 oz": "بهارات (خلطة السبع بهارات) - ٤ أوقية",
+    "Black Seed (Habat El Baraka) - 4 oz": "حبة البركة - ٤ أوقية",
+    "Dried Hibiscus (Karkadeh) - 8 oz": "كركديه مجفف - ٨ أوقية",
+    "Dried Mint - 2 oz": "نعناع مجفف - ٢ أوقية",
+    "Dukkah Spice Mix - 4 oz": "خلطة دقة - ٤ أوقية",
+    "Fenugreek Seeds (Helba) - 4 oz": "بذور الحلبة - ٤ أوقية",
+    "Ground Coriander - 4 oz": "كزبرة مطحونة - ٤ أوقية",
+    "Ground Cumin - 4 oz": "كمون مطحون - ٤ أوقية",
+    "Ground Turmeric - 4 oz": "كركم مطحون - ٤ أوقية",
+    "Blackstrap Molasses (Asal Eswed) - 16 oz": "عسل أسود - ١٦ أوقية",
+    "Halva with Pistachio - 1 lb": "حلاوة بالفستق - ١ رطل",
+    "Medjool Dates - 2 lb box": "تمر مجهول - علبة ٢ رطل",
+    "Qamar Al-Din (Apricot Paste) - 14 oz": "قمر الدين - ١٤ أوقية",
+}
+
+
 # Default prep minutes by category (Oct 2026) — fills Dish.prep_minutes when
 # blank; vendors can override per dish in the portal. Groceries = packing time.
 CATEGORY_PREP: dict[str, int] = {
@@ -398,6 +551,8 @@ def _add_dishes(db, vendor, items):
             models.Dish(
                 vendor_id=vendor.id,
                 name=name,
+                # v52: Arabic name at creation (fill_seed_data backstops).
+                name_ar=DISH_NAMES_AR.get(name),
                 description=desc,
                 price=Decimal(str(price)),
                 category=category,
@@ -439,6 +594,12 @@ def fill_seed_data(db):
         _d = db.scalar(select(models.Dish).where(models.Dish.name == _name))
         if _d is not None and not _d.ingredients:
             _d.ingredients = _ing
+    # v52: Arabic dish names (see DISH_NAMES_AR). Only-when-empty, same
+    # contract as ingredients — vendor edits in the portal win.
+    for _name, _ar in DISH_NAMES_AR.items():
+        _d = db.scalar(select(models.Dish).where(models.Dish.name == _name))
+        if _d is not None and not _d.name_ar:
+            _d.name_ar = _ar
     # Default prep minutes by category.
     for _d in db.scalars(select(models.Dish).where(models.Dish.prep_minutes.is_(None))):
         if _d.category in CATEGORY_PREP:
@@ -583,6 +744,8 @@ def seed():
                     models.Dish(
                         vendor_id=um.id,
                         name=name,
+                        # v52: Arabic name at creation.
+                        name_ar=DISH_NAMES_AR.get(name),
                         description=desc,
                         price=Decimal(str(price)),
                         category=category,
@@ -628,7 +791,10 @@ def seed():
                     subtotal += price * qty
                     items.append(
                         models.OrderItem(
-                            dish_id=dish.id, dish_name=dish.name, unit_price=price, quantity=qty
+                            dish_id=dish.id, dish_name=dish.name,
+                            # v52: Arabic name snapshot, same as checkout.
+                            dish_name_ar=dish.name_ar,
+                            unit_price=price, quantity=qty
                         )
                     )
                 order = models.Order(

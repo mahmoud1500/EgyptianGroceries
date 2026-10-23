@@ -166,8 +166,10 @@ def smart_search(
 
     scored: list[tuple[int, models.Dish]] = []
     for d in dishes:
+        # v52: name_ar joins the haystack so Arabic queries match dishes by
+        # their Arabic name (e.g. كشري -> Koshary).
         haystack = normalize(f"{d.name} {d.name_ar or ''} {d.description or ''}")
-        name = normalize(f"{d.name} {d.name_ar or ''}")
+        name = normalize(d.name)
         score = _match_score(qn, needles, haystack, name)
         if score:
             scored.append((score, d))

@@ -56,6 +56,8 @@ def list_dishes(
         like = f"%{safe}%"
         stmt = stmt.where(
             models.Dish.name.ilike(like, escape="\\")
+            # v52: Arabic names are searchable too (q=كشري finds Koshary
+            # even when its description has no Arabic).
             | models.Dish.name_ar.ilike(like, escape="\\")
             | models.Dish.description.ilike(like, escape="\\")
         )
@@ -568,9 +570,9 @@ def _parse_bulk_row(raw: dict, row_num: int) -> tuple[dict | None, bool | None, 
     """Parse one CSV row -> (dish_kwargs, available, None) or (None, None, error).
 
     Every cell is treated as plain text — formula-looking values (=, +, -, @
-    prefixes) are never evaluated, just stored literally. There is no name_ar
-    column on the model, so an Arabic name is carried at the start of the
-    description (the codebase's existing convention).
+    prefixes) are never evaluated, just stored literally. Since v52 the
+    model HAS a name_ar column, so an Arabic name lands there directly
+    (before v52 it was carried at the start of the description).
     """
     def err(code: str, message: str) -> tuple[None, None, schemas.BulkImportError]:
         return None, None, schemas.BulkImportError(row=row_num, code=code, message=message)
@@ -606,10 +608,11 @@ def _parse_bulk_row(raw: dict, row_num: int) -> tuple[dict | None, bool | None, 
             return err("stock_invalid", f"Stock {stock_raw} cannot be negative.")
     name_ar = (raw.get("name_ar") or "").strip()
     description = (raw.get("description") or "").strip()
-    if name_ar:
-        description = f"{name_ar}\n{description}".strip()
     kwargs = {
         "name": name,
+        # v52: Arabic name persists to Dish.name_ar (blank -> None via the
+        # DishCreate validator).
+        "name_ar": name_ar or None,
         "description": description,
         "price": price,
         "category": (raw.get("category") or "").strip() or "Mains",
