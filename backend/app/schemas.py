@@ -417,6 +417,7 @@ class DishOut(_Out):
     id: int
     vendor_id: int
     name: str
+    name_ar: str | None = None
     description: str
     price: Decimal
     category: str
@@ -727,6 +728,7 @@ def _sale_dt_to_la(value: dt.datetime | None) -> dt.datetime | None:
 
 class DishCreate(BaseModel):
     name: str = Field(min_length=1, max_length=160)
+    name_ar: str | None = Field(default=None, max_length=160)
     description: str = Field(default="", max_length=2000)
     price: Decimal = Field(ge=0, le=100000)
     category: str = Field(default="Mains", max_length=60)
@@ -799,6 +801,7 @@ class BulkImportOut(BaseModel):
 
 class DishUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=160)
+    name_ar: str | None = Field(default=None, max_length=160)
     description: str | None = Field(default=None, max_length=2000)
     price: Decimal | None = Field(default=None, ge=0, le=100000)
     category: str | None = Field(default=None, max_length=60)
