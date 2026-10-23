@@ -927,3 +927,59 @@ button.zip-badge.zip-prompt { border: 1px dashed #b89b5e; background: transparen
   .stories-slide .testi-card { padding: 1.1rem 1.2rem; }
 }
 /* ================= END v49 motion package ================= */
+
+/* ================= Admin delivery management ================= */
+.delivery-admin { max-width: 1120px; margin: 0 auto; }
+.delivery-page-header, .delivery-panel-heading, .delivery-job-top, .delivery-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.delivery-page-header { margin: .5rem 0 1.4rem; }
+.delivery-page-header h1 { margin: .1rem 0 .35rem; }
+.delivery-page-header .eyebrow { margin: 0; color: var(--accent); font-size: .76rem; font-weight: 800; letter-spacing: .12em; }
+.delivery-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin-bottom: 1rem; }
+.delivery-kpi { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow); }
+.delivery-kpi span { display: block; color: var(--muted); font-size: .83rem; margin-bottom: .4rem; }
+.delivery-kpi strong { display: block; font-size: 1.45rem; overflow-wrap: anywhere; }
+.delivery-panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin: 1rem 0; box-shadow: var(--shadow); }
+.delivery-panel h2 { margin: 0 0 .2rem; font-size: 1.15rem; }
+.delivery-panel-heading { margin-bottom: .8rem; }
+.delivery-create-grid, .delivery-edit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .15rem .85rem; }
+.delivery-admin .field { min-width: 0; }
+.delivery-admin input, .delivery-admin select, .delivery-admin textarea {
+  width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+  padding: .62rem .7rem; background: #fff; color: var(--ink); font: inherit;
+}
+.delivery-notes-field { grid-column: 1 / -1; }
+.delivery-actions { justify-content: flex-start; flex-wrap: wrap; margin-top: .8rem; }
+.delivery-save-msg { color: var(--muted); font-size: .86rem; overflow-wrap: anywhere; }
+.delivery-filter-label { display: flex; align-items: center; gap: .5rem; font-size: .86rem; font-weight: 600; }
+.delivery-filter-label select { max-width: 180px; }
+.delivery-job-list { display: grid; gap: .85rem; }
+.delivery-job-card { border: 1px solid var(--line); border-radius: 12px; padding: 1rem; background: #fffdf9; }
+.delivery-order-id { font-weight: 800; font-size: 1.02rem; }
+.delivery-job-id, .delivery-order-meta { color: var(--muted); font-size: .85rem; font-weight: 400; }
+.delivery-order-meta { margin-top: .15rem; }
+.delivery-status-pill { display: inline-block; border-radius: 999px; padding: .3rem .65rem; font-size: .78rem; font-weight: 800; white-space: nowrap; background: #f1e2bd; color: #5b4318; }
+.delivery-status-pill.status-delivered { background: #dcefe4; color: #18583c; }
+.delivery-status-pill.status-failed, .delivery-status-pill.status-cancelled { background: #fde7e5; color: #8b211a; }
+.delivery-status-pill.status-assigned, .delivery-status-pill.status-picked_up { background: #e3ebfa; color: #21477e; }
+.delivery-financials { display: flex; gap: .8rem 1.5rem; flex-wrap: wrap; border-top: 1px solid var(--line); margin-top: .7rem; padding-top: .75rem; font-size: .88rem; }
+.delivery-financials span { display: flex; gap: .35rem; color: var(--muted); }
+.delivery-financials strong { color: var(--ink); }
+.delivery-empty { padding: 2rem 1rem; text-align: center; }
+.delivery-empty span { display: block; font-size: 2rem; margin-bottom: .3rem; }
+.delivery-empty strong { display: block; }
+@media (max-width: 760px) {
+  .delivery-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .delivery-create-grid, .delivery-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .delivery-page-header, .delivery-panel-heading { align-items: flex-start; }
+  .delivery-filter-label { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 480px) {
+  .delivery-create-grid, .delivery-edit-grid { grid-template-columns: 1fr; }
+  .delivery-notes-field { grid-column: auto; }
+  .delivery-page-header { flex-direction: column; }
+  .delivery-job-top { align-items: flex-start; }
+  .delivery-panel { padding: .75rem; }
+}
+/* ================= END Admin delivery management ================= */
