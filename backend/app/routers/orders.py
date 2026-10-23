@@ -209,90 +209,112 @@ def _log_event(db: Session, order: models.Order, event_type: str,
 
 
 def _stripe_payment_intent_id(db: Session, order: models.Order, stripe) -> str | None:
-    """Resolve the Stripe payment-intent id for an order via its checkout
-    session (stored in the payment event's meta by the webhook).
-
-    Returns None when no session/intent can be found. Never raises —
-    Stripe API errors propagate to the caller.
-    """
-    session_id = None
-    ev = db.scalar(
+    """Resolve a PaymentIntent from either Checkout Session or wallet payment metadata."""
+    events = db.scalars(
         select(models.OrderEvent)
         .where(
             models.OrderEvent.order_id == order.id,
             models.OrderEvent.event_type == "payment",
         )
-        .order_by(models.OrderEvent.created_at.desc())
+        .order_by(models.OrderEvent.created_at.desc(), models.OrderEvent.id.desc())
     )
-    if ev and ev.meta:
+    for ev in events:
         try:
-            session_id = json.loads(ev.meta).get("stripe_session")
-        except (ValueError, TypeError, AttributeError):
-            session_id = None
-    if not session_id:
-        return None
-    sess = stripe.checkout.Session.retrieve(session_id)
-    pi = sess.get("payment_intent") if hasattr(sess, "get") else None
-    pi_id = pi.get("id") if hasattr(pi, "get") else pi
-    return pi_id or None
+            meta = json.loads(ev.meta) if ev.meta else {}
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(meta, dict):
+            continue
+        pi_id = meta.get("payment_intent")
+        if isinstance(pi_id, str) and pi_id.startswith("pi_"):
+            return pi_id
+        session_id = meta.get("stripe_session")
+        if isinstance(session_id, str) and session_id.startswith("cs_"):
+            session = stripe.checkout.Session.retrieve(session_id)
+            pi = session.get("payment_intent") if hasattr(session, "get") else None
+            resolved = pi.get("id") if hasattr(pi, "get") else pi
+            if isinstance(resolved, str) and resolved.startswith("pi_"):
+                return resolved
+    return None
 
 
 def _stripe_refund_on_cancel(db: Session, order: models.Order) -> None:
-    """Refund a paid card order via Stripe when it is cancelled.
+    """Refund only this vendor sub-order's outstanding amount; never block cancellation."""
+    if not order.paid or order.payment_method != "credit_card":
+        _log_event(
+            db, order, "refund", "No refund issued — order was not paid by card",
+            {"paid": order.paid, "payment_method": order.payment_method},
+        )
+        return
 
-    Issues a real Stripe refund only when the order was paid by card AND
-    Stripe is configured (STRIPE_SECRET_KEY). Every decision — refund
-    issued, skipped, or failed — is recorded on the order's event log so the
-    site owner can see it and settle manually if needed.
+    stripe = _stripe_client()
+    if stripe is None:
+        _log_event(db, order, "refund", "No refund issued — Stripe not configured", {})
+        return
 
-    Never raises: a refund problem must never block the cancellation itself.
-    """
     try:
-        if not order.paid or order.payment_method != "credit_card":
-            _log_event(
-                db, order, "refund",
-                "No refund issued — order was not paid by card",
-                {"paid": order.paid, "payment_method": order.payment_method},
-            )
-            return
-        stripe = _stripe_client()
-        if stripe is None:
-            _log_event(
-                db, order, "refund",
-                "No refund issued — Stripe not configured",
-                {"paid": order.paid, "payment_method": order.payment_method},
-            )
-            return
-        # The Stripe webhook stored the checkout session id in the payment
-        # event's meta; the refund goes against its payment intent.
         pi_id = _stripe_payment_intent_id(db, order, stripe)
-        if not pi_id:
-            _log_event(
-                db, order, "refund",
-                "No refund issued — no Stripe checkout session found on the order; settle manually",
-                {"paid": True},
-            )
-            return
-        refund = stripe.Refund.create(payment_intent=pi_id)
-        refund_id = refund.get("id") if hasattr(refund, "get") else None
-        # === v40: keep the cumulative refunded_amount column in sync. ===
+    except Exception as exc:  # Stripe lookup failure; cancellation still proceeds.
+        print(f"[orders] Stripe PaymentIntent lookup failed: {exc}")
+        _log_event(db, order, "refund", "Stripe refund FAILED — payment lookup failed; settle manually",
+                   {"error": str(exc)[:200]})
+        return
+    if not pi_id:
+        _log_event(
+            db, order, "refund",
+            "No refund issued — no Stripe PaymentIntent reference found; settle manually",
+            {"paid": True},
+        )
+        return
+
+    already_refunded = _successful_refund_total(db, order.id)
+    order_total = Decimal(str(order.total or 0))
+    remaining = max(Decimal("0"), order_total - already_refunded)
+    amount_cents = int((remaining * Decimal("100")).quantize(Decimal("1"), rounding=ROUND_DOWN))
+    if amount_cents <= 0:
+        _log_event(
+            db, order, "refund", "No refund issued — order already fully refunded",
+            {"already_refunded": str(already_refunded)},
+        )
+        return
+
+    # Stable per-order amount key prevents duplicate refunds if the request is retried.
+    try:
+        refund = stripe.Refund.create(
+            payment_intent=pi_id,
+            amount=amount_cents,
+            idempotency_key=f"order-cancel-refund-{order.id}-{amount_cents}",
+        )
+    except Exception as exc:  # Stripe rejected/failed the request.
+        print(f"[orders] Stripe refund failed: {exc}")
+        _log_event(
+            db, order, "refund", "Stripe refund FAILED — settle manually",
+            {"error": str(exc)[:200], "amount": str(remaining), "payment_intent": pi_id},
+        )
+        return
+
+    # Stripe has accepted the refund. Record its actual ID/amount separately so
+    # a database logging issue is not misrepresented as a Stripe API failure.
+    refund_id = refund.get("id") if hasattr(refund, "get") else getattr(refund, "id", None)
+    actual_cents = refund.get("amount", amount_cents) if hasattr(refund, "get") else amount_cents
+    actual_amount = (Decimal(str(actual_cents)) / Decimal("100")).quantize(Decimal("0.01"))
+    try:
+        _log_event(
+            db, order, "refund",
+            f"Stripe refund issued: {refund_id} for ${actual_amount:.2f}",
+            {"refund_id": refund_id, "amount": str(actual_amount), "payment_intent": pi_id},
+        )
+        order.refunded_amount = Decimal(str(order.refunded_amount or 0)) + actual_amount
+    except Exception as exc:  # Reconciliation required; do not claim Stripe failed.
+        print(f"[orders] Stripe refund {refund_id} succeeded but local logging failed: {exc}")
+        db.rollback()
         try:
-            order.refunded_amount = float(order.refunded_amount or 0) + float(order.total)
-        except (TypeError, ValueError):
-            pass
-        _log_event(
-            db, order, "refund",
-            f"Stripe refund issued: {refund_id} for ${float(order.total):.2f}",
-            {"refund_id": refund_id, "amount": float(order.total),
-             "stripe_session": session_id},
-        )
-    except Exception as exc:  # noqa: BLE001 — refund failure must not break cancellation
-        print(f"[orders] stripe refund failed: {exc}")
-        _log_event(
-            db, order, "refund",
-            "Stripe refund FAILED — settle manually",
-            {"error": str(exc)[:200]},
-        )
+            _log_event(
+                db, order, "refund", "RECONCILIATION REQUIRED — Stripe refund succeeded but local logging failed",
+                {"refund_id": refund_id, "amount": str(actual_amount), "payment_intent": pi_id},
+            )
+        except Exception:
+            db.rollback()
 
 
 def _successful_refund_total(db: Session, order_id: int) -> Decimal:
