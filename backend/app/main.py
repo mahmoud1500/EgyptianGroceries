@@ -30,6 +30,7 @@ from .routers import catering as catering_router
 from .routers import chat as chat_router
 from .routers import complaints as complaints_router
 from .routers import dishes as dishes_router
+from .routers import delivery as delivery_router  # hybrid delivery ledger + manual dispatch
 from .routers import favorites as favorites_router
 from .routers import loyalty as loyalty_router
 from .routers import orders as orders_router
@@ -208,6 +209,7 @@ app.include_router(favorites_router.router)
 app.include_router(loyalty_router.router)
 app.include_router(reviews_router.router)
 app.include_router(orders_router.router)
+app.include_router(delivery_router.router)
 app.include_router(problems_router.router)  # F6: report-a-problem per order
 app.include_router(search_router.router)  # F4: smart bilingual search
 app.include_router(settings_router.router)

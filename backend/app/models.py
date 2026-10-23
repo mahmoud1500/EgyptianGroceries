@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -455,6 +456,35 @@ class OrderItem(Base):
     # === FEATURE 5: bundle line items ===
     bundle: Mapped["Bundle | None"] = relationship("Bundle")
     # === END FEATURE 5 ===
+
+
+class DeliveryJob(Base):
+    """Manual-first delivery assignment and delivery-cost ledger for one vendor order."""
+    __tablename__ = "delivery_jobs"
+    __table_args__ = (
+        CheckConstraint(
+            "customer_fee >= 0 AND quoted_cost >= 0 AND actual_cost >= 0 AND platform_subsidy >= 0",
+            name="ck_delivery_jobs_nonnegative_amounts",
+        ),
+        UniqueConstraint("order_id", name="uq_delivery_jobs_order"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=False, index=True)
+    mode: Mapped[str] = mapped_column(String(20), nullable=False, default="third_party")  # vendor | third_party
+    provider: Mapped[str] = mapped_column(String(40), nullable=False, default="manual")
+    provider_reference: Mapped[str | None] = mapped_column(String(120), nullable=True, default=None)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending", index=True)
+    quoted_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    actual_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    customer_fee: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    platform_subsidy: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="unpaid")
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class OrderEvent(Base):
