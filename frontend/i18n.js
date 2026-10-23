@@ -1,7 +1,7 @@
 /* Egyptian Home Food Marketplace — internationalization.
    I18N dictionaries + t(key, vars) helper with {var} interpolation.
    Language persisted in localStorage ('ehf_lang'), default 'en'.
-   Proper nouns (dish names, vendor names, brand names) are NOT translated. */
+   Dish and grocery names use their saved Arabic name when available; vendor and brand names remain unchanged. */
 'use strict';
 
 const I18N = {
