@@ -683,6 +683,14 @@ async function loadAnalytics() {
    Rules with tile:true render an emoji tile directly (used for groceries,
    which have no photos). */
 const PHOTO_RULES = [
+  /* ---- v50 fix: Koshary + Hummus dishes — must precede the grocery
+     'chickpeas' rule below: both dishes' descriptions mention chickpeas,
+     so the grocery rule stole their photos (a bag of chickpeas). Keys
+     pair the dish name with the first word of its description, so
+     grocery items that merely mention the dishes ("For hummus and
+     koshary") keep their own grocery photos. ---- */
+  { k: ['koshary rice', 'koshari', 'kushari'], img: 'koshary.jpg', emoji: '🍚' },
+  { k: ['hummus chickpeas'], img: 'hummus.jpg', emoji: '🧆' },
   /* ---- grocery photos (checked first) ---- */
   { k: ['frozen molokhia'], img: 'g_frozen_molokhia.jpg', emoji: '\u2744\ufe0f' },
   { k: ['frozen okra'], img: 'g_frozen_okra.jpg', emoji: '\u2744\ufe0f' },
@@ -733,6 +741,12 @@ const PHOTO_RULES = [
   { k: ['cheese pastry'], img: 'um_cheese_pastry.jpg', emoji: '🧀' },
   { k: ['mini pizza'], img: 'um_mini_pizza.jpg', emoji: '🍕' },
   { k: ['chicken tray'], img: 'um_chicken_tray.jpg', emoji: '🍗' },
+  /* ---- v50: Egypt best sellers (Konafa / Qatayef / Ta'ameya) — before
+     the generic rules: Ta'ameya's description mentions tahini + salad,
+     which would otherwise steal the match. ---- */
+  { k: ['konafa', 'kunafa', 'kenafa'], img: 'konafa.jpg', emoji: '🥮' },
+  { k: ['qatayef', 'katayef', 'atayef'], img: 'qatayef.jpg', emoji: '🥟' },
+  { k: ["ta'ameya", 'taameya', 'falafel'], img: 'taameya.jpg', emoji: '🧆' },
   { k: ['whole grilled fish', 'grilled fish'], img: 'grilled_fish.jpg', emoji: '🐟' },
   { k: ['fried fish'], img: 'fried_fish.jpg', emoji: '🐟' },
   { k: ['fish fillet'], img: 'fried_fish.jpg', emoji: '🐟' },

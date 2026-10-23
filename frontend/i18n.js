@@ -107,6 +107,7 @@ en: {
   no_dishes: 'No dishes match your search — try a different word. 🍽️',
   err_dishes: 'We couldn\'t load the dishes: ',
   err_market: 'We couldn\'t load the marketplace: ',
+  retry_load: '↻ Retry',
   view_menu: 'View menu',
 
   add: 'Add',
@@ -799,6 +800,7 @@ ar: {
   no_dishes: 'لا توجد أطباق تطابق بحثك — جرّب كلمة تانية. 🍽️',
   err_dishes: 'مش عارفين نحمّل الأطباق: ',
   err_market: 'مش عارفين نحمّل السوق: ',
+  retry_load: '↻ حاول تاني',
   view_menu: 'عرض المنيو',
 
   add: 'أضف',

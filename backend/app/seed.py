@@ -91,13 +91,13 @@ OMAR_MENU: list[tuple[str, str, float, str, bool]] = [
     ("Chicken Pane (Sandwich)", "Crispy breaded chicken breast in fresh bread", 9.99, "Grill", False),
     ("Grilled Chicken (Plate)", "Marinated chicken, char-grilled — served with rice, salad, bread", 18.99, "Grill", False),
     ("Grilled Chicken (Sandwich)", "Marinated char-grilled chicken in fresh bread", 10.99, "Grill", False),
-    ("Charcoal-Grilled Hawawshi (Plate)", "Egyptian stuffed bread with seasoned beef", 15.99, "Grill", False),
+    ("Charcoal-Grilled Hawawshi (Plate)", "Egyptian stuffed bread with seasoned beef", 15.99, "Grill", True),
     # ---- Casseroles ----
     ("Cow Trotters Casserole (Kaware')", "Traditional Egyptian cow trotters casserole", 24.99, "Casseroles", False),
     ("Oxtail Casserole (Akawi)", "Slow-cooked oxtail casserole", 26.99, "Casseroles", False),
-    ("Okra with Beef (Bamia)", "Okra cooked with tender beef", 21.99, "Casseroles", False),
-    ("Egyptian Baked Rice with Lamb (Rice Ma'amar)", "Baked rice with lamb, Egyptian style", 22.99, "Casseroles", False),
-    ("Egyptian Béchemel Pasta (Macarona Bechamel)", "Layered pasta with béchamel sauce", 17.99, "Casseroles", False),
+    ("Okra with Beef (Bamia)", "Okra cooked with tender beef", 21.99, "Casseroles", True),
+    ("Egyptian Baked Rice with Lamb (Rice Ma'amar)", "Baked rice with lamb, Egyptian style", 22.99, "Casseroles", True),
+    ("Egyptian Béchemel Pasta (Macarona Bechamel)", "Layered pasta with béchamel sauce", 17.99, "Casseroles", True),
     # ---- Mahshi ----
     ("Egyptian Mombar", "Stuffed with rice, herbs, and spices — priced per lb", 18.99, "Mahshi", False),
     ("Stuffed Grape Leaves (Half Tray)", "Half tray of stuffed grape leaves", 39.99, "Mahshi", False),
@@ -110,7 +110,7 @@ OMAR_MENU: list[tuple[str, str, float, str, bool]] = [
     ("Stuffed Zucchini (Full Tray)", "Full tray of stuffed zucchini", 74.99, "Mahshi", False),
     ("Stuffed Tomatoes (Half Tray)", "Half tray of stuffed tomatoes", 42.99, "Mahshi", False),
     ("Stuffed Tomatoes (Full Tray)", "Full tray of stuffed tomatoes", 74.99, "Mahshi", False),
-    ("Mixed Mahshi Tray (Half Tray)", "Grape leaves, cabbage, zucchini, eggplant, and tomatoes", 44.99, "Mahshi", False),
+    ("Mixed Mahshi Tray (Half Tray)", "Grape leaves, cabbage, zucchini, eggplant, and tomatoes", 44.99, "Mahshi", True),
     ("Mixed Mahshi Tray (Full Tray)", "Grape leaves, cabbage, zucchini, eggplant, and tomatoes", 79.99, "Mahshi", False),
     # ---- Appetizers ----
     ("Dolma", "Stuffed grape leaves — price pending, call the vendor to confirm", 0.00, "Appetizers", False),
@@ -128,7 +128,7 @@ SAMPLE_VENDORS = [
             ("Baladi Bread (5 pc)", "Egyptian sourdough flatbread", 3.99, "Bakery", True),
             ("Feteer Meshaltet", "Layered Egyptian pastry", 12.99, "Bakery", False),
             ("Kahk", "Egyptian butter cookies", 8.99, "Desserts", False),
-            ("Basbousa", "Semolina cake with syrup", 6.99, "Desserts", False),
+            ("Basbousa", "Semolina cake with syrup", 6.99, "Desserts", True),
         ],
     },
     {
@@ -139,10 +139,14 @@ SAMPLE_VENDORS = [
         "fulfillment": "pickup",
         "delivery_fee": 0.00,
         "dishes": [
-            ("Molokhia with Chicken", "Molokhia stew with chicken, served with rice", 14.99, "Mains", False),
+            ("Molokhia with Chicken", "Molokhia stew with chicken, served with rice", 14.99, "Mains", True),
             ("Koshary", "Rice, lentils, pasta, chickpeas, and spicy tomato sauce", 9.99, "Mains", True),
-            ("Fatta", "Layered bread, rice, and meat with garlic-vinegar sauce", 15.99, "Mains", False),
-            ("Om Ali", "Egyptian bread pudding", 7.99, "Desserts", False),
+            ("Fatta", "Layered bread, rice, and meat with garlic-vinegar sauce", 15.99, "Mains", True),
+            ("Om Ali", "Egyptian bread pudding", 7.99, "Desserts", True),
+            # === v50: Egypt best sellers the menu was missing ===
+            ("Konafa", "Crispy shredded pastry layered with sweet cheese and cream, baked golden, soaked in syrup, and crowned with pistachio (كنافة)", 8.99, "Desserts", True),
+            ("Qatayef", "Golden folded pancakes stuffed with nuts and cream, kissed with syrup — the Ramadan favorite (قطايف)", 7.99, "Desserts", True),
+            ("Ta'ameya (Egyptian Falafel)", "Crisp fava-bean falafel with herbs — served with baladi bread, salad, and tahini (طعمية)", 9.99, "Mains", True),
         ],
     },
 ]
@@ -337,6 +341,10 @@ DISH_INGREDIENTS: dict[str, str] = {
     "Mixed Mahshi Tray (Half Tray)": "Mixed vegetables stuffed with rice, herbs and tomato",
     "Mixed Mahshi Tray (Full Tray)": "Mixed vegetables stuffed with rice, herbs and tomato",
     "Dolma": "Grape leaves stuffed with rice and minced meat",
+    # --- v50 additions (Mama Samia's Kitchen) ---
+    "Konafa": "Shredded konafa pastry, sweet cheese, cream, ghee, syrup, pistachio",
+    "Qatayef": "Pancake batter, walnuts, cream, syrup, pistachio",
+    "Ta'ameya (Egyptian Falafel)": "Fava beans, leeks, herbs, coriander, sesame, baladi bread, tahini",
     # --- Um Sohaib's Kitchen ---
     "Mansaf": "Lamb, jameed yogurt sauce, shrak bread, rice, almonds",
     "Maqlouba": "Chicken or meat, rice, cauliflower, eggplant, potatoes",
@@ -388,6 +396,28 @@ def _add_dishes(db, vendor, items):
         )
 
 
+# v50: Egypt's proven best sellers — these stay featured so they lead the
+# home page (popular grid + photo marquee) on every database, including
+# ones seeded before v50 (the seed lists alone can't reach those).
+FEATURED_BEST_SELLERS: list[str] = [
+    "Stuffed Grape Leaves",
+    "Mixed Mahshi Tray (Half Tray)",
+    "Molokhia with Chicken",
+    "Egyptian Béchemel Pasta (Macarona Bechamel)",
+    "Koshary",
+    "Fatta",
+    "Charcoal-Grilled Hawawshi (Plate)",
+    "Egyptian Kofta (Plate)",
+    "Okra with Beef (Bamia)",
+    "Egyptian Baked Rice with Lamb (Rice Ma'amar)",
+    "Om Ali",
+    "Basbousa",
+    "Konafa",
+    "Qatayef",
+    "Ta'ameya (Egyptian Falafel)",
+]
+
+
 def fill_seed_data(db):
     """Idempotent seed-*data* fills (not schema): ingredients text + category
     prep-minute defaults. Only fills blanks, so vendor edits in the portal are
@@ -403,6 +433,13 @@ def fill_seed_data(db):
     for _d in db.scalars(select(models.Dish).where(models.Dish.prep_minutes.is_(None))):
         if _d.category in CATEGORY_PREP:
             _d.prep_minutes = CATEGORY_PREP[_d.category]
+    # v50: best sellers stay featured (see FEATURED_BEST_SELLERS). Only
+    # flips False -> True; idempotent and harmless when already set.
+    for _d in db.scalars(
+        select(models.Dish).where(models.Dish.name.in_(FEATURED_BEST_SELLERS))
+    ):
+        if not _d.is_featured:
+            _d.is_featured = True
     db.commit()
 
 
@@ -489,6 +526,32 @@ def seed():
             db.flush()
             _add_dishes(db, vendor, v["dishes"])
         db.flush()
+
+        # === v50: top up dishes added to an existing vendor's menu ===
+        # The loop above only seeds a vendor's dishes when the vendor is
+        # first created, so dishes added to the seed lists later (Konafa,
+        # Qatayef, Ta'ameya at Mama Samia's) would never reach databases
+        # that already have the vendor — including the live site, which
+        # runs seed on every boot. Add just the missing ones (idempotent).
+        _ms = next(v for v in SAMPLE_VENDORS if v["name"] == "Mama Samia's Kitchen")
+        _msv = _get_vendor(db, _ms["name"])
+        if _msv is not None:
+            _have = {
+                d.name
+                for d in db.scalars(
+                    select(models.Dish).where(models.Dish.vendor_id == _msv.id)
+                )
+            }
+            _new_dishes = [
+                item
+                for item in _ms["dishes"]
+                if item[0] in ("Konafa", "Qatayef", "Ta'ameya (Egyptian Falafel)")
+                and item[0] not in _have
+            ]
+            if _new_dishes:
+                _add_dishes(db, _msv, _new_dishes)
+                db.flush()
+        # === END v50 top-up ===
 
         # Um Sohaib's Kitchen (only if missing) — dishes carry photo_url so the
         # web, vendor portal, and mobile app all show the same photo; the four

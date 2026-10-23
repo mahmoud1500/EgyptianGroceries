@@ -1093,6 +1093,14 @@ function zipOk(z) { return !z || /^\d{5}(-\d{4})?$/.test(z.trim()); }
    Rules with tile:true render an emoji tile directly (used for groceries,
    which have no photos). */
 const PHOTO_RULES = [
+  /* ---- v50 fix: Koshary + Hummus dishes — must precede the grocery
+     'chickpeas' rule below: both dishes' descriptions mention chickpeas,
+     so the grocery rule stole their photos (a bag of chickpeas). Keys
+     pair the dish name with the first word of its description, so
+     grocery items that merely mention the dishes ("For hummus and
+     koshary") keep their own grocery photos. ---- */
+  { k: ['koshary rice', 'koshari', 'kushari'], img: 'koshary.jpg', emoji: '🍚' },
+  { k: ['hummus chickpeas'], img: 'hummus.jpg', emoji: '🧆' },
   /* ---- grocery photos (checked first) ---- */
   { k: ['frozen molokhia'], img: 'g_frozen_molokhia.jpg', emoji: '\u2744\ufe0f' },
   { k: ['frozen okra'], img: 'g_frozen_okra.jpg', emoji: '\u2744\ufe0f' },
@@ -1143,6 +1151,12 @@ const PHOTO_RULES = [
   { k: ['cheese pastry'], img: 'um_cheese_pastry.jpg', emoji: '🧀' },
   { k: ['mini pizza'], img: 'um_mini_pizza.jpg', emoji: '🍕' },
   { k: ['chicken tray'], img: 'um_chicken_tray.jpg', emoji: '🍗' },
+  /* ---- v50: Egypt best sellers (Konafa / Qatayef / Ta'ameya) — before
+     the generic rules: Ta'ameya's description mentions tahini + salad,
+     which would otherwise steal the match. ---- */
+  { k: ['konafa', 'kunafa', 'kenafa'], img: 'konafa.jpg', emoji: '🥮' },
+  { k: ['qatayef', 'katayef', 'atayef'], img: 'qatayef.jpg', emoji: '🥟' },
+  { k: ["ta'ameya", 'taameya', 'falafel'], img: 'taameya.jpg', emoji: '🧆' },
   { k: ['whole grilled fish', 'grilled fish'], img: 'grilled_fish.jpg', emoji: '🐟' },
   { k: ['fried fish'], img: 'fried_fish.jpg', emoji: '🐟' },
   { k: ['fish fillet'], img: 'fried_fish.jpg', emoji: '🐟' },
@@ -1442,17 +1456,46 @@ async function api(path, opts) {
   opts = opts || {};
   const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
   if (S.token) headers['Authorization'] = 'Bearer ' + S.token;
-  const res = await fetch('/api' + path, Object.assign({}, opts, { headers }));
-  if (res.status === 401) { logout(true); throw new Error(t('session_expired')); }
-  if (!res.ok) {
-    let msg = res.statusText;
-    try { const j = await res.json(); if (j && j.detail) msg = j.detail; } catch (e) { /* ignore */ }
-    const err = new Error(msg);
-    err.status = res.status; // let callers distinguish 422 validation from 429 rate limit
-    throw err;
+  // === v50: request timeout. A sleeping free-tier server (wake-up can
+  // take ~60s) must not leave a view sitting on its loading state
+  // forever — abort the request so callers can retry or show an error.
+  // opts.timeoutMs overrides; opts.signal (caller's own) wins as-is. ===
+  let signal = opts.signal;
+  let timer = null;
+  if (!signal && typeof AbortController !== 'undefined') {
+    const ctl = new AbortController();
+    signal = ctl.signal;
+    timer = setTimeout(() => ctl.abort(), opts.timeoutMs || 20000);
   }
-  if (res.status === 204) return null;
-  return res.json();
+  try {
+    let res;
+    try {
+      res = await fetch('/api' + path, Object.assign({}, opts, { headers, signal }));
+    } catch (e) {
+      // Cross-realm AbortSignal: DOM test harnesses pair this realm's
+      // AbortController with a foreign fetch that rejects the signal as
+      // "not an instance of AbortSignal". Retry once without the signal
+      // (that realm simply gets no abort-timeout). Real browsers share
+      // one realm and never take this branch.
+      if (timer && e && e.name === 'TypeError' && /signal/i.test(e.message || '')) {
+        res = await fetch('/api' + path, Object.assign({}, opts, { headers, signal: undefined }));
+      } else {
+        throw e;
+      }
+    }
+    if (res.status === 401) { logout(true); throw new Error(t('session_expired')); }
+    if (!res.ok) {
+      let msg = res.statusText;
+      try { const j = await res.json(); if (j && j.detail) msg = j.detail; } catch (e) { /* ignore */ }
+      const err = new Error(msg);
+      err.status = res.status; // let callers distinguish 422 validation from 429 rate limit
+      throw err;
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 function photoFor(dish) {
@@ -2678,19 +2721,56 @@ window.quickAdd = async function (dishId) {
 /* Grocery categories live on the dedicated Groceries page. */
 const GROCERY_CATS = ['Pantry', 'Spices & Herbs', 'Frozen', 'Dairy & Cheese', 'Sweets', 'Beverages'];
 
+/* === v50: Egypt's proven best sellers (owner-curated) lead the home
+   page: featured dishes in this name order come first in the popular
+   grid and the photo marquee. Mirrors FEATURED_BEST_SELLERS in seed.py. === */
+const BEST_SELLER_ORDER = [
+  'stuffed grape leaves', 'mixed mahshi tray (half tray)', 'molokhia with chicken',
+  'egyptian béchemel pasta (macarona bechamel)', 'koshary', 'fatta',
+  'charcoal-grilled hawawshi (plate)', 'egyptian kofta (plate)',
+  'okra with beef (bamia)', "egyptian baked rice with lamb (rice ma'amar)",
+  'om ali', 'basbousa', 'konafa', 'qatayef', "ta'ameya (egyptian falafel)",
+];
+function bestSellerRank(d) {
+  const i = BEST_SELLER_ORDER.indexOf((d.name || '').toLowerCase());
+  return i === -1 ? BEST_SELLER_ORDER.length : i;
+}
+function byBestSeller(a, b) { return bestSellerRank(a) - bestSellerRank(b); }
+
 async function vHome() {
   const view = $('#view');
   setPageSEO('Egyptian Home Food Marketplace | Homemade Egyptian Food',
     'Order homemade Egyptian food from local cooks. Browse dishes and groceries for pickup or delivery.', null, '/');
   view.innerHTML = '<div class="empty"><span class="big">🍲</span>' + esc(t('loading_market')) + '</div>';
+  // === v50: retry the data batch up to 3 attempts with short backoff —
+  // a waking free-tier server answers within ~60s, so one timed-out
+  // attempt must not strand the page on the loading screen. The error
+  // view (with a working Retry button) appears only after all attempts.
+  let homeData = null;
+  let homeErr = null;
+  for (let attempt = 0; attempt < 3 && !homeData; attempt++) {
+    try {
+      homeData = await Promise.all([
+        api('/vendors'),
+        api('/dishes?featured=true'),
+        api('/dishes?available_only=false'),
+        api('/dishes/bestsellers?limit=10').catch(() => []),
+        api('/bundles').catch(() => []), // === Holiday feasts (Oct 2026) ===
+      ]);
+    } catch (e) {
+      homeErr = e;
+      if (S.route !== 'home') return; // navigated away while loading
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+    }
+  }
+  if (!homeData) {
+    if (S.route !== 'home') return;
+    view.innerHTML = '<div class="error">' + esc(t('err_market')) + esc(homeErr ? homeErr.message : '') +
+      ' <button type="button" class="btn small" onclick="vHome()">' + esc(t('retry_load')) + '</button></div>';
+    return;
+  }
   try {
-    const [vendors, featured, all, bestsellers, feastBundles] = await Promise.all([
-      api('/vendors'),
-      api('/dishes?featured=true'),
-      api('/dishes?available_only=false'),
-      api('/dishes/bestsellers?limit=10').catch(() => []),
-      api('/bundles').catch(() => []), // === Holiday feasts (Oct 2026) ===
-    ]);
+    const [vendors, featured, all, bestsellers, feastBundles] = homeData;
     S.vendors = vendors;
     S.vendorById = {};
     vendors.forEach(v => { S.vendorById[v.id] = v; });
@@ -2703,10 +2783,11 @@ async function vHome() {
     featuredFood.forEach(d => { S.dishById[d.id] = d; });
     S.allDishes = all; // reused for the first grid paint — avoids re-fetching /dishes
     bestFood.forEach(d => { S.dishById[d.id] = d; });
-    // Keep the homepage focused: one short popular list, ordered by bestsellers
-    // first, then featured dishes, then other available dishes.
+    // Keep the homepage focused: one short popular list. v50: featured
+    // dishes lead — ordered by the best-seller ranking — then the
+    // order-data bestsellers, then other available dishes.
     const popularIds = new Set();
-    S.popularDishes = [...bestFood, ...featuredFood, ...foodOnly.filter(d => d.available)]
+    S.popularDishes = [...[...featuredFood].sort(byBestSeller), ...bestFood, ...foodOnly.filter(d => d.available)]
       .filter(d => d.available && !popularIds.has(d.id) && popularIds.add(d.id))
       .slice(0, 6);
     S.popularDishes.forEach(d => { S.dishById[d.id] = d; });
@@ -2766,10 +2847,12 @@ async function vHome() {
     // duplicate for the seamless loop, rendered non-interactive). ===
     (function () {
       const seenIds = new Set();
-      const picks = [...bestFood, ...featuredFood, ...foodOnly.filter(d => d.available)]
+      // v50: 15 picks (was 14) so every ranked best seller — including
+      // Ta'ameya at rank 15 — makes the ribbon.
+      const picks = [...[...featuredFood].sort(byBestSeller), ...bestFood, ...foodOnly.filter(d => d.available)]
         .filter(d => d.available && !seenIds.has(d.id) && seenIds.add(d.id))
         .filter(d => d.photo_url || !photoFor(d).tile)
-        .slice(0, 14);
+        .slice(0, 15);
       if (picks.length < 5) return;
       const itemHtml = function (d, dup) {
         const src = d.photo_url || imgUrl(photoFor(d).img);
@@ -2889,7 +2972,8 @@ async function vHome() {
     })();
   } catch (e) {
     if (S.route !== 'home') return; // navigated away while loading (deep link)
-    view.innerHTML = '<div class="error">' + esc(t('err_market')) + esc(e.message) + '</div>';
+    view.innerHTML = '<div class="error">' + esc(t('err_market')) + esc(e.message) +
+      ' <button type="button" class="btn small" onclick="vHome()">' + esc(t('retry_load')) + '</button></div>';
   }
 }
 
