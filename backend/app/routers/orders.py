@@ -306,15 +306,12 @@ def _stripe_refund_on_cancel(db: Session, order: models.Order) -> None:
         )
         order.refunded_amount = Decimal(str(order.refunded_amount or 0)) + actual_amount
     except Exception as exc:  # Reconciliation required; do not claim Stripe failed.
-        print(f"[orders] Stripe refund {refund_id} succeeded but local logging failed: {exc}")
-        db.rollback()
-        try:
-            _log_event(
-                db, order, "refund", "RECONCILIATION REQUIRED — Stripe refund succeeded but local logging failed",
-                {"refund_id": refund_id, "amount": str(actual_amount), "payment_intent": pi_id},
-            )
-        except Exception:
-            db.rollback()
+        # Do not roll back here: this helper runs inside the cancellation
+        # transaction, and a rollback would undo the cancellation as well.
+        print(
+            f"[orders] RECONCILIATION REQUIRED: Stripe refund {refund_id} "
+            f"succeeded for {actual_amount}, but local logging failed: {exc}"
+        )
 
 
 def _successful_refund_total(db: Session, order_id: int) -> Decimal:
