@@ -173,6 +173,8 @@ class Dish(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     vendor_id: Mapped[int] = mapped_column(ForeignKey("vendors.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
+    # Optional Arabic display name; English name remains canonical for legacy integrations.
+    name_ar: Mapped[str | None] = mapped_column(String(160), nullable=True, default=None)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     category: Mapped[str] = mapped_column(String(60), nullable=False, default="Mains", index=True)
