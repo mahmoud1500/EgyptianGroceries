@@ -823,6 +823,22 @@ button.zip-badge.zip-prompt { border: 1px dashed #b89b5e; background: transparen
 .line-edit .mod-picker { margin-bottom: .7rem; }
 .line-edit .mod-title { font-size: .92rem; }
 .line-edit > .btn { margin-top: .2rem; }
+
+/* ---------- usability polish: touch targets, mobile forms, hover ---------- */
+.btn, .lang-toggle, .tab, .nav a, .stepper button { min-height: 44px; }
+.share-btn { width: 2.75rem; height: 2.75rem; }
+input[type=text], input[type=email], input[type=password], input[type=number],
+input[type=datetime-local], input[type=search], select, textarea {
+  min-height: 44px;
+}
+@media (max-width: 700px) {
+  input[type=text], input[type=email], input[type=password], input[type=number],
+  input[type=datetime-local], input[type=search], select, textarea { font-size: 16px; }
+}
+:focus-visible { outline-color: var(--accent); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) {
+  .dish-card:hover, .vendor-card:hover { transform: translateY(-3px); }
+}
 /* === END v39 line editor === */
 
 /* ================= v49: FULL MOTION PACKAGE ================= */
