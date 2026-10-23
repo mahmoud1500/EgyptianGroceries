@@ -640,16 +640,21 @@ function dishIngRows(dish) {
 }
 function dishIngredients(dish) {
   const rows = dishIngRows(dish).map(function (ig) {
-    return Object.assign({}, ig, { name: optionText(ig, 'name'), allergen_name: optionText(ig, 'allergen_name') });
+    const rawName = optionText(ig, 'name');
+    const rawAllergen = optionText(ig, 'allergen_name');
+    return Object.assign({}, ig, {
+      name: arabicCatalogText(rawName, 'food'),
+      allergen_name: arabicCatalogText(rawAllergen, 'allergen')
+    });
   });
   if (rows.length) return rows;
   // Fall back to the ingredients text (seeded): every listed ingredient
   // becomes a removable toggle, so "choose ingredients" works even when the
   // vendor never opened the portal's ingredient manager.
-  const txt = dish && dish.ingredients;
+  const txt = dish && (lang() === 'ar' && dish.ingredients_ar ? dish.ingredients_ar : dish.ingredients);
   if (!txt) return [];
   return String(txt).split(',').map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 30)
-    .map(function (nm) { return { name: nm, included_by_default: true, removable: true, extra_price: 0 }; });
+    .map(function (nm) { return { name: arabicCatalogText(nm, 'food'), included_by_default: true, removable: true, extra_price: 0 }; });
 }
 /* Is the dish-detail page for this dish currently rendered? Quick-add from
    dish cards has no customization UI — plain defaults apply there. */
@@ -1372,6 +1377,63 @@ function esc(s) {
 function dname(d) { return (lang() === 'ar' && d && d.name_ar) ? d.name_ar : (d ? d.name : ''); }
 function dishText(d, field) { return d ? ((lang() === 'ar' && d[field + '_ar']) ? d[field + '_ar'] : (d[field] || '')) : ''; }
 function optionText(item, field) { return item ? ((lang() === 'ar' && item[field + '_ar']) ? item[field + '_ar'] : (item[field] || '')) : ''; }
+/* Arabic fallback for common catalog ingredients. Vendor-provided *_ar values
+   always take precedence; unknown phrases are preserved rather than guessed. */
+const AR_FOOD_TERMS = {
+  'chicken':'دجاج','chicken breast':'صدر دجاج','grilled chicken':'دجاج مشوي','fried chicken':'دجاج مقلي',
+  'beef':'لحم بقري','ground beef':'لحم بقري مفروم','beef mince':'لحم بقري مفروم','lamb':'لحم ضأن','mutton':'لحم ضأن',
+  'chicken shawarma':'شاورما دجاج','beef shawarma':'شاورما لحم','shawarma':'شاورما','kofta':'كفتة','kebab':'كباب',
+  'rice':'أرز','white rice':'أرز أبيض','brown rice':'أرز بني','basmati rice':'أرز بسمتي',
+  'onion':'بصل','onions':'بصل','red onion':'بصل أحمر','green onion':'بصل أخضر','spring onion':'بصل أخضر',
+  'garlic':'ثوم','tomato':'طماطم','tomatoes':'طماطم','tomato sauce':'صلصة طماطم','potato':'بطاطس','potatoes':'بطاطس',
+  'cucumber':'خيار','lettuce':'خس','parsley':'بقدونس','cilantro':'كزبرة خضراء','coriander':'كزبرة','mint':'نعناع','dill':'شبت',
+  'lemon':'ليمون','lime':'ليمون أخضر','black pepper':'فلفل أسود','white pepper':'فلفل أبيض','pepper':'فلفل','salt':'ملح',
+  'olive oil':'زيت زيتون','vegetable oil':'زيت نباتي','oil':'زيت','butter':'زبدة','flour':'دقيق','eggs':'بيض','egg':'بيض',
+  'milk':'حليب','cheese':'جبنة','mozzarella':'جبنة موزاريلا','feta cheese':'جبنة فيتا','feta':'جبنة فيتا',
+  'yogurt':'زبادي',' yoghurt':'زبادي','yoghurt':'زبادي','tahini':'طحينة','chickpeas':'حمص','hummus':'حمص',
+  'beans':'فاصوليا','fava beans':'فول','lentils':'عدس','pasta':'مكرونة','bread':'خبز','pita bread':'خبز بيتا',
+  'baladi bread':'عيش بلدي','tomato paste':'معجون طماطم','garlic sauce':'صوص ثوم','mayonnaise':'مايونيز','ketchup':'كاتشب',
+  'pickles':'مخلل','pickle':'مخلل','cabbage':'كرنب','carrot':'جزر','carrots':'جزر','bell pepper':'فلفل رومي',
+  'green pepper':'فلفل أخضر','red pepper':'فلفل أحمر','hot pepper':'فلفل حار','chili':'شطة','chilli':'شطة',
+  'cumin':'كمون','paprika':'بابريكا','cinnamon':'قرفة','cardamom':'حبهان','turmeric':'كركم','thyme':'زعتر','oregano':'أوريجانو','basil':'ريحان',
+  'eggplant':'باذنجان','aubergine':'باذنجان','zucchini':'كوسة','courgette':'كوسة','okra':'بامية','spinach':'سبانخ',
+  'peas':'بازلاء','corn':'ذرة','shrimp':'جمبري','prawns':'جمبري','fish':'سمك','tuna':'تونة','salmon':'سلمون',
+  'sausage':'سجق','beef sausage':'سجق بقري','sugar':'سكر','honey':'عسل','water':'ماء','dates':'تمر','raisins':'زبيب',
+  'nuts':'مكسرات','almonds':'لوز','pistachios':'فستق','walnuts':'عين جمل','peanuts':'فول سوداني','sesame':'سمسم',
+  'coconut':'جوز الهند','cream':'كريمة','cooking cream':'كريمة طبخ','stock':'مرق','chicken stock':'مرق دجاج',
+  'mushroom':'فطر','mushrooms':'فطر','avocado':'أفوكادو','apple':'تفاح','banana':'موز','orange':'برتقال',
+  'strawberry':'فراولة','mango':'مانجو','pomegranate':'رمان','dates syrup':'دبس التمر',
+  'gluten':'جلوتين','dairy':'منتجات الألبان','milk':'حليب','egg allergen':'بيض','soy':'صويا','wheat':'قمح',
+  'extra cheese':'جبنة إضافية','no onions':'بدون بصل','without onions':'بدون بصل','no garlic':'بدون ثوم','without garlic':'بدون ثوم',
+  'spicy':'حار','mild':'خفيف','regular':'عادي','small':'صغير','medium':'متوسط','large':'كبير'
+};
+const AR_ALLERGEN_TERMS = {
+  'milk':'الحليب','dairy':'منتجات الألبان','eggs':'البيض','egg':'البيض','fish':'السمك','shellfish':'المحار والقشريات',
+  'shrimp':'الجمبري','crustaceans':'القشريات','peanuts':'الفول السوداني','nuts':'المكسرات','tree nuts':'المكسرات',
+  'soy':'الصويا','soya':'الصويا','wheat':'القمح','gluten':'الجلوتين','sesame':'السمسم','mustard':'الخردل'
+};
+function arabicCatalogText(value, type) {
+  if (lang() !== 'ar' || value == null || value === '') return value || '';
+  const dictionary = type === 'allergen' ? AR_ALLERGEN_TERMS : AR_FOOD_TERMS;
+  return String(value).split(/([,;])/).map(function (part) {
+    if (part === ',' || part === ';') return part === ',' ? '،' : '؛';
+    const raw = part.trim();
+    const key = raw.toLowerCase().replace(/^[•\\s]+|[.!?\\s]+$/g, '');
+    if (!key) return raw;
+    const translated = dictionary[key];
+    return translated ? (part.match(/^\\s/) ? ' ' : '') + translated + (part.match(/\\s$/) ? ' ' : '') : raw;
+  }).join('');
+}
+function dishIngredientsText(dish) {
+  if (!dish) return '';
+  if (lang() === 'ar' && dish.ingredients_ar) return dish.ingredients_ar;
+  return lang() === 'ar' ? arabicCatalogText(dish.ingredients, 'food') : (dish.ingredients || '');
+}
+function dishAllergensText(dish) {
+  if (!dish) return '';
+  if (lang() === 'ar' && dish.allergens_ar) return dish.allergens_ar;
+  return lang() === 'ar' ? arabicCatalogText(dish.allergens, 'allergen') : (dish.allergens || '');
+}
 /* v52: display name for an ORDER ITEM — renders the Arabic snapshot taken
    at order time; pre-v52 orders have NULL there and fall back to English. */
 function iname(i) { return (lang() === 'ar' && i && i.dish_name_ar) ? i.dish_name_ar : (i ? i.dish_name : ''); }
@@ -3437,9 +3499,9 @@ async function vDishDetail(dishId) {
     const details = [];
     if (dish.calories != null) details.push(['🔥', t('dd_calories'), t('dd_kcal', { n: dish.calories })]);
     if (dish.serving_size || dish.serving_size_ar) details.push(['⚖️', t('dd_serving'), dishText(dish, 'serving_size')]);
-    if (dish.ingredients || dish.ingredients_ar) details.push(['🧂', t('dd_ingredients'), dishText(dish, 'ingredients')]);
+    if (dish.ingredients || dish.ingredients_ar) details.push(['🧂', t('dd_ingredients'), dishIngredientsText(dish)]);
     details.push(['⏱', t('dd_prep'), '~' + fmtDur(prepMins(dish, v))]);
-    if (dish.allergens || dish.allergens_ar) details.push(['⚠️', t('dd_allergens'), dishText(dish, 'allergens')]);
+    if (dish.allergens || dish.allergens_ar) details.push(['⚠️', t('dd_allergens'), dishAllergensText(dish)]);
 
     let html = v
       ? '<a class="crumb" href="#" onclick="go(\'vendor\',' + v.id + ');return false;"><span class="crumb-arrow">←</span> ' + esc(v.name) + '</a>'
