@@ -868,6 +868,7 @@ def create_dish_option(
     opt = models.DishOption(
         dish_id=dish.id,
         name=payload.name,
+        name_ar=payload.name_ar,
         selection_type=payload.selection_type,
         min_select=payload.min_select,
         max_select=payload.max_select,  # normalized to 1 for single by the schema
@@ -903,6 +904,8 @@ def update_dish_option(
     opt.max_select = max_select
     if "name" in updates:
         opt.name = updates["name"]
+    if "name_ar" in updates:
+        opt.name_ar = updates["name_ar"]
     if choices is not None:
         _validate_choice_dish_links(dish, choices, db)
         opt.choices = json.dumps(choices)
