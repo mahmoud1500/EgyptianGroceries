@@ -178,6 +178,7 @@ class Dish(Base):
     # dishes by fill_seed_data (only-when-empty); vendor-editable. ===
     name_ar: Mapped[str | None] = mapped_column(String(200), nullable=True, default=None)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    description_ar: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     category: Mapped[str] = mapped_column(String(60), nullable=False, default="Mains", index=True)
     available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
@@ -188,8 +189,11 @@ class Dish(Base):
     # Dish detail page info (Oct 2026) — all optional, filled in by vendors.
     calories: Mapped[int | None] = mapped_column(Integer, nullable=True)
     serving_size: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    serving_size_ar: Mapped[str | None] = mapped_column(String(120), nullable=True)
     ingredients: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ingredients_ar: Mapped[str | None] = mapped_column(Text, nullable=True)
     allergens: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    allergens_ar: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Estimated prep time in minutes (Oct 2026); NULL = unknown.
     prep_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Stock cap (Oct 2026): NULL = unlimited; decremented atomically at checkout.
@@ -260,6 +264,7 @@ class DishOption(Base):
         ForeignKey("dishes.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(80), nullable=False)
+    name_ar: Mapped[str | None] = mapped_column(String(80), nullable=True, default=None)
     selection_type: Mapped[str] = mapped_column(String(10), nullable=False, default="single")
     min_select: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     max_select: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
@@ -282,6 +287,7 @@ class DishIngredient(Base):
         ForeignKey("dishes.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(80), nullable=False)
+    name_ar: Mapped[str | None] = mapped_column(String(80), nullable=True, default=None)
     included_by_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     removable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     extra_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
@@ -289,6 +295,7 @@ class DishIngredient(Base):
     is_vegan: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_allergen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     allergen_name: Mapped[str | None] = mapped_column(String(80), nullable=True, default=None)
+    allergen_name_ar: Mapped[str | None] = mapped_column(String(80), nullable=True, default=None)
 
     dish: Mapped["Dish"] = relationship("Dish", back_populates="dish_ingredients")
 

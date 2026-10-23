@@ -620,13 +620,13 @@ function dishOptionGroups(dish) {
     const rawMax = (g && g.max_select !== undefined) ? g.max_select : null;
     return {
       id: (g && g.id !== undefined && g.id !== null) ? g.id : null,
-      name: (g && g.name) || '',
+      name: optionText(g, 'name'),
       type: (g && g.selection_type === 'multiple') ? 'multiple' : 'single',
       min: Math.max(0, Number((g && g.min_select) || 0)),
       max: (rawMax === null || rawMax === undefined || rawMax === '')
         ? null : Math.max(0, Number(rawMax)),
       choices: ((g && g.choices) || []).map(function (c) {
-        return { label: String(c.label), delta: Number(c.delta) || 0 };
+        return { label: optionText(c, 'label'), delta: Number(c.delta) || 0 };
       }),
     };
   });
@@ -639,7 +639,9 @@ function dishIngRows(dish) {
   return (dish && Array.isArray(dish.ingredient_options)) ? dish.ingredient_options : [];
 }
 function dishIngredients(dish) {
-  const rows = dishIngRows(dish);
+  const rows = dishIngRows(dish).map(function (ig) {
+    return Object.assign({}, ig, { name: optionText(ig, 'name'), allergen_name: optionText(ig, 'allergen_name') });
+  });
   if (rows.length) return rows;
   // Fall back to the ingredients text (seeded): every listed ingredient
   // becomes a removable toggle, so "choose ingredients" works even when the
@@ -1368,6 +1370,8 @@ function esc(s) {
 /* v52: display name for a dish object — Arabic name in AR mode when the
    dish has one (mirrors the bundle pattern), else the English name. */
 function dname(d) { return (lang() === 'ar' && d && d.name_ar) ? d.name_ar : (d ? d.name : ''); }
+function dishText(d, field) { return d ? ((lang() === 'ar' && d[field + '_ar']) ? d[field + '_ar'] : (d[field] || '')) : ''; }
+function optionText(item, field) { return item ? ((lang() === 'ar' && item[field + '_ar']) ? item[field + '_ar'] : (item[field] || '')) : ''; }
 /* v52: display name for an ORDER ITEM — renders the Arabic snapshot taken
    at order time; pre-v52 orders have NULL there and fall back to English. */
 function iname(i) { return (lang() === 'ar' && i && i.dish_name_ar) ? i.dish_name_ar : (i ? i.dish_name : ''); }
@@ -2494,7 +2498,7 @@ function dishCard(dish) {
     '<span class="prep-pill">⏱ ~' + esc(fmtDur(prepMins(dish, v))) + '</span>' +
     '<h3 class="dish-name">' + esc(dname(dish)) + '</h3>' +
     '<div class="dish-rating">' + rating + '</div>' +
-    (dish.description ? '<p class="dish-desc">' + esc(dish.description) + '</p>' : '') +
+    (dish.description ? '<p class="dish-desc">' + esc(dishText(dish, 'description')) + '</p>' : '') +
     (v ? '<span class="vendor-tag">' + esc(t('from_vendor')) + ' <a href="#" onclick="event.stopPropagation();go(\'vendor\',' + v.id + ');return false;">' + esc(v.name) + '</a></span>' : '') +
     '<div class="dish-row">' + priceHTML(dish) + stepperHTML(dish) + '</div>' +
     '</div></div>';
@@ -3432,10 +3436,10 @@ async function vDishDetail(dishId) {
     // Details grid — only fields that actually have values.
     const details = [];
     if (dish.calories != null) details.push(['🔥', t('dd_calories'), t('dd_kcal', { n: dish.calories })]);
-    if (dish.serving_size) details.push(['⚖️', t('dd_serving'), dish.serving_size]);
-    if (dish.ingredients) details.push(['🧂', t('dd_ingredients'), dish.ingredients]);
+    if (dish.serving_size || dish.serving_size_ar) details.push(['⚖️', t('dd_serving'), dishText(dish, 'serving_size')]);
+    if (dish.ingredients || dish.ingredients_ar) details.push(['🧂', t('dd_ingredients'), dishText(dish, 'ingredients')]);
     details.push(['⏱', t('dd_prep'), '~' + fmtDur(prepMins(dish, v))]);
-    if (dish.allergens) details.push(['⚠️', t('dd_allergens'), dish.allergens]);
+    if (dish.allergens || dish.allergens_ar) details.push(['⚠️', t('dd_allergens'), dishText(dish, 'allergens')]);
 
     let html = v
       ? '<a class="crumb" href="#" onclick="go(\'vendor\',' + v.id + ');return false;"><span class="crumb-arrow">←</span> ' + esc(v.name) + '</a>'
@@ -3447,7 +3451,7 @@ async function vDishDetail(dishId) {
       '<span class="cat-pill">' + esc(catLabel(dish.category)) + '</span>' + dietBadges(dish) + availBadge(dish) + sigPill(dish) +
       '<h1>' + esc(dname(dish)) + '</h1>' +
       '<div class="dish-rating">' + rating + '</div>' +
-      (dish.description ? '<p class="dd-desc">' + esc(dish.description) + '</p>' : '') +
+      (dish.description ? '<p class="dd-desc">' + esc(dishText(dish, 'description')) + '</p>' : '') +
       '<div class="dd-price-row">' + priceHTML(dish) + dishPageStepperHTML(dish) + shareBtn(dish.id) + '</div>' +
       (dish.available ? '' : '<div class="notice">' + esc(t('dish_unavailable')) + '</div>') +
       '</div></div>';

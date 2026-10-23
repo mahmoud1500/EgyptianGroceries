@@ -448,9 +448,10 @@ function renderCustSection(dishId, groups, ings) {
   box.innerHTML = h;
 }
 
-function optChoiceRowHTML(dishId, fid, i, label, delta, linkDishId) {
+function optChoiceRowHTML(dishId, fid, i, label, delta, linkDishId, labelAr) {
   return '<div class="opt-row"><input type="text" maxlength="60" data-clabel placeholder="' + esc(t('opt_choice_lbl')) + ' ' + (i + 1) +
     '" value="' + esc(label || '') + '">' +
+    '<input type="text" maxlength="40" data-clabel-ar placeholder="اسم الخيار بالعربية" value="' + esc(labelAr || '') + '">' +
     '<select data-cdish onchange="onChoiceDishLink(this)" title="' + esc(t('opt_link_dish')) + '">' +
     dishLinkOptionsHTML(linkDishId, dishId) + '</select>' +
     '<span class="opt-delta-lbl">' + esc(t('opt_delta_lbl')) + '</span>' +
@@ -484,11 +485,12 @@ function optGroupFormHTML(dishId, g) {
   g = g || { name: '', selection_type: 'single', min_select: 0, max_select: null, choices: [] };
   const fid = isNew ? 'new' : g.id;
   const choices = (g.choices || []).map(function (c, i) {
-    return optChoiceRowHTML(dishId, fid, i, c.label, c.delta, c.dish_id);
+    return optChoiceRowHTML(dishId, fid, i, c.label, c.delta, c.dish_id, c.label_ar);
   }).join('');
   return '<div class="opt-editor">' +
     '<label class="field">' + esc(t('opt_grp_name_ph')) + '</label>' +
     '<input type="text" id="og-name-' + fid + '" maxlength="80" value="' + esc(g.name || '') + '">' +
+    '<label class="field">اسم المجموعة (العربية)</label><input type="text" id="og-name-ar-' + fid + '" maxlength="80" dir="rtl" value="' + esc(g.name_ar || '') + '">' +
     '<div class="row2"><div><label class="field">' + esc(t('opt_type_single')) + ' / ' + esc(t('opt_type_multi')) + '</label>' +
     '<select id="og-type-' + fid + '">' +
     '<option value="single"' + (g.selection_type !== 'multiple' ? ' selected' : '') + '>' + esc(t('opt_type_single')) + '</option>' +
@@ -556,9 +558,10 @@ window.saveOptGroup = async function (dishId, gid) {
     if (!label) return;
     const linkSel = r.querySelector('[data-cdish]');
     const linkId = linkSel && linkSel.value ? Number(linkSel.value) : null;
-    choices.push({ label: label, delta: Number((r.querySelector('[data-cdelta]') || {}).value) || 0, dish_id: linkId });
+    choices.push({ label: label, label_ar: (((r.querySelector('[data-clabel-ar]') || {}).value) || '').trim() || null, delta: Number((r.querySelector('[data-cdelta]') || {}).value) || 0, dish_id: linkId });
   });
-  const body = { name: name, selection_type: typeEl ? typeEl.value : 'single', min_select: min, max_select: max, choices: choices };
+  const nameArEl = document.getElementById('og-name-ar-' + fid);
+  const body = { name: name, name_ar: (nameArEl && nameArEl.value || '').trim() || null, selection_type: typeEl ? typeEl.value : 'single', min_select: min, max_select: max, choices: choices };
   try {
     if (gid === null || gid === undefined) {
       await api('/dishes/' + dishId + '/options', { method: 'POST', body: JSON.stringify(body) });
@@ -607,6 +610,7 @@ function ingRowHTML(dishId, ig) {
   return '<div class="ing-editor" id="ing-' + fid + '">' +
     '<div class="row2"><div><label class="field">' + esc(t('ing_name')) + '</label>' +
     '<input type="text" id="ig-name-' + fid + '" maxlength="120" value="' + esc(ig.name || '') + '"></div>' +
+    '<div><label class="field">' + esc(t('ing_name')) + ' (العربية)</label><input type="text" id="ig-name-ar-' + fid + '" maxlength="80" dir="rtl" value="' + esc(ig.name_ar || '') + '"></div>' +
     '<div><label class="field">' + esc(t('ing_extra_price')) + '</label>' +
     '<input type="number" id="ig-price-' + fid + '" step="0.01" min="0" value="' + (Number(ig.extra_price) || '') + '"></div></div>' +
     '<div class="check-grid">' +
@@ -618,6 +622,8 @@ function ingRowHTML(dishId, ig) {
     '</div>' +
     '<label class="field">' + esc(t('ing_allergen_ph')) + '</label>' +
     '<input type="text" id="ig-algname-' + fid + '" maxlength="120" value="' + esc(ig.allergen_name || '') + '">' +
+    '<label class="field">' + esc(t('ing_allergen_ph')) + ' (العربية)</label>' +
+    '<input type="text" id="ig-algname-ar-' + fid + '" maxlength="80" dir="rtl" value="' + esc(ig.allergen_name_ar || '') + '">' +
     '<div class="order-actions" style="margin-top:.4rem"><button type="button" class="btn small" onclick="saveIngRow(' + dishId + ',' +
     (isNew ? 'null' : ig.id) + ')">' + esc(t('opt_save')) + '</button> ' +
     (isNew
@@ -639,6 +645,7 @@ window.saveIngRow = async function (dishId, iid) {
   if (!name) { alert(t('ing_need_name')); return; }
   const body = {
     name: name,
+    name_ar: (val('ig-name-ar-' + fid) || '').trim() || null,
     included_by_default: chk('ig-inc-' + fid),
     removable: chk('ig-rem-' + fid),
     extra_price: Number(val('ig-price-' + fid)) || 0,
@@ -646,6 +653,7 @@ window.saveIngRow = async function (dishId, iid) {
     is_vegan: chk('ig-vgn-' + fid),
     is_allergen: chk('ig-alg-' + fid),
     allergen_name: (val('ig-algname-' + fid) || '').trim() || null,
+    allergen_name_ar: (val('ig-algname-ar-' + fid) || '').trim() || null,
   };
   try {
     if (iid === null || iid === undefined) {
@@ -1997,6 +2005,7 @@ function addDishForm() {
     // v52: optional Arabic dish name (shown to customers in Arabic mode).
     '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="nd-name-ar" maxlength="200" dir="auto">' +
     '<label class="field">' + esc(t('f_desc')) + '</label><textarea id="nd-desc" rows="2" maxlength="2000"></textarea>' +
+    '<label class="field">' + esc(t('f_desc')) + ' (العربية)</label><textarea id="nd-desc-ar" rows="2" maxlength="2000" dir="rtl"></textarea>' +
     '<label class="field">' + esc(t('f_photo')) + '</label>' +
     '<input type="url" id="nd-photo" maxlength="2000" placeholder="' + esc(t('f_photo_ph')) + '" oninput="previewDishPhoto(\'nd-photo\',\'nd-preview\',\'nd-name\')">' +
     '<label class="field upload-label">' + esc(t('f_upload_or')) + ' <input type="file" id="nd-file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="photoFilePicked(\'nd-file\',\'nd-photo\',\'nd-preview\')"></label>' +
@@ -2015,7 +2024,9 @@ function addDishForm() {
     '<div><label class="field">' + esc(t('f_serving')) + '</label><input type="text" id="nd-serv" maxlength="120" placeholder="' + esc(t('f_serv_ph')) + '"></div></div>' +
     '<div class="row2"><div><label class="field">' + esc(t('f_prep')) + '</label><input type="number" id="nd-prep" step="1" min="0" max="1440" placeholder="' + esc(t('f_prep_ph')) + '"></div><div></div></div>' +
     '<label class="field">' + esc(t('f_ing')) + '</label><textarea id="nd-ing" rows="2" maxlength="5000" placeholder="' + esc(t('f_ing_ph')) + '"></textarea>' +
+    '<label class="field">' + esc(t('f_ing')) + ' (العربية)</label><textarea id="nd-ing-ar" rows="2" maxlength="5000" dir="rtl"></textarea>' +
     '<label class="field">' + esc(t('f_allergens')) + '</label><input type="text" id="nd-all" maxlength="255" placeholder="' + esc(t('f_all_ph')) + '">' +
+    '<label class="field">' + esc(t('f_allergens')) + ' (العربية)</label><input type="text" id="nd-all-ar" maxlength="255" dir="rtl">
     '<div><label class="field">&nbsp;</label><button class="btn" type="submit" style="width:100%">' + esc(t('f_add')) + '</button></div>' +
     '</form>';
 }
@@ -2032,6 +2043,7 @@ window.submitDish = async function (ev) {
       // v52: optional Arabic name (empty -> null).
       name_ar: $('#nd-name-ar').value.trim() || null,
       description: $('#nd-desc').value.trim(),
+      description_ar: $('#nd-desc-ar').value.trim() || null,
       price: parseFloat($('#nd-price').value),
       category: $('#nd-cat').value.trim() || 'Mains',
       photo_url: $('#nd-photo').value.trim(),
@@ -2045,7 +2057,9 @@ window.submitDish = async function (ev) {
       serving_size: $('#nd-serv').value.trim() || null,
       prep_minutes: $('#nd-prep').value === '' ? null : parseInt($('#nd-prep').value, 10),
       ingredients: $('#nd-ing').value.trim() || null,
+      ingredients_ar: $('#nd-ing-ar').value.trim() || null,
       allergens: $('#nd-all').value.trim() || null,
+      allergens_ar: $('#nd-all-ar').value.trim() || null,
       is_vegetarian: $('#nd-veg').checked,
       is_vegan: $('#nd-vegan').checked,
     };
@@ -2085,6 +2099,7 @@ window.editDish = function (id) {
     // v52: optional Arabic dish name (shown to customers in Arabic mode).
     '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="ed-name-ar" maxlength="200" dir="auto" value="' + esc(d.name_ar || '') + '">' +
     '<label class="field">' + esc(t('f_desc')) + '</label><textarea id="ed-desc" rows="2" maxlength="2000">' + esc(d.description || '') + '</textarea>' +
+    '<label class="field">' + esc(t('f_desc')) + ' (العربية)</label><textarea id="ed-desc-ar" rows="2" maxlength="2000" dir="rtl">' + esc(d.description_ar || '') + '</textarea>' +
     '<label class="field">' + esc(t('f_photo')) + '</label><input type="url" id="ed-photo" maxlength="2000" placeholder="' + esc(t('f_photo_ph')) + '" value="' + esc(d.photo_url || '') + '" oninput="previewDishPhoto(\'ed-photo\',\'ed-preview\',\'ed-name\')">' +
     '<label class="field upload-label">' + esc(t('f_upload_or')) + ' <input type="file" id="ed-file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="photoFilePicked(\'ed-file\',\'ed-photo\',\'ed-preview\')"></label>' +
     '<img id="ed-preview" class="photo-preview" src="' + esc(startSrc) + '" alt="" onerror="previewDishPhotoErr(this)">' +
@@ -2129,7 +2144,9 @@ window.editDish = function (id) {
     '<div><label class="field">' + esc(t('f_serving')) + '</label><input type="text" id="ed-serv" maxlength="120" placeholder="' + esc(t('f_serv_ph')) + '" value="' + esc(d.serving_size || '') + '"></div></div>' +
     '<div class="row2"><div><label class="field">' + esc(t('f_prep')) + '</label><input type="number" id="ed-prep" step="1" min="0" max="1440" placeholder="' + esc(t('f_prep_ph')) + '" value="' + (d.prep_minutes != null ? esc(d.prep_minutes) : '') + '"></div><div></div></div>' +
     '<label class="field">' + esc(t('f_ing')) + '</label><textarea id="ed-ing" rows="2" maxlength="5000" placeholder="' + esc(t('f_ing_ph')) + '">' + esc(d.ingredients || '') + '</textarea>' +
+    '<label class="field">' + esc(t('f_ing')) + ' (العربية)</label><textarea id="ed-ing-ar" rows="2" maxlength="5000" dir="rtl">' + esc(d.ingredients_ar || '') + '</textarea>' +
     '<label class="field">' + esc(t('f_allergens')) + '</label><input type="text" id="ed-all" maxlength="255" placeholder="' + esc(t('f_all_ph')) + '" value="' + esc(d.allergens || '') + '">' +
+    '<label class="field">' + esc(t('f_allergens')) + ' (العربية)</label><input type="text" id="ed-all-ar" maxlength="255" dir="rtl" value="' + esc(d.allergens_ar || '') + '">
     '<div class="row2"><div><label class="field">&nbsp;</label><button class="btn" type="submit" style="width:100%">' + esc(t('save_changes')) + '</button></div>' +
     '<div><label class="field">&nbsp;</label><button class="btn secondary" type="button" style="width:100%" onclick="cancelDishEdit()">' + esc(t('cancel')) + '</button></div></div>' +
     '</form></div>';
@@ -2185,6 +2202,7 @@ window.submitDishEdit = async function (ev, id) {
       // v52: optional Arabic name (empty -> null clears it).
       name_ar: $('#ed-name-ar').value.trim() || null,
       description: $('#ed-desc').value.trim(),
+      description_ar: $('#ed-desc-ar').value.trim() || null,
       price: parseFloat($('#ed-price').value),
       category: $('#ed-cat').value.trim() || 'Mains',
       photo_url: $('#ed-photo').value.trim(),
@@ -2198,7 +2216,9 @@ window.submitDishEdit = async function (ev, id) {
       serving_size: $('#ed-serv').value.trim() || null,
       prep_minutes: $('#ed-prep').value === '' ? null : parseInt($('#ed-prep').value, 10),
       ingredients: $('#ed-ing').value.trim() || null,
+      ingredients_ar: $('#ed-ing-ar').value.trim() || null,
       allergens: $('#ed-all').value.trim() || null,
+      allergens_ar: $('#ed-all-ar').value.trim() || null,
       is_vegetarian: $('#ed-veg').checked,
       is_vegan: $('#ed-vegan').checked,
       // === FEATURE 7: timed flash sale (nulls clear it) ===

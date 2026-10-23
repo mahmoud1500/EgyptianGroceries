@@ -216,6 +216,7 @@ class DishOptionChoice(BaseModel):
     uses `delta`; the link is organizational only.
     """
     label: str = Field(min_length=1, max_length=40)
+    label_ar: str | None = Field(default=None, max_length=40)
     # Family/tray catering needs deltas beyond ±$50 (e.g. Mansaf 6-person +$100);
     # ±500 still catches absurd typos.
     delta: float = Field(ge=-500, le=500)
@@ -238,6 +239,7 @@ class DishOptionCreate(BaseModel):
     and max_select choices (max_select null = unbounded).
     """
     name: str = Field(min_length=1, max_length=80)
+    name_ar: str | None = Field(default=None, max_length=80)
     selection_type: str = Field(default="single", max_length=10)
     min_select: int = Field(default=0, ge=0, le=20)
     max_select: int | None = Field(default=None, ge=1, le=20)
@@ -291,6 +293,7 @@ class DishOptionUpdate(BaseModel):
     """Edit a modifier group. Only the fields sent are changed; the merged
     configuration is validated (e.g. single → max_select must stay 1)."""
     name: str | None = Field(default=None, min_length=1, max_length=80)
+    name_ar: str | None = Field(default=None, max_length=80)
     selection_type: str | None = Field(default=None, max_length=10)
     min_select: int | None = Field(default=None, ge=0, le=20)
     max_select: int | None = Field(default=None, ge=1, le=20)
@@ -311,6 +314,7 @@ class DishOptionOut(_Out):
     id: int
     dish_id: int
     name: str
+    name_ar: str | None = None
     selection_type: str = "single"
     min_select: int = 1
     max_select: int | None = None
@@ -367,6 +371,7 @@ class DishIngredientCreate(BaseModel):
     extra_price.
     """
     name: str = Field(min_length=1, max_length=80)
+    name_ar: str | None = Field(default=None, max_length=80)
     included_by_default: bool = True
     removable: bool = True
     extra_price: float = Field(default=0, ge=0, le=50)
@@ -374,6 +379,7 @@ class DishIngredientCreate(BaseModel):
     is_vegan: bool = False
     is_allergen: bool = False
     allergen_name: str | None = Field(default=None, max_length=80)
+    allergen_name_ar: str | None = Field(default=None, max_length=80)
 
     @model_validator(mode="after")
     def _config_ok(self):
@@ -390,6 +396,7 @@ class DishIngredientCreate(BaseModel):
 class DishIngredientUpdate(BaseModel):
     """Edit a dish ingredient. Only the fields sent are changed."""
     name: str | None = Field(default=None, min_length=1, max_length=80)
+    name_ar: str | None = Field(default=None, max_length=80)
     included_by_default: bool | None = None
     removable: bool | None = None
     extra_price: float | None = Field(default=None, ge=0, le=50)
@@ -397,12 +404,14 @@ class DishIngredientUpdate(BaseModel):
     is_vegan: bool | None = None
     is_allergen: bool | None = None
     allergen_name: str | None = Field(default=None, max_length=80)
+    allergen_name_ar: str | None = Field(default=None, max_length=80)
 
 
 class DishIngredientOut(_Out):
     id: int
     dish_id: int
     name: str
+    name_ar: str | None = None
     included_by_default: bool = True
     removable: bool = True
     extra_price: Decimal = Decimal("0")
@@ -410,6 +419,7 @@ class DishIngredientOut(_Out):
     is_vegan: bool = False
     is_allergen: bool = False
     allergen_name: str | None = None
+    allergen_name_ar: str | None = None
 
 
 # ---------- dishes ----------
@@ -420,6 +430,7 @@ class DishOut(_Out):
     # v52: Arabic dish name; NULL = none (clients fall back to `name`).
     name_ar: str | None = None
     description: str
+    description_ar: str | None = None
     price: Decimal
     category: str
     available: bool
@@ -430,8 +441,11 @@ class DishOut(_Out):
     rating_count: int = 0
     calories: int | None = None
     serving_size: str | None = None
+    serving_size_ar: str | None = None
     ingredients: str | None = None
+    ingredients_ar: str | None = None
     allergens: str | None = None
+    allergens_ar: str | None = None
     prep_minutes: int | None = None  # NULL = unknown
     stock_quantity: int | None = None  # NULL = unlimited
     is_vegetarian: bool = False
@@ -734,14 +748,18 @@ class DishCreate(BaseModel):
     # v52: optional Arabic dish name; blank normalizes to None.
     name_ar: str | None = Field(default=None, max_length=200)
     description: str = Field(default="", max_length=2000)
+    description_ar: str | None = Field(default=None, max_length=2000)
     price: Decimal = Field(ge=0, le=100000)
     category: str = Field(default="Mains", max_length=60)
     photo_url: str = Field(default="", max_length=2000)
     discount_percent: int = Field(default=0, ge=0, le=100)
     calories: int | None = Field(default=None, ge=0, le=10000)
     serving_size: str | None = Field(default=None, max_length=120)
+    serving_size_ar: str | None = Field(default=None, max_length=120)
     ingredients: str | None = Field(default=None, max_length=5000)
+    ingredients_ar: str | None = Field(default=None, max_length=5000)
     allergens: str | None = Field(default=None, max_length=255)
+    allergens_ar: str | None = Field(default=None, max_length=255)
     prep_minutes: int | None = Field(default=None, ge=0, le=1440)
     stock_quantity: int | None = Field(default=None, ge=0, le=1000000)  # NULL = unlimited
     is_vegetarian: bool = False
@@ -815,6 +833,7 @@ class DishUpdate(BaseModel):
     # v52: optional Arabic dish name; explicit blank/null clears it.
     name_ar: str | None = Field(default=None, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
+    description_ar: str | None = Field(default=None, max_length=2000)
     price: Decimal | None = Field(default=None, ge=0, le=100000)
     category: str | None = Field(default=None, max_length=60)
     available: bool | None = None
