@@ -1390,7 +1390,7 @@ const AR_FOOD_TERMS = {
   'lemon':'ليمون','lime':'ليمون أخضر','black pepper':'فلفل أسود','white pepper':'فلفل أبيض','pepper':'فلفل','salt':'ملح',
   'olive oil':'زيت زيتون','vegetable oil':'زيت نباتي','oil':'زيت','butter':'زبدة','flour':'دقيق','eggs':'بيض','egg':'بيض',
   'milk':'حليب','cheese':'جبنة','mozzarella':'جبنة موزاريلا','feta cheese':'جبنة فيتا','feta':'جبنة فيتا',
-  'yogurt':'زبادي',' yoghurt':'زبادي','yoghurt':'زبادي','tahini':'طحينة','chickpeas':'حمص','hummus':'حمص',
+  'yogurt':'زبادي','yoghurt':'زبادي','yoghurt':'زبادي','tahini':'طحينة','chickpeas':'حمص','hummus':'حمص',
   'beans':'فاصوليا','fava beans':'فول','lentils':'عدس','pasta':'مكرونة','bread':'خبز','pita bread':'خبز بيتا',
   'baladi bread':'عيش بلدي','tomato paste':'معجون طماطم','garlic sauce':'صوص ثوم','mayonnaise':'مايونيز','ketchup':'كاتشب',
   'pickles':'مخلل','pickle':'مخلل','cabbage':'كرنب','carrot':'جزر','carrots':'جزر','bell pepper':'فلفل رومي',
