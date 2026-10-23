@@ -193,6 +193,18 @@ def ensure_schema():
             if "last_announcement_seen_at" not in cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN last_announcement_seen_at TIMESTAMP"))
             # === END new-dish announcements ===
+    if "dish_options" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("dish_options")}
+        with engine.begin() as conn:
+            if "name_ar" not in cols:
+                conn.execute(text("ALTER TABLE dish_options ADD COLUMN name_ar VARCHAR(80)"))
+    if "dish_ingredients" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("dish_ingredients")}
+        with engine.begin() as conn:
+            if "name_ar" not in cols:
+                conn.execute(text("ALTER TABLE dish_ingredients ADD COLUMN name_ar VARCHAR(80)"))
+            if "allergen_name_ar" not in cols:
+                conn.execute(text("ALTER TABLE dish_ingredients ADD COLUMN allergen_name_ar VARCHAR(80)"))
     if "dishes" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("dishes")}
         with engine.begin() as conn:
@@ -263,6 +275,10 @@ def ensure_schema():
             # vendor edit) fills it. No backfill UPDATE here. ===
             if "name_ar" not in cols:
                 conn.execute(text("ALTER TABLE dishes ADD COLUMN name_ar VARCHAR(200)"))
+            for col, sql_type in (("description_ar", "TEXT"), ("serving_size_ar", "VARCHAR(120)"),
+                                  ("ingredients_ar", "TEXT"), ("allergens_ar", "VARCHAR(255)")):
+                if col not in cols:
+                    conn.execute(text(f"ALTER TABLE dishes ADD COLUMN {col} {sql_type}"))
             # === END v52 ===
             # === v29: signature dishes (Oct 2026). All nullable: NULL
             # is_signature is treated as false; NULL signature_rank =
