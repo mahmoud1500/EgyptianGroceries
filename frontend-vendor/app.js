@@ -2026,7 +2026,7 @@ function addDishForm() {
     '<label class="field">' + esc(t('f_ing')) + '</label><textarea id="nd-ing" rows="2" maxlength="5000" placeholder="' + esc(t('f_ing_ph')) + '"></textarea>' +
     '<label class="field">' + esc(t('f_ing')) + ' (العربية)</label><textarea id="nd-ing-ar" rows="2" maxlength="5000" dir="rtl"></textarea>' +
     '<label class="field">' + esc(t('f_allergens')) + '</label><input type="text" id="nd-all" maxlength="255" placeholder="' + esc(t('f_all_ph')) + '">' +
-    '<label class="field">' + esc(t('f_allergens')) + ' (العربية)</label><input type="text" id="nd-all-ar" maxlength="255" dir="rtl">
+    '<label class="field">' + esc(t('f_allergens')) + ' (العربية)</label><input type="text" id="nd-all-ar" maxlength="255" dir="rtl">' +
     '<div><label class="field">&nbsp;</label><button class="btn" type="submit" style="width:100%">' + esc(t('f_add')) + '</button></div>' +
     '</form>';
 }
@@ -2146,7 +2146,7 @@ window.editDish = function (id) {
     '<label class="field">' + esc(t('f_ing')) + '</label><textarea id="ed-ing" rows="2" maxlength="5000" placeholder="' + esc(t('f_ing_ph')) + '">' + esc(d.ingredients || '') + '</textarea>' +
     '<label class="field">' + esc(t('f_ing')) + ' (العربية)</label><textarea id="ed-ing-ar" rows="2" maxlength="5000" dir="rtl">' + esc(d.ingredients_ar || '') + '</textarea>' +
     '<label class="field">' + esc(t('f_allergens')) + '</label><input type="text" id="ed-all" maxlength="255" placeholder="' + esc(t('f_all_ph')) + '" value="' + esc(d.allergens || '') + '">' +
-    '<label class="field">' + esc(t('f_allergens')) + ' (العربية)</label><input type="text" id="ed-all-ar" maxlength="255" dir="rtl" value="' + esc(d.allergens_ar || '') + '">
+    '<label class="field">' + esc(t('f_allergens')) + ' (العربية)</label><input type="text" id="ed-all-ar" maxlength="255" dir="rtl" value="' + esc(d.allergens_ar || '') + '">' +
     '<div class="row2"><div><label class="field">&nbsp;</label><button class="btn" type="submit" style="width:100%">' + esc(t('save_changes')) + '</button></div>' +
     '<div><label class="field">&nbsp;</label><button class="btn secondary" type="button" style="width:100%" onclick="cancelDishEdit()">' + esc(t('cancel')) + '</button></div></div>' +
     '</form></div>';
