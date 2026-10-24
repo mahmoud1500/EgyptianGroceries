@@ -1212,6 +1212,80 @@ const PHOTO_RULES = [
   { k: ['salad'], img: 'meze.jpg', emoji: '🥗' },
   { k: ['appetizer', 'meze'], img: 'meze.jpg', emoji: '🫒' },
 ];
+const AR_PHOTO_RULES = [
+  // Arabic catalog names -> the same item-specific photos as the English names.
+  { k: ['\u0645\u062d\u0634\u064a \u0648\u0631\u0642 \u0639\u0646\u0628', '\u0645\u062d\u0634\u064a \u0643\u0631\u0646\u0628', '\u0645\u062d\u0634\u064a \u0628\u062a\u0646\u062c\u0627\u0646', '\u0645\u062d\u0634\u064a \u0643\u0648\u0633\u0629', '\u0645\u062d\u0634\u064a \u0637\u0645\u0627\u0637\u0645', '\u0645\u062d\u0634\u064a \u0645\u0634\u0643\u0644', '\u062f\u0648\u0644\u0645\u0629'], img: 'dolma.jpg', emoji: '\u{1F9EB}' },
+  { k: ['\u0645\u0643\u0631\u0648\u0646\u0629 \u0643\u0627\u0644\u064a\u0645\u0627\u0631\u064a', '\u0645\u0643\u0631\u0648\u0646\u0629 \u062c\u0645\u0628\u0631\u064a', '\u0645\u0643\u0631\u0648\u0646\u0629 \u0633\u064a \u0641\u0648\u062f'], img: 'seafood.jpg', emoji: '\u{1F990}' },
+  { k: ['\u0645\u0644\u0648\u062e\u064a\u0629 \u0645\u062c\u0645\u062f\u0629'], img: 'g_frozen_molokhia.jpg', emoji: '\u2744\ufe0f' },
+  { k: ['\u0628\u0627\u0645\u064a\u0629 \u0645\u062c\u0645\u062f\u0629'], img: 'g_frozen_okra.jpg', emoji: '\u2744\ufe0f' },
+  { k: ['\u0641\u0648\u0644 \u0623\u062e\u0636\u0631 \u0645\u062c\u0645\u062f'], img: 'g_frozen_fava.jpg', emoji: '\u{1FAD8}' },
+  { k: ['\u0641\u0648\u0644 \u0645\u062f\u0645\u0633 \u0645\u0639\u0644\u0628'], img: 'g_canned_ful.jpg', emoji: '\u{1F963}' },
+  { k: ['\u0631\u0632 \u0645\u0635\u0631\u064a'], img: 'g_shortgrain_rice.jpg', emoji: '\u{1F35A}' },
+  { k: ['\u0639\u062f\u0633 \u0623\u062d\u0645\u0631'], img: 'g_red_lentils.jpg', emoji: '\u{1FAD8}' },
+  { k: ['\u062d\u0645\u0635 \u062c\u0627\u0641'], img: 'g_chickpeas.jpg', emoji: '\u{1FAD8}' },
+  { k: ['\u0641\u0627\u0635\u0648\u0644\u064a\u0627 \u0628\u064a\u0636\u0627\u0621'], img: 'g_white_beans.jpg', emoji: '\u{1FAD8}' },
+  { k: ['\u0641\u0648\u0644 \u0645\u062f\u0645\u0633'], img: 'g_fava_beans.jpg', emoji: '\u{1FAD8}' },
+  { k: ['\u0648\u0631\u0642 \u0645\u0644\u0648\u062e\u064a\u0629 \u062c\u0627\u0641'], img: 'g_dried_molokhia.jpg', emoji: '\u{1F33F}' },
+  { k: ['\u0628\u0627\u0645\u064a\u0629 \u062c\u0627\u0641\u0629'], img: 'g_dried_okra.jpg', emoji: '\u{1F33F}' },
+  { k: ['\u0648\u0631\u0642 \u0639\u0646\u0628'], img: 'g_grape_leaves_jar.jpg', emoji: '\u{1FAD9}' },
+  { k: ['\u0637\u0631\u0634\u064a \u0645\u0635\u0631\u064a'], img: 'g_torshi.jpg', emoji: '\u{1F952}' },
+  { k: ['\u0632\u064a\u062a\u0648\u0646 \u0623\u062e\u0636\u0631'], img: 'g_green_olives.jpg', emoji: '\u{1FAD2}' },
+  { k: ['\u0643\u0645\u0648\u0646'], img: 'g_cumin.jpg', emoji: '\u{1F9C2}' },
+  { k: ['\u0643\u0632\u0628\u0631\u0629'], img: 'g_coriander.jpg', emoji: '\u{1F33F}' },
+  { k: ['\u062f\u0642\u0629'], img: 'g_dukkah.jpg', emoji: '\u{1F95C}' },
+  { k: ['\u0628\u0647\u0627\u0631\u0627\u062a'], img: 'g_baharat.jpg', emoji: '\u{1F9C2}' },
+  { k: ['\u062d\u0628\u0629 \u0627\u0644\u0628\u0631\u0643\u0629'], img: 'g_black_seed.jpg', emoji: '\u{1F331}' },
+  { k: ['\u0646\u0639\u0646\u0627\u0639 \u0645\u062c\u0641\u0641'], img: 'g_dried_mint.jpg', emoji: '\u{1F33F}' },
+  { k: ['\u0643\u0631\u0643\u062f\u064a\u0647'], img: 'g_karkadeh.jpg', emoji: '\u{1F33A}' },
+  { k: ['\u062d\u0644\u0628\u0629'], img: 'g_fenugreek.jpg', emoji: '\u{1F331}' },
+  { k: ['\u0643\u0631\u0643\u0645'], img: 'g_turmeric.jpg', emoji: '\u{1F7E1}' },
+  { k: ['\u062c\u0628\u0646\u0629 \u0628\u064a\u0636\u0627\u0621 \u0645\u0635\u0631\u064a\u0629'], img: 'g_white_cheese.jpg', emoji: '\u{1F9C0}' },
+  { k: ['\u062c\u0628\u0646\u0629 \u0645\u0634'], img: 'g_mish_cheese.jpg', emoji: '\u{1F9C0}' },
+  { k: ['\u062c\u0628\u0646\u0629 \u0642\u0631\u064a\u0634'], img: 'g_karish.jpg', emoji: '\u{1F9C0}' },
+  { k: ['\u062d\u0644\u0627\u0648\u0629 \u0637\u062d\u064a\u0646\u064a\u0629'], img: 'g_halva.jpg', emoji: '\u{1F36C}' },
+  { k: ['\u0639\u0633\u0644 \u0623\u0633\u0648\u062f'], img: 'g_molasses.jpg', emoji: '\u{1F36F}' },
+  { k: ['\u062a\u0645\u0631'], img: 'g_medjool_dates.jpg', emoji: '\u{1F334}' },
+  { k: ['\u0642\u0645\u0631 \u0627\u0644\u062f\u064a\u0646'], img: 'g_qamar_aldin.jpg', emoji: '\u{1F351}' },
+  { k: ['\u0634\u0627\u064a \u0623\u0633\u0648\u062f \u0645\u0635\u0631\u064a'], img: 'g_black_tea.jpg', emoji: '\u{1F375}' },
+  { k: ['\u062e\u0644\u0637\u0629 \u0633\u062d\u0644\u0628'], img: 'g_sahlab.jpg', emoji: '\u{1F95B}' },
+  { k: ['\u0643\u0634\u0631\u064a', '\u0643\u0634\u0627\u0631\u064a'], img: 'koshary.jpg', emoji: '\u{1F35A}' },
+  { k: ['\u062d\u0645\u0635'], img: 'hummus.jpg', emoji: '\u{1F9C6}' },
+  { k: ['\u0643\u0646\u0627\u0641\u0629'], img: 'konafa.jpg', emoji: '\u{1F96E}' },
+  { k: ['\u0642\u0637\u0627\u064a\u0641'], img: 'qatayef.jpg', emoji: '\u{1F95F}' },
+  { k: ['\u0637\u0639\u0645\u064a\u0629'], img: 'taameya.jpg', emoji: '\u{1F9C6}' },
+  { k: ['\u0645\u0646\u0633\u0641'], img: 'um_mansaf.jpg', emoji: '\u{1F35A}' },
+  { k: ['\u0645\u0642\u0644\u0648\u0628\u0629'], img: 'um_maqlouba.jpg', emoji: '\u{1F35A}' },
+  { k: ['\u0645\u0633\u062e\u0646'], img: 'um_musakhan.jpg', emoji: '\u{1F357}' },
+  { k: ['\u0628\u0631\u064a\u0627\u0646\u064a'], img: 'um_biryani.jpg', emoji: '\u{1F35A}' },
+  { k: ['\u0634\u064a\u0634\u0628\u0631\u0643'], img: 'um_shishbarak.jpg', emoji: '\u{1F95F}' },
+  { k: ['\u0641\u0631\u064a\u0643\u0629'], img: 'um_freekeh.jpg', emoji: '\u{1F372}' },
+  { k: ['\u064a\u0627\u0644\u0646\u062c\u064a'], img: 'um_yalanji.jpg', emoji: '\u{1F9C6}' },
+  { k: ['\u0643\u0628\u0629'], img: 'um_kibbeh.jpg', emoji: '\u{1F9C6}' },
+  { k: ['\u0635\u0641\u064a\u062d\u0629 \u0644\u062d\u0645\u0629'], img: 'um_sfiha.jpg', emoji: '\u{1FAD3}' },
+  { k: ['\u0641\u0637\u0627\u064a\u0631 \u0633\u0628\u0627\u0646\u062e'], img: 'um_spinach_pastry.jpg', emoji: '\u{1F96C}' },
+  { k: ['\u0641\u0637\u0627\u064a\u0631 \u062c\u0628\u0646\u0629'], img: 'um_cheese_pastry.jpg', emoji: '\u{1F9C0}' },
+  { k: ['\u0645\u064a\u0646\u064a \u0628\u064a\u062a\u0632\u0627'], img: 'um_mini_pizza.jpg', emoji: '\u{1F355}' },
+  { k: ['\u0635\u064a\u0646\u064a\u0629 \u0641\u0631\u0627\u062e \u0628\u0627\u0644\u0631\u0632'], img: 'um_chicken_tray.jpg', emoji: '\u{1F357}' },
+  { k: ['\u062d\u0648\u0627\u0648\u0634\u064a'], img: 'feteer.jpg', emoji: '\u{1FAD3}' },
+  { k: ['\u0643\u0641\u062a\u0629'], img: 'kofta.jpg', emoji: '\u{1F362}' },
+  { k: ['\u0643\u0628\u0627\u0628'], img: 'adana_kebab.jpg', emoji: '\u{1F362}' },
+  { k: ['\u0643\u0628\u062f\u0629'], img: 'adana_kebab.jpg', emoji: '\u{1F362}' },
+  { k: ['\u0633\u062c\u0642'], img: 'adana_kebab.jpg', emoji: '\u{1F32d}' },
+  { k: ['\u0645\u0644\u0648\u062e\u064a\u0629'], img: 'molokhia.jpg', emoji: '\u{1F372}' },
+  { k: ['\u0628\u0627\u0645\u064a\u0629'], img: 'okra.jpg', emoji: '\u{1F372}' },
+  { k: ['\u0643\u062d\u0643'], img: 'kahk.jpg', emoji: '\u{1F36A}' },
+  { k: ['\u0628\u0633\u0628\u0648\u0633\u0629'], img: 'baklava.jpg', emoji: '\u{1F370}' },
+  { k: ['\u0623\u0645 \u0639\u0644\u064a'], img: 'rice_pudding.jpg', emoji: '\u{1F36E}' },
+  { k: ['\u0641\u062a\u0629'], img: 'cooked_rice.jpg', emoji: '\u{1F35A}' },
+  { k: ['\u0633\u0645\u0643\u0629 \u0643\u0627\u0645\u0644\u0629 \u0645\u0634\u0648\u064a\u0629'], img: 'grilled_fish.jpg', emoji: '\u{1F41F}' },
+  { k: ['\u0633\u0645\u0643\u0629 \u0643\u0627\u0645\u0644\u0629 \u0645\u0642\u0644\u064a\u0629'], img: 'fried_fish.jpg', emoji: '\u{1F41F}' },
+  { k: ['\u0634\u0648\u0631\u0628\u0629 \u0639\u062f\u0633'], img: 'lentil_soup.jpg', emoji: '\u{1F372}' },
+  { k: ['\u0628\u0637\u0627\u0637\u0633 \u0645\u0642\u0644\u064a\u0629'], img: 'french_fries.jpg', emoji: '\u{1F35F}' },
+  { k: ['\u0633\u0644\u0637\u0629 \u0633\u064a\u0632\u0631'], img: 'caesar_salad.jpg', emoji: '\u{1F957}' },
+  { k: ['\u0641\u062a\u0648\u0634'], img: 'fattoush.jpg', emoji: '\u{1F957}' },
+  { k: ['\u062a\u0628\u0648\u0644\u0629'], img: 'tabbouleh.jpg', emoji: '\u{1F957}' },
+  { k: ['\u0633\u0644\u0637\u0629 \u064a\u0648\u0646\u0627\u0646\u064a\u0629'], img: 'greek_salad.jpg', emoji: '\u{1F957}' },
+];
 const DEFAULT_PHOTO = { img: 'meze.jpg', emoji: '🍽️' };
 
 /* ================= state ================= */
@@ -1686,9 +1760,14 @@ async function api(path, opts) {
 }
 
 function photoFor(dish) {
-  const t = ((dish.name || '') + ' ' + (dish.description || '')).toLowerCase();
-  for (const r of PHOTO_RULES) {
-    for (const k of r.k) { if (t.indexOf(k) !== -1) return r; }
+  // Prefer the product's own name (English or Arabic) so an ingredient in
+  // its description cannot select a different product's photo.
+  const name = ((dish.name || '') + ' ' + (dish.name_ar || '')).toLowerCase();
+  const text = (name + ' ' + (dish.description || '') + ' ' + (dish.description_ar || '')).toLowerCase();
+  for (const source of [name, text]) {
+    for (const r of AR_PHOTO_RULES.concat(PHOTO_RULES)) {
+      for (const k of r.k) { if (source.indexOf(k) !== -1) return r; }
+    }
   }
   return DEFAULT_PHOTO;
 }
@@ -2518,7 +2597,7 @@ function lineEditHTML(l) {
       if (ig.included_by_default) {
         h += '<label class="ing-row ingredient-choice"><input class="ingredient-check" type="checkbox" data-leing="rem" data-ing-name="' + esc(nm) + '"' +
           (isRemoved ? '' : ' checked') + ' onchange="onLineIngChange(\'' + id + '\')">' +
-          '<span class="ing-name">' + esc(nm) + '</span> <span class="ing-hint">' + esc(t('ing_tap_remove')) + '</span></label>';
+          '<span class="ing-name">' + esc(nm) + '</span></label>';
       } else {
         const price = Number(ig.extra_price) || 0;
         h += '<label class="ing-row ingredient-choice"><input class="ingredient-check" type="checkbox" data-leing="add" data-ing-name="' + esc(nm) + '" data-ing-price="' + price + '"' +
@@ -3716,7 +3795,7 @@ async function vDishDetail(dishId) {
           if (ig.removable) {
             html += '<label class="ing-row ingredient-choice"><input class="ingredient-check" type="checkbox" checked data-ing="rem" data-ing-name="' +
               esc(nm) + '" onchange="onIngChange(' + dish.id + ')">' +
-              '<span class="ing-name">' + esc(nm) + '</span> <span class="ing-hint">' + esc(t('ing_tap_remove')) + '</span></label>';
+              '<span class="ing-name">' + esc(nm) + '</span></label>';
           } else {
             html += '<div class="ing-row"><span class="ing-name">• ' + esc(nm) + '</span> <span class="ing-hint">' + esc(t('ing_fixed')) + '</span></div>';
           }
