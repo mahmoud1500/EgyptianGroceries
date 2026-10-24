@@ -1474,7 +1474,10 @@ def admin_vendor_update(
     updates = payload.model_dump(exclude_unset=True)
     changed: dict = {}
     for key, value in updates.items():
-        if key in ("name", "tagline", "area", "phone"):
+        if key == "name_ar":
+            # v53 remainder: blank clears it (NULL = shop falls back to name).
+            value = (value or "").strip() or None
+        elif key in ("name", "tagline", "area", "phone"):
             # name: empty → 400 below. tagline/area/phone are NOT NULL in
             # the DB — store "" (matching the vendor-owner PATCH), never
             # None, or the commit 500s on a NOT NULL violation (QA B-1).

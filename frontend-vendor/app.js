@@ -2598,6 +2598,7 @@ function renderSettings() {
   html += '<div class="form-card settings-form"><h3>' + esc(t('set_profile')) + '</h3>' +
     '<div id="settings-err"></div>' +
     '<label class="field">' + esc(t('set_name')) + '</label><input type="text" id="set-name" maxlength="120" value="' + esc(v.name || '') + '">' +
+    '<label class="field">' + esc(t('set_name_ar')) + '</label><input type="text" id="set-name-ar" maxlength="120" dir="rtl" placeholder="مثال: مطبخ ماما سامية" value="' + esc(v.name_ar || '') + '">' +
     '<label class="field">' + esc(t('set_tagline')) + '</label><input type="text" id="set-tagline" maxlength="255" value="' + esc(v.tagline || '') + '">' +
     '<div class="row2"><div><label class="field">' + esc(t('set_area')) + '</label>' +
     '<input type="text" id="set-area" maxlength="120" placeholder="' + esc(t('set_area_ph')) + '" value="' + esc(v.area || '') + '"></div>' +
@@ -2720,6 +2721,7 @@ window.saveSettings = async function () {
   const feeRaw = $('#set-fee').value.trim();
   const body = {
     name,
+    name_ar: $('#set-name-ar').value.trim() || null,
     tagline: $('#set-tagline').value.trim(),
     area: $('#set-area').value.trim(),
     phone: $('#set-phone').value.trim(),
@@ -3663,6 +3665,7 @@ window.admVendorEdit = async function (id) {
   modal.innerHTML = '<div class="modal-card"><h3 class="section-title">' + esc(t('adm_vendor_edit_h')) + '</h3>' +
     '<form class="add-dish-form" onsubmit="return admVendorSave(event,' + v.id + ')">' +
     '<label class="field">' + esc(t('f_vendor_name')) + '</label><input type="text" id="av-name" required maxlength="160" value="' + esc(v.name || '') + '">' +
+    '<label class="field">' + esc(t('f_vendor_name_ar')) + '</label><input type="text" id="av-name-ar" maxlength="160" dir="rtl" placeholder="مثال: مطبخ ماما سامية" value="' + esc(v.name_ar || '') + '">' +
     '<label class="field">' + esc(t('f_tagline')) + '</label><input type="text" id="av-tagline" maxlength="300" value="' + esc(v.tagline || '') + '">' +
     '<label class="field">' + esc(t('f_area')) + '</label><input type="text" id="av-area" maxlength="200" value="' + esc(v.area || '') + '">' +
     '<label class="field">' + esc(t('f_phone')) + '</label><input type="text" id="av-phone" maxlength="40" value="' + esc(v.phone || '') + '">' +
@@ -3691,6 +3694,7 @@ window.admVendorSave = async function (ev, id) {
       method: 'PATCH',
       body: JSON.stringify({
         name: $('#av-name').value.trim(),
+        name_ar: $('#av-name-ar').value.trim() || null,
         tagline: $('#av-tagline').value.trim() || null,
         area: $('#av-area').value.trim() || null,
         phone: $('#av-phone').value.trim() || null,

@@ -535,6 +535,9 @@ def update_vendor(
     data = payload.model_dump(exclude_unset=True)
     if "name" in data and data["name"] is not None:
         vendor.name = data["name"].strip()
+    # v53 remainder: Arabic vendor name — blank clears it (NULL = fallback).
+    if "name_ar" in data:
+        vendor.name_ar = (data["name_ar"] or "").strip() or None
     for field in ("tagline", "area", "phone"):
         if field in data:
             setattr(vendor, field, (data[field] or "").strip())

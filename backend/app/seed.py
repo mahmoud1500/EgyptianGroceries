@@ -740,6 +740,134 @@ FEATURED_BEST_SELLERS: list[str] = [
 ]
 
 
+# v53 remainder: Arabic ingredient lists (item-for-item parallel to
+# DISH_INGREDIENTS — same keys, same split(", ") item counts, so AR
+# checkout toggles map by INDEX to the EN canonical removal names)
+# and Arabic vendor names. Copied verbatim from
+# hidden_files/builds/dish-text-ar.py (Copywriter, 2026-10-23).
+DISH_INGREDIENTS_AR: dict[str, str] = {
+    "Dolma": "ورق عنب محشي رز ولحمة مفرومة",
+    "Baladi Bread (5 pc)": "دقيق قمح كامل, ماء, خميرة, ملح, ردة قمح",
+    "Feteer Meshaltet": "دقيق, ماء, سمن بلدي, ملح, سكر",
+    "Cow Trotters Casserole (Kaware')": "كوارع, صوص طماطم, بصل, مخبوز",
+    "Egyptian Baked Rice with Lamb (Rice Ma'amar)": "رز, لبن, قشطة, لحمة ضأن, زبدة, مخبوز",
+    "Egyptian Béchemel Pasta (Macarona Bechamel)": "مكرونة, لحمة مفرومة, صوص بشاميل, مخبوز",
+    "Okra with Beef (Bamia)": "بامية, لحمة, صوص طماطم",
+    "Oxtail Casserole (Akawi)": "عكاوي, بصل, صوص طماطم, مخبوز",
+    "Basbousa": "سميد, زبادي, شربات, جوز هند مبشور, سمن, لوز, بيكنج بودر",
+    "Kahk": "دقيق, سمن, سكر بودرة, حشو عجمية بالعسل والمكسرات, ريحة كحك (محلب), سمسم, خميرة",
+    "Konafa": "شعر كنافة, جبنة حلوة, قشطة, سمن, شربات, فستق",
+    "Om Ali": "بف باستري, لبن, قشطة, سكر, زبيب, جوز هند مبشور, لوز, فستق, فانيليا",
+    "Qatayef": "عجينة قطايف, جوز (عين جمل), قشطة, شربات, فستق",
+    "Alexandrian Liver (Plate)": "كبدة بلدي, توم, شطة, كمون, ليمون, بتتقدم مع رز وسلطة",
+    "Alexandrian Liver (Sandwich)": "كبدة بلدي, توم, شطة, كمون, ليمون, عيش بلدي",
+    "Charcoal-Grilled Hawawshi (Plate)": "عيش بلدي, لحمة مفرومة, بصل, فلفل ألوان, طماطم, بقدونس, بهارات حواوشي, سمن",
+    "Charcoal-Grilled Kebab (Plate)": "كباب مشوي على الفحم, بصل, بقدونس, بيتقدم مع رز وسلطة",
+    "Charcoal-Grilled Kebab (Sandwich)": "كباب مشوي على الفحم, بصل, بقدونس, عيش بلدي",
+    "Charcoal-Grilled Sausage (Plate)": "سجق مشوي على الفحم, بيتقدم مع رز وسلطة",
+    "Charcoal-Grilled Sausage (Sandwich)": "سجق مشوي على الفحم, عيش بلدي, طحينة",
+    "Chicken Pane (Plate)": "فراخ بانيه, بتتقدم مع رز وسلطة",
+    "Chicken Pane (Sandwich)": "فراخ بانيه, عيش بلدي, صوص توم",
+    "Egyptian Kofta (Plate)": "لحمة مفرومة, بصل, بقدونس, بهارات, بتتقدم مع رز وسلطة",
+    "Egyptian Kofta (Sandwich)": "لحمة مفرومة, بصل, بقدونس, بهارات, عيش بلدي, طحينة",
+    "Egyptian-Style Sausage (Plate)": "سجق مصري, فلفل, بصل, بيتقدم مع رز وسلطة",
+    "Egyptian-Style Sausage (Sandwich)": "سجق مصري, فلفل, بصل, عيش بلدي",
+    "Grilled Beef (Plate)": "لحمة مشوية, بهارات, بتتقدم مع رز وسلطة",
+    "Grilled Beef (Sandwich)": "لحمة مشوية, بهارات, عيش بلدي, طحينة",
+    "Grilled Chicken (Plate)": "فراخ مشوية, توم, ليمون, بهارات, بتتقدم مع رز وسلطة",
+    "Grilled Chicken (Sandwich)": "فراخ مشوية, توم, ليمون, عيش بلدي",
+    "Egyptian Mombar": "رز, خضرة وطماطم, محشي ومقلي",
+    "Mixed Mahshi Tray (Full Tray)": "خضار مشكلة محشية رز, خضرة وطماطم",
+    "Mixed Mahshi Tray (Half Tray)": "خضار مشكلة محشية رز, خضرة وطماطم",
+    "Stuffed Cabbage Rolls (Full Tray)": "كرنب محشي رز, خضرة وطماطم",
+    "Stuffed Cabbage Rolls (Half Tray)": "كرنب محشي رز, خضرة وطماطم",
+    "Stuffed Eggplant (Full Tray)": "بتنجان محشي رز, خضرة وطماطم",
+    "Stuffed Eggplant (Half Tray)": "بتنجان محشي رز, خضرة وطماطم",
+    "Stuffed Grape Leaves (Full Tray)": "ورق عنب محشي رز, خضرة وطماطم",
+    "Stuffed Grape Leaves (Half Tray)": "ورق عنب محشي رز, خضرة وطماطم",
+    "Stuffed Tomatoes (Full Tray)": "طماطم محشية رز, خضرة",
+    "Stuffed Tomatoes (Half Tray)": "طماطم محشية رز, خضرة",
+    "Stuffed Zucchini (Full Tray)": "كوسة محشية رز, خضرة وطماطم",
+    "Stuffed Zucchini (Half Tray)": "كوسة محشية رز, خضرة وطماطم",
+    "Biryani": "فراخ, رز بسمتي, بهارات برياني, زبادي",
+    "Chicken Tray with Rice": "فراخ, رز, بطاطس, طماطم",
+    "Fatta": "رز, عيش بلدي, لحمة, صوص طماطم, توم, خل, شوربة لحمة, سمن",
+    "Freekeh with Chicken": "فريكة, فراخ, شوربة, مكسرات",
+    "Kibbeh": "برغل, لحمة مفرومة, بصل, صنوبر",
+    "Kofta with Tahini & Rice": "كفتة, صوص طحينة, رز",
+    "Koshary": "رز, عدس بني, مكرونة, حمص, بصل محمر مقرمش, صوص طماطم حامي, دقة خل وتوم (دقة), كمون",
+    "Mansaf": "لحمة ضأن, صوص جميد, عيش شراك, رز, لوز",
+    "Maqlouba": "فراخ أو لحمة, رز, قرنبيط, بتنجان, بطاطس",
+    "Molokhia with Chicken": "ورق ملوخية, فراخ, شوربة فراخ, توم, كزبرة مطحونة, رز, ليمون",
+    "Musakhan": "فراخ, بصل بالسماق, عيش طابون, زيت زيتون",
+    "Ouzi": "لحمة ضأن, رز, بسلة, جزر, مكسرات",
+    "Shish Barak": "شيشبرك لحمة, صوص زبادي, توم, نعناع",
+    "Stuffed Cabbage Rolls": "كرنب, رز, خضرة, طماطم",
+    "Stuffed Grape Leaves": "ورق عنب, رز, لحمة, ليمون",
+    "Ta'ameya (Egyptian Falafel)": "فول, كرات, خضرة, كزبرة, سمسم, عيش بلدي, طحينة",
+    "Yalanji (Stuffed Vegetables)": "خضار, رز, زيت زيتون, ليمون (نباتي)",
+    "Cheese Pastry": "جبنة, عجينة",
+    "Meat Sfiha": "لحمة مفرومة, طماطم, بصل, عيش مسطح",
+    "Mini Pizza": "عجينة بيتزا, صوص طماطم, جبنة",
+    "Spinach Pastry": "سبانخ, بصل, سماق, عجينة",
+    "Salad": "طماطم, خيار, خس, عصير ليمون, زيت زيتون",
+    "Baba Ghanoush": "بتنجان مشوي, طحينة, عصير ليمون, توم, زيت زيتون",
+    "Beet Salad": "بنجر, توم, عصير ليمون, زيت زيتون, بقدونس",
+    "Caesar Salad": "خس روماني, بارميزان, كروتون, صوص سيزر",
+    "Chicken Caesar Salad": "فراخ مشوية, خس روماني, بارميزان, كروتون, صوص سيزر",
+    "Coleslaw": "كرنب, جزر, صوص مايونيز",
+    "Corn Salad": "ذرة, فلفل, مايونيز, عصير ليمون",
+    "Cucumber Yogurt Salad": "خيار, زبادي, توم, نعناع, زيت زيتون",
+    "Egyptian Baladi Salad": "طماطم, خيار, بصل, بقدونس, عصير ليمون, زيت زيتون",
+    "Egyptian Pickles": "خضرة مخللة مشكلة, محلول خل, شطة",
+    "Fattoush": "خضرة مشكلة, طماطم, خيار, فجل, عيش محمص, صوص سماق",
+    "Greek Salad": "طماطم, خيار, بصل أحمر, زيتون, جبنة فيتا, زيت زيتون",
+    "Hummus": "حمص, طحينة, عصير ليمون, توم, زيت زيتون, بابريكا",
+    "Pickled Eggplant": "بتنجان صغير, توم, خل, شطة, كزبرة",
+    "Potato Salad": "بطاطس, مايونيز, مستردة, بيض, مخلل",
+    "Tabbouleh": "بقدونس, برغل, طماطم, نعناع, عصير ليمون, زيت زيتون",
+    "Tahini Salad": "طحينة, عصير ليمون, توم, كمون, زيت زيتون, بقدونس",
+    "Blue Crab (Seasonal)": "كابوريا زرقاء, زبدة توم, ليمون",
+    "Calamari Pasta": "مكرونة, كاليماري, صوص طماطم, توم",
+    "Deluxe Platter": "سمك, جمبري, كاليماري, كابوريا, زبدة توم, ليمون",
+    "Extra Sauce": "صوص طحينة وتوم بيتي",
+    "Fish Fillet": "فيليه سمك, توم, ليمون, كمون",
+    "Fish Rice": "رز, سمك, توم, بهارات",
+    "French Fries": "بطاطس, ملح",
+    "Fried Calamari": "كاليماري, دقيق, توم, ليمون",
+    "Fried Shrimp": "جمبري, دقيق, توم, ليمون",
+    "Garlic Bread": "عيش, زبدة توم, بقدونس",
+    "Grilled Calamari": "كاليماري, توم, ليمون, زيت زيتون",
+    "Grilled Shrimp": "جمبري, توم, ليمون, زيت زيتون",
+    "King Crab Legs": "أرجل كينج كراب, زبدة توم, ليمون",
+    "Mixed Seafood Platter": "سمك, جمبري, كاليماري, توم, ليمون",
+    "Rice": "رز أبيض, زبدة",
+    "Seafood Pasta": "مكرونة, سي فود مشكل, صوص طماطم, توم",
+    "Seafood Rice": "رز, سي فود مشكل, توم, بهارات",
+    "Seafood Soup": "سي فود مشكل, شوربة سمك, توم, ليمون",
+    "Shrimp & Calamari Platter": "جمبري, كاليماري, توم, ليمون",
+    "Shrimp Pasta": "مكرونة, جمبري, صوص طماطم, توم",
+    "Shrimp Rice": "رز, جمبري, توم, بهارات",
+    "Shrimp Sauteed": "جمبري, توم, زبدة, ليمون",
+    "Spicy Shrimp": "جمبري, شطة, توم, ليمون",
+    "Whole Fried Fish": "سمكة كاملة, دقيق, توم, كمون, ليمون",
+    "Whole Grilled Fish": "سمكة كاملة, توم, ليمون, زيت زيتون, بهارات",
+    "Beef & Pasta Soup": "لحمة, مكرونة, خضار مشكلة, شوربة",
+    "Egyptian Lentil Soup": "عدس أحمر, بصل, جزر, كمون, ليمون",
+    "Kaware' Broth (Cow Trotters Soup)": "كوارع, توم, خل, ليمون, كمون",
+    "Orzo Soup (Lisan Asfour)": "لسان عصفور, شوربة فراخ, زبدة",
+    "Vegetable Soup": "خضار مشكلة, شوربة طماطم",
+}
+
+VENDOR_NAMES_AR: dict[str, str] = {
+    "Mama Samia's Kitchen": "مطبخ ماما سامية",
+    "Nile Bakery": "مخبز النيل",
+    "Nile Groceries": "بقالة النيل",
+    "Omar Caboose": "عمر كابوس",
+    "Um Sohaib's Kitchen": "مطبخ أم صهيب",
+}
+
+
 def fill_seed_data(db):
     """Idempotent seed-*data* fills (not schema): ingredients text + category
     prep-minute defaults. Only fills blanks, so vendor edits in the portal are
@@ -757,6 +885,17 @@ def fill_seed_data(db):
         _d = db.scalar(select(models.Dish).where(models.Dish.name == _name))
         if _d is not None and not _d.name_ar:
             _d.name_ar = _ar
+    # v53 remainder: Arabic ingredient lists (only-when-empty — a vendor's
+    # custom ingredients_ar in the portal always wins).
+    for _name, _ar in DISH_INGREDIENTS_AR.items():
+        _d = db.scalar(select(models.Dish).where(models.Dish.name == _name))
+        if _d is not None and not _d.ingredients_ar:
+            _d.ingredients_ar = _ar
+    # v53 remainder: Arabic vendor names (only-when-empty).
+    for _name, _ar in VENDOR_NAMES_AR.items():
+        _v = db.scalar(select(models.Vendor).where(models.Vendor.name == _name))
+        if _v is not None and not _v.name_ar:
+            _v.name_ar = _ar
     # v53: Arabic descriptions + option group/choice labels (only-when-empty).
     for _d in db.scalars(select(models.Dish).where(models.Dish.description_ar.is_(None))):
         _ar = DISH_DESCRIPTIONS_AR.get(_d.description)

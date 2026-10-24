@@ -67,6 +67,10 @@ class Vendor(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
+    # v53 remainder: Arabic vendor name (mirrors Dish.name_ar). NULL = no
+    # Arabic name yet; the shop falls back to `name`. Only-when-empty seed
+    # fill; vendors can edit it in the portal settings.
+    name_ar: Mapped[str | None] = mapped_column(String(120), nullable=True, default=None)
     tagline: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     area: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     phone: Mapped[str] = mapped_column(String(40), nullable=False, default="")

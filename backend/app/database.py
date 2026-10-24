@@ -317,6 +317,10 @@ def ensure_schema():
     if "vendors" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("vendors")}
         with engine.begin() as conn:
+            # v53 remainder: Arabic vendor name. Nullable = fall back to
+            # `name` on the shop; old vendors keep NULL until the seed fill.
+            if "name_ar" not in cols:
+                conn.execute(text("ALTER TABLE vendors ADD COLUMN name_ar VARCHAR(120)"))
             # Structured shop address (Oct 2026). Legacy `area` stays untouched.
             if "street_address" not in cols:
                 conn.execute(text("ALTER TABLE vendors ADD COLUMN street_address VARCHAR(120)"))

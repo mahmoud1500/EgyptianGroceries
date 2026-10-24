@@ -56,7 +56,7 @@ function payHintsHTML(groups, payment) {
     const method = payment === 'zelle' ? t('pay_zelle') : t('pay_venmo');
     rows = groups.map(gr => {
       const h = vendorHandle(gr.vendor, payment);
-      const name = gr.vendor && gr.vendor.name ? gr.vendor.name : '';
+      const name = vname(gr.vendor);
       return '<div class="vendor-tag">⚡ ' + (h
         ? esc(t('pay_send_to', { name, method, handle: h }))
         : esc(t('pay_handle_hint', { name, method }))) + '</div>';
@@ -281,7 +281,7 @@ function closedBlockMsg(v) {
   if (!r) return null;
   const reason = r.reason === 'paused' ? t('closed_reason_paused')
     : r.reason === 'day' ? t('closed_reason_day') : t('closed_reason_hours');
-  return t('vendor_closed_block', { name: (v && v.name) || t('unknown_vendor'), reason });
+  return t('vendor_closed_block', { name: vname(v) || t('unknown_vendor'), reason });
 }
 
 /* ---- advance ordering / weekly specials (America/Los_Angeles) ----
@@ -573,7 +573,7 @@ function centerPickupWheels() {
 }
 function pickupPickerHTML(vendor, g) {
   const sel = pickupSel(vendor, g);
-  let html = '<label class="field">' + esc(t('pickup_time_vendor', { name: vendor.name })) + '</label>';
+  let html = '<label class="field">' + esc(t('pickup_time_vendor', { name: vname(vendor) })) + '</label>';
   html += '<div class="pick-row">' + pickupCalHTML(vendor, g, sel) + pickupWheelHTML(vendor, g, sel) + '</div>';
   return html;
 }
@@ -644,6 +644,10 @@ function dishIngredients(dish) {
     const rawAllergen = optionText(ig, 'allergen_name');
     return Object.assign({}, ig, {
       name: arabicCatalogText(rawName, 'food'),
+      /* v53 remainder: the EN canonical name is the removal key — it is
+         what the backend validates against (DishIngredient.name). Labels
+         localize; keys never do. */
+      canonical: ig.name || rawName,
       allergen_name: arabicCatalogText(rawAllergen, 'allergen')
     });
   });
@@ -651,10 +655,26 @@ function dishIngredients(dish) {
   // Fall back to the ingredients text (seeded): every listed ingredient
   // becomes a removable toggle, so "choose ingredients" works even when the
   // vendor never opened the portal's ingredient manager.
-  const txt = dish && (lang() === 'ar' && dish.ingredients_ar ? dish.ingredients_ar : dish.ingredients);
-  if (!txt) return [];
-  return String(txt).split(',').map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 30)
-    .map(function (nm) { return { name: arabicCatalogText(nm, 'food'), included_by_default: true, removable: true, extra_price: 0 }; });
+  // v53 remainder: in AR mode the AR list is zipped by INDEX with the EN
+  // list (the seed guarantees item-for-item parallelism), so each toggle
+  // shows the AR label while its removal key stays the EN canonical name.
+  // If the two lists ever drift apart, fall back to EN + dictionary
+  // translation (labels approximate, keys still correct).
+  const enList = String((dish && dish.ingredients) || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 30);
+  const arList = (dish && dish.ingredients_ar) ? String(dish.ingredients_ar).split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+  const useAr = lang() === 'ar' && arList.length === enList.length && enList.length > 0;
+  if (!enList.length) return [];
+  return enList.map(function (nm, i) {
+    return { name: useAr ? arList[i] : arabicCatalogText(nm, 'food'), canonical: nm, included_by_default: true, removable: true, extra_price: 0 };
+  });
+}
+/* v53 remainder: display label for a stored (canonical EN) ingredient name
+   — in AR mode map back to the AR toggle label when the dish is known,
+   else show the stored name. */
+function ingDisplayName(dish, canonical) {
+  if (!dish || lang() !== 'ar') return canonical;
+  const row = dishIngredients(dish).find(function (x) { return (x.canonical || x.name) === canonical; });
+  return row ? row.name : canonical;
 }
 /* Is the dish-detail page for this dish currently rendered? Quick-add from
    dish cards has no customization UI — plain defaults apply there. */
@@ -792,12 +812,13 @@ function custLinesHTML(entry) {
     h += '<div class="vendor-tag mod-line">🧩 ' + esc(line) + '</div>';
   });
   (cust.removed || []).forEach(function (n) {
-    h += '<div style="color:#b3261e;font-weight:700">🚫 ' + esc(t('no_x', { name: n })) + '</div>';
+    h += '<div style="color:#b3261e;font-weight:700">🚫 ' + esc(t('no_x', { name: ingDisplayName(e.dish, n) })) + '</div>';
   });
   (cust.added || []).forEach(function (a) {
     const nm = (a && a.name !== undefined) ? a.name : String(a);
     const d = Number(a && a.delta) || 0;
-    h += '<div class="vendor-tag mod-line">➕ ' + esc(d ? t('mod_line', { label: nm, delta: money(d) }) : nm) + '</div>';
+    const label = ingDisplayName(e.dish, nm);
+    h += '<div class="vendor-tag mod-line">➕ ' + esc(d ? t('mod_line', { label: label, delta: money(d) }) : label) + '</div>';
   });
   return h;
 }
@@ -806,11 +827,14 @@ function custLinesHTML(entry) {
 function orderItemExtraHTML(i) {
   let h = '';
   if (i.modifier_label) h += ' <small>(' + esc(i.modifier_label) + ')</small>';
+  // v53 remainder: stored removal names are EN canonical; show the AR label
+  // in AR mode when the dish is cached, else the stored name.
+  const dish = (typeof S !== 'undefined' && S.dishById) ? S.dishById[i.dish_id] : null;
   (i.removed_ingredients || []).forEach(function (n) {
-    h += '<div style="color:#b3261e;font-weight:700">🚫 ' + esc(t('no_x', { name: n })) + '</div>';
+    h += '<div style="color:#b3261e;font-weight:700">🚫 ' + esc(t('no_x', { name: ingDisplayName(dish, n) })) + '</div>';
   });
   (i.added_ingredients || []).forEach(function (n) {
-    h += '<div class="vendor-tag mod-line">➕ ' + esc(String(n)) + '</div>';
+    h += '<div class="vendor-tag mod-line">➕ ' + esc(ingDisplayName(dish, String(n))) + '</div>';
   });
   return h;
 }
@@ -1492,6 +1516,13 @@ function dname(d) {
     if (AR_PRODUCT_NAMES[key]) return AR_PRODUCT_NAMES[key];
   }
   return d.name || '';
+}
+/* v53 remainder: display name for a vendor — mirrors dname(): in AR mode
+   the vendor's saved Arabic name (Vendor.name_ar) wins, else English. */
+function vname(v) {
+  if (!v) return '';
+  if (lang() === 'ar' && typeof v.name_ar === 'string' && v.name_ar.trim()) return v.name_ar.trim();
+  return v.name || '';
 }
 function dishText(d, field) { return d ? ((lang() === 'ar' && d[field + '_ar']) ? d[field + '_ar'] : (d[field] || '')) : ''; }
 function optionText(item, field) { return item ? ((lang() === 'ar' && item[field + '_ar']) ? item[field + '_ar'] : (item[field] || '')) : ''; }
@@ -2621,7 +2652,7 @@ function dishVarsHTML(dish) {
       keys.map(function (k) {
         const e = S.cart.items[k] || {};
         return '<div class="vars-line"><div class="vars-info">' +
-          custLinesHTML({ cust: e.cust || emptyCust() }) + '</div>' +
+          custLinesHTML({ cust: e.cust || emptyCust(), dish: dish }) + '</div>' +
           lineStepperHTML({ key: k, qty: e.qty || 0 }) + '</div>';
       }).join('');
   } else {
@@ -2697,17 +2728,18 @@ function lineEditHTML(l) {
     h += '<div class="mod-picker"><div class="mod-title">' + esc(t('ing_title')) + '</div><div class="ing-list">';
     ings.forEach(function (ig) {
       const nm = ig.name || '';
-      const isRemoved = (cust.removed || []).indexOf(nm) !== -1;
+      const key = ig.canonical || nm;
+      const isRemoved = (cust.removed || []).indexOf(key) !== -1;
       const isAdded = (cust.added || []).some(function (a) {
-        return (a && a.name !== undefined ? a.name : String(a)) === nm;
+        return (a && a.name !== undefined ? a.name : String(a)) === key;
       });
       if (ig.included_by_default) {
-        h += '<label class="ing-row ingredient-choice"><input class="ingredient-check" type="checkbox" data-leing="rem" data-ing-name="' + esc(nm) + '"' +
+        h += '<label class="ing-row ingredient-choice"><input class="ingredient-check" type="checkbox" data-leing="rem" data-ing-name="' + esc(key) + '"' +
           (isRemoved ? '' : ' checked') + ' onchange="onLineIngChange(\'' + id + '\')">' +
           '<span class="ing-name">' + esc(nm) + '</span></label>';
       } else {
         const price = Number(ig.extra_price) || 0;
-        h += '<label class="ing-row ingredient-choice"><input class="ingredient-check" type="checkbox" data-leing="add" data-ing-name="' + esc(nm) + '" data-ing-price="' + price + '"' +
+        h += '<label class="ing-row ingredient-choice"><input class="ingredient-check" type="checkbox" data-leing="add" data-ing-name="' + esc(key) + '" data-ing-price="' + price + '"' +
           (isAdded ? ' checked' : '') + ' onchange="onLineIngChange(\'' + id + '\')">' +
           '<span class="ing-name">' + esc(t('ing_add')) + ' ' + esc(nm) + '</span>' +
           (price ? ' <span class="mod-delta">+' + money(price) + '</span>' : '') + '</label>';
@@ -2862,7 +2894,7 @@ function dishCard(dish) {
     '<h3 class="dish-name">' + esc(dname(dish)) + '</h3>' +
     '<div class="dish-rating">' + rating + '</div>' +
     (dish.description ? '<p class="dish-desc">' + esc(dishText(dish, 'description')) + '</p>' : '') +
-    (v ? '<span class="vendor-tag">' + esc(t('from_vendor')) + ' <a href="#" onclick="event.stopPropagation();go(\'vendor\',' + v.id + ');return false;">' + esc(v.name) + '</a></span>' : '') +
+    (v ? '<span class="vendor-tag">' + esc(t('from_vendor')) + ' <a href="#" onclick="event.stopPropagation();go(\'vendor\',' + v.id + ');return false;">' + esc(vname(v)) + '</a></span>' : '') +
     '<div class="dish-row">' + priceHTML(dish) + stepperHTML(dish) + '</div>' +
     '</div></div>';
 }
@@ -2880,7 +2912,7 @@ window.shareDish = function (ev, dishId) {
   if (!dish) return;
   const v = S.vendorById[dish.vendor_id];
   const url = window.location.origin + '/dish/' + dishId;
-  const text = t('share_msg', { dish: dname(dish), vendor: v ? v.name : '', url: url });
+  const text = t('share_msg', { dish: dname(dish), vendor: v ? vname(v) : '', url: url });
   const waSVG = '<svg viewBox="0 0 448 512" aria-hidden="true"><path fill="#fff" d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-32.4 3.4-7.4 1.7-13.9-1-19.8-2.1-4.5-12.5-30.2-17.1-41.4-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>';
   const fbSVG = '<svg viewBox="0 0 320 512" aria-hidden="true"><path fill="#fff" d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z"/></svg>';
   const pop = document.createElement('div');
@@ -2943,7 +2975,7 @@ function bundleCard(b) {
     '<h3 class="dish-name">' + esc(name) + '</h3>' +
     (desc ? '<p class="dish-desc">' + esc(desc) + '</p>' : '') +
     '<div class="vendor-tag">🍱 ' + esc(t('bundle_includes')) + ': ' + esc(bundleItemsText(b)) + '</div>' +
-    (v ? '<span class="vendor-tag">' + esc(t('bundle_from', { vendor: v.name })) + '</span>' : '') +
+    (v ? '<span class="vendor-tag">' + esc(t('bundle_from', { vendor: vname(v) })) + '</span>' : '') +
     '<div class="dish-row"><span class="price">' + money(b.price) + '</span>' +
     '<button class="btn small" onclick="event.stopPropagation();addBundleToCart(' + b.id + ')">' + esc(t('bundle_add')) + '</button></div>' +
     '</div></div>';
@@ -3000,7 +3032,7 @@ async function vBundles() {
       bundles.forEach(function (b) { (byVendor[b.vendor_id] = byVendor[b.vendor_id] || []).push(b); });
       Object.keys(byVendor).forEach(function (vid) {
         const v = S.vendorById[vid];
-        html += '<h3 class="section-title">🏪 ' + esc(v ? v.name : vid) + '</h3>' +
+        html += '<h3 class="section-title">🏪 ' + esc(v ? vname(v) : vid) + '</h3>' +
           '<div class="grid">' + byVendor[vid].map(bundleCard).join('') + '</div>';
       });
     }
@@ -3329,7 +3361,7 @@ async function vHome() {
             return '<div class="testi-card"><div class="stars">★★★★★</div>' +
               '<p>“' + esc(q.r.text) + '”</p>' +
               '<div class="testi-who">— ' + esc(q.r.user_name || t('review_fallback_name')) +
-              ' <span class="vendor-tag">' + esc(t('from_vendor')) + ' ' + esc(q.v.name) + '</span></div></div>';
+              ' <span class="vendor-tag">' + esc(t('from_vendor')) + ' ' + esc(vname(q.v)) + '</span></div></div>';
           };
           if (quotes.length === 1) {
             slot.innerHTML = '<h2 class="section-title">' + esc(t('testi_h')) + ' <span class="sub">' + esc(t('testi_sub')) + '</span></h2>' +
@@ -3500,7 +3532,7 @@ function vendorCard(v) {
     ? '<span>⭐ ' + Number(v.avg_rating).toFixed(1) + ' (' + v.rating_count + ')</span>'
     : '<span class="no-rating">' + esc(t('no_reviews_yet')) + '</span>';
   return '<div class="vendor-card">' +
-    '<h3>' + esc(v.name) + '</h3>' +
+    '<h3>' + esc(vname(v)) + '</h3>' +
     '<p class="tagline">“' + esc(v.tagline) + '”</p>' +
     '<div class="vendor-meta"><span>📍 ' + esc(v.area) + '</span>' + rating +
     (v.dish_count > 0 ? '<span>🍲 ' + v.dish_count + '</span>' : '') +
@@ -3597,7 +3629,7 @@ async function vVendor(vendorId) {
         ? '<div class="paused-banner">' + esc(t('paused_banner')) + '</div>'
         : '<div id="open-banner">' + openBannerHTML(v) + '</div>') +
       '<div class="storefront-head">' +
-      '<h1>' + esc(v.name) + '</h1>' +
+      '<h1>' + esc(vname(v)) + '</h1>' +
       '<p class="tagline">“' + esc(v.tagline) + '”</p>' +
       '<div class="vendor-meta"><span>📍 ' + esc(v.area) + '</span>' +
       (v.phone ? '<span>📞 <a href="tel:' + esc(v.phone.replace(/[^+\d]/g, '')) + '">' + esc(v.phone) + '</a></span>' : '') +
@@ -3610,7 +3642,7 @@ async function vVendor(vendorId) {
     if (v.phone) {
       const digits = String(v.phone).replace(/\D/g, '');
       if (digits) {
-        const waText = encodeURIComponent(t('whatsapp_msg', { name: v.name }));
+        const waText = encodeURIComponent(t('whatsapp_msg', { name: vname(v) }));
         html += '<a class="btn small" style="margin-top:.7rem" href="https://wa.me/' + digits +
           '?text=' + waText + '" target="_blank" rel="noopener">' + esc(t('whatsapp_btn')) + '</a>';
       }
@@ -3679,7 +3711,7 @@ async function vVendor(vendorId) {
     html += '<h2 class="section-title">' + esc(t('reviews_title')) +
       (rev.count ? ' <span class="sub">' + rev.count + '</span>' : '') + '</h2>';
     html += rev.reviews.length
-      ? rev.reviews.map(r => reviewCardHTML(r, v.name)).join('')
+      ? rev.reviews.map(r => reviewCardHTML(r, vname(v))).join('')
       : '<div class="empty">' + esc(t('no_reviews')) + '</div>';
     view.innerHTML = html;
     // Vendors without their own hour fields: ask the backend for open status.
@@ -3805,7 +3837,7 @@ async function vDishDetail(dishId) {
     if (dish.allergens || dish.allergens_ar) details.push(['⚠️', t('dd_allergens'), dishAllergensText(dish)]);
 
     let html = v
-      ? '<a class="crumb" href="#" onclick="go(\'vendor\',' + v.id + ');return false;"><span class="crumb-arrow">←</span> ' + esc(v.name) + '</a>'
+      ? '<a class="crumb" href="#" onclick="go(\'vendor\',' + v.id + ');return false;"><span class="crumb-arrow">←</span> ' + esc(vname(v)) + '</a>'
       : '<a class="crumb" href="#" onclick="go(\'home\');return false;">' + esc(t('back_to_cooks')) + '</a>';
 
     html += '<div class="dish-detail">' +
@@ -3898,10 +3930,11 @@ async function vDishDetail(dishId) {
       html += '<h2 class="section-title">' + esc(t('ing_title')) + '</h2><div class="ing-list" id="ing-list" data-dish="' + dish.id + '">';
       dishIng.forEach(function (ig) {
         const nm = ig.name || '';
+        const key = ig.canonical || nm;
         if (ig.included_by_default) {
           if (ig.removable) {
             html += '<label class="ing-row ingredient-choice"><input class="ingredient-check" type="checkbox" checked data-ing="rem" data-ing-name="' +
-              esc(nm) + '" onchange="onIngChange(' + dish.id + ')">' +
+              esc(key) + '" onchange="onIngChange(' + dish.id + ')">' +
               '<span class="ing-name">' + esc(nm) + '</span></label>';
           } else {
             html += '<div class="ing-row"><span class="ing-name">• ' + esc(nm) + '</span> <span class="ing-hint">' + esc(t('ing_fixed')) + '</span></div>';
@@ -3909,7 +3942,7 @@ async function vDishDetail(dishId) {
         } else {
           const price = Number(ig.extra_price) || 0;
           html += '<label class="ing-row ingredient-choice"><input class="ingredient-check" type="checkbox" data-ing="add" data-ing-name="' +
-            esc(nm) + '" data-ing-price="' + price + '" onchange="onIngChange(' + dish.id + ')">' +
+            esc(key) + '" data-ing-price="' + price + '" onchange="onIngChange(' + dish.id + ')">' +
             '<span class="ing-name">' + esc(t('ing_add')) + ' ' + esc(nm) + '</span>' +
             (price ? ' <span class="mod-delta">+' + money(price) + '</span>' : '') + '</label>';
         }
@@ -3924,7 +3957,7 @@ async function vDishDetail(dishId) {
     if (v) {
       html += '<div class="madeby-card"><div class="who">' +
         '<div class="madeby-lbl">' + esc(t('dd_made_by')) + '</div>' +
-        '<strong>' + esc(v.name) + '</strong>' +
+        '<strong>' + esc(vname(v)) + '</strong>' +
         (v.area ? '<div class="vendor-tag">📍 ' + esc(v.area) + '</div>' : '') +
         '</div><button class="btn small" onclick="go(\'vendor\',' + v.id + ')">' + esc(t('dd_view_store')) + '</button></div>';
     }
@@ -3938,7 +3971,7 @@ async function vDishDetail(dishId) {
     html += '<h2 class="section-title">' + esc(t('dd_reviews')) +
       (rev.count ? ' <span class="sub">' + rev.count + '</span>' : '') + '</h2>';
     html += rev.reviews.length
-      ? rev.reviews.map(r => reviewCardHTML(r, v && v.name)).join('')
+      ? rev.reviews.map(r => reviewCardHTML(r, v && vname(v))).join('')
       : '<div class="empty">' + esc(t('no_reviews')) + '</div>';
 
     if (related.length) {
@@ -4029,7 +4062,7 @@ async function vCart() {
     const myZip = getZip();
     const allowDelivery = groupDeliveryAllowed(v);
     // === END ZIP gating ===
-    html += '<div class="order-card" id="vendor-checkout-' + v.id + '" tabindex="-1"><div class="order-head"><strong>' + esc(v.name) + '</strong>' + vendorRating + fulfillBadge(v) + '</div>';
+    html += '<div class="order-card" id="vendor-checkout-' + v.id + '" tabindex="-1"><div class="order-head"><strong>' + esc(vname(v)) + '</strong>' + vendorRating + fulfillBadge(v) + '</div>';
     const closedMsg = closedBlockMsg(v);
     if (closedMsg) html += '<div class="error">' + esc(closedMsg) + '</div>';
     for (const l of gr.lines) {
@@ -4084,7 +4117,7 @@ async function vCart() {
         html += '<div class="hint">📍 ' + esc(t('zip_prompt_delivery')) +
           ' <button type="button" class="linklike" onclick="zipFormOpen()">' + esc(t('zip_enter')) + '</button></div>';
       } else if (!allowDelivery) {
-        html += '<div class="notice">' + esc(t('zip_not_served_cart', { name: v.name, zip: myZip })) + '</div>';
+        html += '<div class="notice">' + esc(t('zip_not_served_cart', { name: vname(v), zip: myZip })) + '</div>';
       }
     }
     // === END ZIP prompts ===
@@ -4094,7 +4127,7 @@ async function vCart() {
       // auto-fills from the slot, so no separate picker is shown). ===
       const slots = await vendorPickupSlots(v.id);
       if (slots.length) {
-        html += '<label class="field">' + esc(t('pickup_time_vendor', { name: v.name })) + '</label>' +
+        html += '<label class="field">' + esc(t('pickup_time_vendor', { name: vname(v) })) + '</label>' +
           '<label class="field">' + esc(t('slot_pick')) + '</label>' +
           '<select id="pickup-slot-' + v.id + '" onchange="setGroupPickupSlot(' + v.id + ',this.value)">' +
           '<option value="">' + esc(t('slot_pick_ph')) + '</option>' +
@@ -4114,7 +4147,7 @@ async function vCart() {
       // === END F8 ===
     }
       html += pickupCardHTML(v); // === FEATURE 9: pickup-point card ===
-    html += '<label class="field">' + esc(t('notes_vendor', { name: v.name })) + ' <span class="sub">' + esc(t('optional')) + '</span></label>' +
+    html += '<label class="field">' + esc(t('notes_vendor', { name: vname(v) })) + ' <span class="sub">' + esc(t('optional')) + '</span></label>' +
       '<textarea id="notes-' + v.id + '" rows="2" maxlength="1000" placeholder="' + esc(t('notes_ph')) + '" ' +
       'oninput="setGroupNotes(' + v.id + ',this.value)">' + esc(g.notes) + '</textarea>';
     html += '<table class="totals"><tr><td>' + esc(t('subtotal')) + '</td><td style="text-align:right">' + money(gr.subtotal) + '</td></tr>' +
@@ -4127,7 +4160,7 @@ async function vCart() {
         if (gr.freeDelivery) {
           html += '<div class="notice">🎉 ' + esc(t('free_delivery_applied')) + '</div>';
         } else {
-          html += '<div class="hint">🛵 ' + esc(t('free_delivery_more', { amount: money(fdo - gr.subtotal), name: v.name })) + '</div>';
+          html += '<div class="hint">🛵 ' + esc(t('free_delivery_more', { amount: money(fdo - gr.subtotal), name: vname(v) })) + '</div>';
         }
       }
     }
@@ -4346,7 +4379,7 @@ window.nextReview = async function () {
         zipFormOpen();
         showCheckoutError(t('need_zip'), document.querySelector('#zip-wrap input'));
       } else {
-        showCheckoutError(t('zip_not_served_cart', { name: gr.vendor.name, zip: getZip() }), $('#zip-wrap button'));
+        showCheckoutError(t('zip_not_served_cart', { name: vname(gr.vendor), zip: getZip() }), $('#zip-wrap button'));
       }
       return;
     }
@@ -4365,7 +4398,7 @@ window.nextReview = async function () {
       if (slots.length) {
         const sel = $('#pickup-slot-' + gr.vendor.id);
         const sv = sel ? sel.value : g.pickupSlotId;
-        if (!sv) { showCheckoutError(t('need_pickup_slot', { name: gr.vendor.name }), sel); return; }
+        if (!sv) { showCheckoutError(t('need_pickup_slot', { name: vname(gr.vendor) }), sel); return; }
         g.pickupSlotId = Number(sv);
         const selectedSlot = slots.find(function (s) { return String(s.id) === String(sv); });
         if (selectedSlot && selectedSlot.next_date && selectedSlot.start_time) {
@@ -4375,7 +4408,7 @@ window.nextReview = async function () {
         g.pickupSlotId = null;
         const selected = pickupSel(gr.vendor, g);
         if (!selected.date || !selected.time) {
-          showCheckoutError(t('need_pickup_time_vendor', { name: gr.vendor.name }), $('#pickup-time-' + gr.vendor.id)); return;
+          showCheckoutError(t('need_pickup_time_vendor', { name: vname(gr.vendor) }), $('#pickup-time-' + gr.vendor.id)); return;
         }
         g.pickupAt = selected.date + 'T' + selected.time;
       }
@@ -4392,7 +4425,7 @@ window.nextReview = async function () {
           showCheckoutError(t('need_zip'), document.querySelector('#zip-wrap input'));
           return;
         }
-        showCheckoutError(t('zip_not_served_cart', { name: gr.vendor.name, zip: z }), $('#zip-wrap button'));
+        showCheckoutError(t('zip_not_served_cart', { name: vname(gr.vendor), zip: z }), $('#zip-wrap button'));
         return;
       }
       g.deliveryZip = z || null;
@@ -4433,7 +4466,7 @@ async function vReview() {
   let html = '<h2 class="section-title">' + esc(t('review_title')) + '</h2><div class="cart-layout"><div>';
   for (const gr of groups) {
     const v = gr.vendor, g = gr.g;
-    html += '<div class="order-card"><div class="order-head"><strong>' + esc(v.name) + '</strong>' + fulfillBadge(v) + '</div>';
+    html += '<div class="order-card"><div class="order-head"><strong>' + esc(vname(v)) + '</strong>' + fulfillBadge(v) + '</div>';
     html += '<ul class="order-items review-lines">' + gr.lines.map(l => {
       const picks = custLinesHTML(l) + bundleLinesHTML(l); // === F5: bundle components ===
       // === v39: inline editor on review lines too — same component as cart.
@@ -5336,11 +5369,11 @@ window.reorder = async function (orderId) {
       const ings = dishIngredients(d);
       if (Array.isArray(ings)) {
         (i.removed_ingredients || []).forEach(function (n) {
-          if (ings.some(x => x.name === n && x.included_by_default && x.removable)) cust.removed.push(n);
+          if (ings.some(x => (x.canonical || x.name) === n && x.included_by_default && x.removable)) cust.removed.push(n);
         });
         (i.added_ingredients || []).forEach(function (n) {
-          const f = ings.find(x => x.name === n && !x.included_by_default);
-          if (f) cust.added.push({ name: f.name, delta: Number(f.extra_price) || 0 });
+          const f = ings.find(x => (x.canonical || x.name) === n && !x.included_by_default);
+          if (f) cust.added.push({ name: f.canonical || f.name, delta: Number(f.extra_price) || 0 });
         });
       }
       const rk = lineKey(d.id, { cust: cust });

@@ -132,6 +132,8 @@ class UserOut(_Out):
 class VendorOut(_Out):
     id: int
     name: str
+    # v53 remainder: Arabic vendor name (NULL = shop falls back to `name`).
+    name_ar: str | None = None
     tagline: str
     area: str
     phone: str
@@ -951,6 +953,8 @@ class AdminOrderDetailOut(_Out):
 class AdminVendorUpdate(BaseModel):
     is_paused: bool | None = None
     name: str | None = Field(default=None, min_length=1, max_length=160)
+    # v53 remainder: Arabic vendor name (blank clears it back to NULL).
+    name_ar: str | None = Field(default=None, max_length=160)
     tagline: str | None = Field(default=None, max_length=300)
     area: str | None = Field(default=None, max_length=200)
     phone: str | None = Field(default=None, max_length=40)
@@ -1722,6 +1726,8 @@ class ResetIn(BaseModel):
 # ---------- vendor settings ----------
 class VendorUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
+    # v53 remainder: Arabic vendor name (blank clears it back to NULL).
+    name_ar: str | None = Field(default=None, max_length=120)
     tagline: str | None = Field(default=None, max_length=255)
     area: str | None = Field(default=None, max_length=120)
     phone: str | None = Field(default=None, max_length=40)
