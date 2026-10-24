@@ -1407,6 +1407,121 @@ const AR_FOOD_TERMS = {
   'extra cheese':'جبنة إضافية','no onions':'بدون بصل','without onions':'بدون بصل','no garlic':'بدون ثوم','without garlic':'بدون ثوم',
   'spicy':'حار','mild':'خفيف','regular':'عادي','small':'صغير','medium':'متوسط','large':'كبير'
 };
+/* Extra Arabic names for seeded dish ingredients (merged into the dictionary above). */
+Object.assign(AR_FOOD_TERMS, {
+  'baby eggplant':'باذنجان صغير',
+  'baked':'مخبوز',
+  'baking powder':'بيكنج باودر',
+  'baladi ghee':'سمنة بلدي',
+  'beef broth':'مرق لحم بقري',
+  'beef liver':'كبدة بقري',
+  'beets':'بنجر',
+  'bell peppers':'فلفل رومي',
+  'biryani spices':'بهارات برياني',
+  'blue crab':'سلطعون أزرق',
+  'breaded chicken':'دجاج بانيه',
+  'broth':'مرق',
+  'brown lentils':'عدس بني',
+  'bulgur':'برغل',
+  'béchamel sauce':'صلصة بشاميل',
+  'cabbage stuffed with rice':'كرنب محشي بالأرز',
+  'caesar dressing':'صوص سيزر',
+  'calamari':'كاليماري',
+  'cauliflower':'قرنبيط',
+  'charcoal-grilled kebab':'كباب مشوي على الفحم',
+  'charcoal-grilled sausage':'سجق مشوي على الفحم',
+  'chicken broth':'مرق دجاج',
+  'chicken or meat':'دجاج أو لحم',
+  'cow trotters':'كوارع بقري',
+  'crab':'سلطعون',
+  'crispy fried onions':'بصل مقرمش مقلي',
+  'croutons':'خبز محمص مقرمش',
+  'cucumbers':'خيار',
+  'dough':'عجينة',
+  'eggplant stuffed with rice':'باذنجان محشي بالأرز',
+  'egyptian sausage':'سجق مصري',
+  'fish broth':'مرق سمك',
+  'fish fillet':'فيليه سمك',
+  'flatbread':'خبز مسطح',
+  'freekeh':'فريك',
+  'garlic butter':'زبدة بالثوم',
+  'garlic vinegar (da\'ah)':'دقة الخل والثوم',
+  'ghee':'سمنة',
+  'grape leaves':'ورق عنب',
+  'grape leaves stuffed with rice':'ورق عنب محشي بالأرز',
+  'grape leaves stuffed with rice and minced meat':'ورق عنب محشي بالأرز واللحم المفروم',
+  'grilled beef':'لحم بقري مشوي',
+  'ground coriander':'كزبرة مطحونة',
+  'hawawshi spices':'بهارات الحواوشي',
+  'herbs':'أعشاب',
+  'herbs and tomato':'أعشاب وطماطم',
+  'honey-nut filling (agameya)':'حشوة العسل والمكسرات (عجمية)',
+  'house tahini garlic sauce':'صلصة الطحينة والثوم الخاصة',
+  'jameed yogurt sauce':'صلصة اللبن الجميد',
+  'kahk spice (mahlab)':'بهارات الكحك (محلب)',
+  'king crab legs':'أرجل سلطعون ملكي',
+  'leeks':'كرات',
+  'lemon (vegetarian)':'ليمون (نباتي)',
+  'lemon juice':'عصير ليمون',
+  'macaroni pasta':'مكرونة',
+  'mayonnaise dressing':'صوص مايونيز',
+  'meat':'لحم',
+  'meat dumplings':'عجائن محشوة باللحم',
+  'minced beef':'لحم بقري مفروم',
+  'minced meat':'لحم مفروم',
+  'mixed greens':'خضروات ورقية مشكلة',
+  'mixed pickled vegetables':'مخلل خضار مشكل',
+  'mixed seafood':'مأكولات بحرية مشكلة',
+  'mixed vegetables':'خضار مشكل',
+  'mixed vegetables stuffed with rice':'خضار مشكل محشي بالأرز',
+  'molokhia leaves':'ورق ملوخية',
+  'mustard':'خردل',
+  'olives':'زيتون',
+  'orzo pasta':'مكرونة لسان العصفور',
+  'oxtail':'ذيل بقري',
+  'pancake batter':'عجينة القطايف',
+  'parmesan':'جبنة بارميزان',
+  'peppers':'فلفل',
+  'pine nuts':'صنوبر',
+  'pistachio':'فستق',
+  'pizza dough':'عجينة بيتزا',
+  'powdered sugar':'سكر بودرة',
+  'puff pastry':'عجينة الباف',
+  'radish':'فجل',
+  'red lentils':'عدس أحمر',
+  'roasted eggplant':'باذنجان مشوي',
+  'romaine lettuce':'خس روماني',
+  'semolina':'سميد',
+  'served with rice and salad':'يقدم مع الأرز والسلطة',
+  'sesame seeds':'سمسم',
+  'shrak bread':'خبز الشراك',
+  'shredded coconut':'جوز هند مبشور',
+  'shredded konafa pastry':'عجينة كنافة مبشورة',
+  'spices':'بهارات',
+  'spicy tomato sauce':'صلصة طماطم حارة',
+  'stuffed and fried':'محشي ومقلي',
+  'sugar syrup':'شربات سكر',
+  'sumac':'سماق',
+  'sumac dressing':'صوص السماق',
+  'sumac onions':'بصل بالسماق',
+  'sweet cheese':'جبنة حلوة',
+  'syrup':'شيرة',
+  'taboon bread':'خبز الطابون',
+  'tahini sauce':'صلصة طحينة',
+  'toasted pita':'خبز بيتا محمص',
+  'tomato broth':'مرق طماطم',
+  'tomatoes stuffed with rice':'طماطم محشية بالأرز',
+  'vanilla':'فانيليا',
+  'vegetables':'خضروات',
+  'vinegar':'خل',
+  'vinegar brine':'مملحة الخل',
+  'wheat bran':'نخالة القمح',
+  'whole fish':'سمكة كاملة',
+  'whole wheat flour':'دقيق قمح كامل',
+  'yeast':'خميرة',
+  'yogurt sauce':'صلصة زبادي',
+  'zucchini stuffed with rice':'كوسة محشية بالأرز'
+});
 const AR_ALLERGEN_TERMS = {
   'milk':'الحليب','dairy':'منتجات الألبان','eggs':'البيض','egg':'البيض','fish':'السمك','shellfish':'المحار والقشريات',
   'shrimp':'الجمبري','crustaceans':'القشريات','peanuts':'الفول السوداني','nuts':'المكسرات','tree nuts':'المكسرات',
@@ -1925,7 +2040,7 @@ function updateAuthArea() {
   });
   if (S.user) {
     area.innerHTML = (S.user.role === 'admin'
-      ? '<a class="btn small secondary" href="/admin/delivery" data-go="delivery-admin">🚚 Delivery Management</a>'
+      ? '<a class="btn small secondary" href="/admin/delivery" data-go="delivery-admin">' + esc(t('dl_nav')) + '</a>'
       : '') +
       '<span>👋 ' + esc(S.user.name) + '</span>' +
       '<button class="btn small secondary" onclick="logout()">' + esc(t('nav_logout')) + '</button>';
@@ -5375,10 +5490,7 @@ window.submitHelpTicket = async function () {
 
 /* ================= Admin: hybrid delivery management ================= */
 const DELIVERY_STATUSES = ['pending', 'assigned', 'picked_up', 'delivered', 'failed', 'cancelled'];
-const DELIVERY_STATUS_LABELS = {
-  pending: 'Pending', assigned: 'Assigned', picked_up: 'Picked up',
-  delivered: 'Delivered', failed: 'Failed', cancelled: 'Cancelled'
-};
+function deliveryStatusLabel(s) { return t('dl_st_' + s); }
 let _deliveryAdminCache = { jobs: [], orders: [], filter: 'all', loading: false, error: '' };
 
 function deliveryMoney(value) {
@@ -5388,12 +5500,12 @@ function deliveryMoney(value) {
 function deliveryStatusPill(status) {
   const s = DELIVERY_STATUSES.includes(status) ? status : 'pending';
   return '<span class="delivery-status-pill status-' + esc(s) + '">' +
-    esc(DELIVERY_STATUS_LABELS[s] || s) + '</span>';
+    esc(DELIVERY_STATUSES.includes(s) ? deliveryStatusLabel(s) : s) + '</span>';
 }
 function deliveryOrderLabel(order) {
   const customer = order.customer_name || order.customer?.name || order.customer_email || '';
-  const date = order.created_at ? new Date(order.created_at).toLocaleDateString() : '';
-  return 'Order #' + order.id + (customer ? ' · ' + customer : '') + (date ? ' · ' + date : '');
+  const date = order.created_at ? new Date(order.created_at).toLocaleDateString(lang() === 'ar' ? 'ar' : undefined) : '';
+  return t('dl_order_n', { id: order.id }) + (customer ? ' · ' + customer : '') + (date ? ' · ' + date : '');
 }
 function deliveryJobOrder(job) {
   return _deliveryAdminCache.orders.find(o => Number(o.id) === Number(job.order_id)) || { id: job.order_id };
@@ -5404,10 +5516,10 @@ function deliveryAdminSummary(jobs) {
   const subsidy = jobs.reduce((sum, j) => sum + Math.max(0, Number(j.platform_subsidy) || 0), 0);
   const actual = jobs.reduce((sum, j) => sum + Math.max(0, Number(j.actual_cost) || 0), 0);
   return '<div class="delivery-kpis">' +
-    '<div class="delivery-kpi"><span>Active deliveries</span><strong>' + active + '</strong></div>' +
-    '<div class="delivery-kpi"><span>Delivered</span><strong>' + delivered + '</strong></div>' +
-    '<div class="delivery-kpi"><span>Actual delivery cost</span><strong>' + esc(deliveryMoney(actual)) + '</strong></div>' +
-    '<div class="delivery-kpi"><span>Platform subsidy</span><strong>' + esc(deliveryMoney(subsidy)) + '</strong></div>' +
+    '<div class="delivery-kpi"><span>' + esc(t('dl_kpi_active')) + '</span><strong>' + active + '</strong></div>' +
+    '<div class="delivery-kpi"><span>' + esc(t('dl_st_delivered')) + '</span><strong>' + delivered + '</strong></div>' +
+    '<div class="delivery-kpi"><span>' + esc(t('dl_kpi_actual')) + '</span><strong>' + esc(deliveryMoney(actual)) + '</strong></div>' +
+    '<div class="delivery-kpi"><span>' + esc(t('dl_kpi_subsidy')) + '</span><strong>' + esc(deliveryMoney(subsidy)) + '</strong></div>' +
     '</div>';
 }
 function deliveryCreateForm() {
@@ -5417,19 +5529,19 @@ function deliveryCreateForm() {
     !jobsOrderIds.has(Number(o.id)) &&
     String(o.status || '').toLowerCase() !== 'cancelled'
   );
-  return '<section class="delivery-panel"><div class="delivery-panel-heading"><div><h2>Create a delivery job</h2>' +
-    '<p class="hint">Select an existing delivery order that does not already have a delivery job.</p></div></div>' +
+  return '<section class="delivery-panel"><div class="delivery-panel-heading"><div><h2>' + esc(t('dl_create_h')) + '</h2>' +
+    '<p class="hint">' + esc(t('dl_create_sub')) + '</p></div></div>' +
     (eligible.length
-      ? '<div class="delivery-create-grid"><label class="field">Delivery order<select id="delivery-new-order">' +
+      ? '<div class="delivery-create-grid"><label class="field">' + esc(t('dl_f_order')) + '<select id="delivery-new-order">' +
         eligible.map(o => '<option value="' + Number(o.id) + '">' + esc(deliveryOrderLabel(o)) + '</option>').join('') +
-        '</select></label><label class="field">Delivery mode<select id="delivery-new-mode"><option value="third_party">Third-party delivery</option><option value="vendor">Vendor delivery</option></select></label>' +
-        '<label class="field">Provider<input id="delivery-new-provider" maxlength="40" value="manual" placeholder="e.g. in-house, courier name"></label>' +
-        '<label class="field">Provider reference<input id="delivery-new-reference" maxlength="120" placeholder="Optional tracking/reference ID"></label>' +
-        '<label class="field">Quoted cost ($)<input id="delivery-new-quoted" type="number" min="0" step="0.01" value="0"></label>' +
-        '<label class="field">Customer delivery fee ($)<input id="delivery-new-fee" type="number" min="0" step="0.01" placeholder="Use order fee if blank"></label>' +
-        '<label class="field delivery-notes-field">Notes<textarea id="delivery-new-notes" rows="2" maxlength="2000" placeholder="Optional dispatch notes"></textarea></label>' +
-        '</div><div class="delivery-actions"><button class="btn" type="button" onclick="createDeliveryJob()">Create delivery job</button><span id="delivery-create-msg" role="status"></span></div>'
-      : '<div class="notice">No eligible delivery orders found. A job may already exist for each delivery order, or no delivery orders are available.</div>') +
+        '</select></label><label class="field">' + esc(t('dl_f_mode')) + '<select id="delivery-new-mode"><option value="third_party">' + esc(t('dl_mode_3p')) + '</option><option value="vendor">' + esc(t('dl_mode_vendor')) + '</option></select></label>' +
+        '<label class="field">' + esc(t('dl_f_provider')) + '<input id="delivery-new-provider" maxlength="40" value="manual" placeholder="' + esc(t('dl_provider_ph')) + '"></label>' +
+        '<label class="field">' + esc(t('dl_f_ref')) + '<input id="delivery-new-reference" maxlength="120" placeholder="' + esc(t('dl_ref_ph')) + '"></label>' +
+        '<label class="field">' + esc(t('dl_f_quoted')) + '<input id="delivery-new-quoted" type="number" min="0" step="0.01" value="0"></label>' +
+        '<label class="field">' + esc(t('dl_f_cust_fee_full')) + '<input id="delivery-new-fee" type="number" min="0" step="0.01" placeholder="' + esc(t('dl_fee_ph')) + '"></label>' +
+        '<label class="field delivery-notes-field">' + esc(t('dl_f_notes')) + '<textarea id="delivery-new-notes" rows="2" maxlength="2000" placeholder="' + esc(t('dl_notes_ph')) + '"></textarea></label>' +
+        '</div><div class="delivery-actions"><button class="btn" type="button" onclick="createDeliveryJob()">' + esc(t('dl_btn_create')) + '</button><span id="delivery-create-msg" role="status"></span></div>'
+      : '<div class="notice">' + esc(t('dl_none_eligible')) + '</div>') +
     '</section>';
 }
 function deliveryJobCard(job) {
@@ -5439,30 +5551,30 @@ function deliveryJobCard(job) {
   const provider = job.provider || 'manual';
   const status = DELIVERY_STATUSES.includes(job.status) ? job.status : 'pending';
   return '<article class="delivery-job-card" data-delivery-job="' + id + '">' +
-    '<div class="delivery-job-top"><div><div class="delivery-order-id">Order #' + Number(job.order_id) +
-      ' <span class="delivery-job-id">· Job #' + id + '</span></div><div class="delivery-order-meta">' +
-      esc(order.customer_name || order.customer?.name || order.customer_email || 'Customer details unavailable') +
-      (order.created_at ? ' · ' + esc(new Date(order.created_at).toLocaleDateString()) : '') +
+    '<div class="delivery-job-top"><div><div class="delivery-order-id">' + esc(t('dl_order_n', { id: Number(job.order_id) })) +
+      ' <span class="delivery-job-id">· ' + esc(t('dl_job_n', { id: id })) + '</span></div><div class="delivery-order-meta">' +
+      esc(order.customer_name || order.customer?.name || order.customer_email || t('dl_cust_unavail')) +
+      (order.created_at ? ' · ' + esc(new Date(order.created_at).toLocaleDateString(lang() === 'ar' ? 'ar' : undefined)) : '') +
       '</div></div>' + deliveryStatusPill(status) + '</div>' +
     '<div class="delivery-edit-grid">' +
-      '<label class="field">Status<select data-delivery-field="status">' +
-        DELIVERY_STATUSES.map(s => '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + esc(DELIVERY_STATUS_LABELS[s]) + '</option>').join('') +
+      '<label class="field">' + esc(t('dl_f_status')) + '<select data-delivery-field="status">' +
+        DELIVERY_STATUSES.map(s => '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + esc(deliveryStatusLabel(s)) + '</option>').join('') +
       '</select></label>' +
-      '<label class="field">Delivery mode<select data-delivery-field="mode"><option value="third_party"' + (mode === 'third_party' ? ' selected' : '') + '>Third-party</option><option value="vendor"' + (mode === 'vendor' ? ' selected' : '') + '>Vendor</option></select></label>' +
-      '<label class="field">Provider<input data-delivery-field="provider" maxlength="40" value="' + esc(provider) + '"></label>' +
-      '<label class="field">Provider reference<input data-delivery-field="provider_reference" maxlength="120" value="' + esc(job.provider_reference || '') + '" placeholder="Tracking/reference"></label>' +
-      '<label class="field">Quoted cost ($)<input data-delivery-field="quoted_cost" type="number" min="0" step="0.01" value="' + esc(job.quoted_cost ?? '0') + '"></label>' +
-      '<label class="field">Actual cost ($)<input data-delivery-field="actual_cost" type="number" min="0" step="0.01" value="' + esc(job.actual_cost ?? '0') + '"></label>' +
-      '<label class="field">Customer fee ($)<input data-delivery-field="customer_fee" type="number" min="0" step="0.01" value="' + esc(job.customer_fee ?? '0') + '"></label>' +
-      '<label class="field">Cost payment status<select data-delivery-field="payment_status">' +
-        ['unpaid', 'paid', 'waived'].map(s => '<option value="' + s + '"' + (s === job.payment_status ? ' selected' : '') + '>' + esc(s.charAt(0).toUpperCase() + s.slice(1)) + '</option>').join('') +
+      '<label class="field">' + esc(t('dl_f_mode')) + '<select data-delivery-field="mode"><option value="third_party"' + (mode === 'third_party' ? ' selected' : '') + '>' + esc(t('dl_mode_3p_s')) + '</option><option value="vendor"' + (mode === 'vendor' ? ' selected' : '') + '>' + esc(t('dl_mode_vendor_s')) + '</option></select></label>' +
+      '<label class="field">' + esc(t('dl_f_provider')) + '<input data-delivery-field="provider" maxlength="40" value="' + esc(provider) + '"></label>' +
+      '<label class="field">' + esc(t('dl_f_ref')) + '<input data-delivery-field="provider_reference" maxlength="120" value="' + esc(job.provider_reference || '') + '" placeholder="' + esc(t('dl_ref_ph_s')) + '"></label>' +
+      '<label class="field">' + esc(t('dl_f_quoted')) + '<input data-delivery-field="quoted_cost" type="number" min="0" step="0.01" value="' + esc(job.quoted_cost ?? '0') + '"></label>' +
+      '<label class="field">' + esc(t('dl_f_actual')) + '<input data-delivery-field="actual_cost" type="number" min="0" step="0.01" value="' + esc(job.actual_cost ?? '0') + '"></label>' +
+      '<label class="field">' + esc(t('dl_f_cust_fee')) + '<input data-delivery-field="customer_fee" type="number" min="0" step="0.01" value="' + esc(job.customer_fee ?? '0') + '"></label>' +
+      '<label class="field">' + esc(t('dl_f_pay')) + '<select data-delivery-field="payment_status">' +
+        ['unpaid', 'paid', 'waived'].map(s => '<option value="' + s + '"' + (s === job.payment_status ? ' selected' : '') + '>' + esc(t('dl_pay_' + s)) + '</option>').join('') +
       '</select></label>' +
-      '<label class="field delivery-notes-field">Notes<textarea data-delivery-field="notes" rows="2" maxlength="2000">' + esc(job.notes || '') + '</textarea></label>' +
+      '<label class="field delivery-notes-field">' + esc(t('dl_f_notes')) + '<textarea data-delivery-field="notes" rows="2" maxlength="2000">' + esc(job.notes || '') + '</textarea></label>' +
     '</div>' +
-    '<div class="delivery-financials"><span>Actual cost <strong>' + esc(deliveryMoney(job.actual_cost)) + '</strong></span>' +
-      '<span>Customer fee <strong>' + esc(deliveryMoney(job.customer_fee)) + '</strong></span>' +
-      '<span>Platform subsidy <strong>' + esc(deliveryMoney(job.platform_subsidy)) + '</strong></span></div>' +
-    '<div class="delivery-actions"><button class="btn small" type="button" onclick="saveDeliveryJob(' + id + ')">Save changes</button>' +
+    '<div class="delivery-financials"><span>' + esc(t('dl_fin_actual')) + ' <strong>' + esc(deliveryMoney(job.actual_cost)) + '</strong></span>' +
+      '<span>' + esc(t('dl_fin_fee')) + ' <strong>' + esc(deliveryMoney(job.customer_fee)) + '</strong></span>' +
+      '<span>' + esc(t('dl_kpi_subsidy')) + ' <strong>' + esc(deliveryMoney(job.platform_subsidy)) + '</strong></span></div>' +
+    '<div class="delivery-actions"><button class="btn small" type="button" onclick="saveDeliveryJob(' + id + ')">' + esc(t('dl_save')) + '</button>' +
       '<span class="delivery-save-msg" id="delivery-save-msg-' + id + '" role="status"></span></div>' +
     '</article>';
 }
@@ -5470,18 +5582,18 @@ async function vDeliveryAdmin() {
   const view = $('#view');
   if (!view) return;
   if (!S.user || S.user.role !== 'admin') {
-    S.flash = 'Please sign in with an administrator account to manage deliveries.';
+    S.flash = t('dl_signin');
     go('login');
     return;
   }
-  view.innerHTML = '<section class="delivery-admin"><div class="delivery-page-header"><div><p class="eyebrow">ADMINISTRATION</p><h1>Delivery Management</h1><p class="hint">Dispatch orders and track delivery costs and platform subsidies.</p></div>' +
-    '<button class="btn secondary" type="button" onclick="refreshDeliveryAdmin()">↻ Refresh</button></div><div id="delivery-admin-content"><p class="hint">Loading delivery data…</p></div></section>';
+  view.innerHTML = '<section class="delivery-admin"><div class="delivery-page-header"><div><p class="eyebrow">' + esc(t('dl_eyebrow')) + '</p><h1>' + esc(t('dl_title')) + '</h1><p class="hint">' + esc(t('dl_sub')) + '</p></div>' +
+    '<button class="btn secondary" type="button" onclick="refreshDeliveryAdmin()">' + esc(t('dl_refresh')) + '</button></div><div id="delivery-admin-content"><p class="hint">' + esc(t('dl_loading')) + '</p></div></section>';
   await refreshDeliveryAdmin();
 }
 window.refreshDeliveryAdmin = async function () {
   const content = document.getElementById('delivery-admin-content');
   if (!content) return;
-  content.innerHTML = '<p class="hint">Loading delivery data…</p>';
+  content.innerHTML = '<p class="hint">' + esc(t('dl_loading')) + '</p>';
   try {
     const result = await Promise.all([
       api('/delivery/jobs'),
@@ -5495,20 +5607,20 @@ window.refreshDeliveryAdmin = async function () {
       : _deliveryAdminCache.jobs.filter(j => j.status === _deliveryAdminCache.filter);
     content.innerHTML = deliveryAdminSummary(_deliveryAdminCache.jobs) +
       deliveryCreateForm() +
-      '<section class="delivery-panel"><div class="delivery-panel-heading"><div><h2>Delivery jobs</h2><p class="hint">' +
-      _deliveryAdminCache.jobs.length + ' total job' + (_deliveryAdminCache.jobs.length === 1 ? '' : 's') +
-      '</p></div><label class="delivery-filter-label">Filter by status<select id="delivery-status-filter" onchange="filterDeliveryJobs(this.value)">' +
-      [['all','All statuses'], ...DELIVERY_STATUSES.map(s => [s, DELIVERY_STATUS_LABELS[s]])]
+      '<section class="delivery-panel"><div class="delivery-panel-heading"><div><h2>' + esc(t('dl_jobs_h')) + '</h2><p class="hint">' +
+      esc(_deliveryAdminCache.jobs.length === 1 ? t('dl_total_one') : t('dl_total_many', { n: _deliveryAdminCache.jobs.length })) +
+      '</p></div><label class="delivery-filter-label">' + esc(t('dl_filter')) + '<select id="delivery-status-filter" onchange="filterDeliveryJobs(this.value)">' +
+      [['all', t('dl_all')], ...DELIVERY_STATUSES.map(s => [s, deliveryStatusLabel(s)])]
         .map(([v,l]) => '<option value="' + v + '"' + (v === _deliveryAdminCache.filter ? ' selected' : '') + '>' + esc(l) + '</option>').join('') +
       '</select></label></div>' +
       (jobs.length ? '<div class="delivery-job-list">' + jobs.map(deliveryJobCard).join('') + '</div>' :
-        '<div class="delivery-empty"><span>🚚</span><strong>No delivery jobs' +
-        (_deliveryAdminCache.filter === 'all' ? ' yet' : ' with this status') +
-        '</strong><p class="hint">Create a job above for an existing delivery order.</p></div>') +
+        '<div class="delivery-empty"><span>🚚</span><strong>' +
+        esc(_deliveryAdminCache.filter === 'all' ? t('dl_empty_all') : t('dl_empty_filtered')) +
+        '</strong><p class="hint">' + esc(t('dl_empty_hint')) + '</p></div>') +
       '</section>';
   } catch (e) {
     content.innerHTML = '<div class="error">' + esc(errText(e)) + '</div>' +
-      '<button class="btn" type="button" onclick="refreshDeliveryAdmin()">Try again</button>';
+      '<button class="btn" type="button" onclick="refreshDeliveryAdmin()">' + esc(t('dl_retry')) + '</button>';
   }
 };
 window.filterDeliveryJobs = function (status) {
@@ -5529,7 +5641,7 @@ window.createDeliveryJob = async function () {
   const quoted = Number(quotedEl.value);
   const fee = feeEl.value.trim() === '' ? null : Number(feeEl.value);
   if (!Number.isFinite(quoted) || quoted < 0 || (fee !== null && (!Number.isFinite(fee) || fee < 0))) {
-    if (msg) msg.textContent = 'Enter valid non-negative costs.';
+    if (msg) msg.textContent = t('dl_bad_cost');
     return;
   }
   const button = document.querySelector('#delivery-create-msg')?.previousElementSibling;
@@ -5566,12 +5678,12 @@ window.saveDeliveryJob = async function (jobId) {
     }
   });
   if (['quoted_cost', 'actual_cost', 'customer_fee'].some(k => !Number.isFinite(payload[k]) || payload[k] < 0)) {
-    if (msg) msg.textContent = 'Enter valid non-negative costs.';
+    if (msg) msg.textContent = t('dl_bad_cost');
     return;
   }
   const button = card.querySelector('button.btn');
   if (button) button.disabled = true;
-  if (msg) msg.textContent = 'Saving…';
+  if (msg) msg.textContent = t('dl_saving');
   try {
     await api('/delivery/jobs/' + Number(jobId), {
       method: 'PATCH',
