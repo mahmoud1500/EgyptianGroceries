@@ -1446,9 +1446,19 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
-/* v52: display name for a dish object — Arabic name in AR mode when the
-   dish has one (mirrors the bundle pattern), else the English name. */
-function dname(d) { return (lang() === 'ar' && d && d.name_ar) ? d.name_ar : (d ? d.name : ''); }
+/* v52 + PR #12: display name for a dish object — in AR mode the dish's
+   saved Arabic name (Dish.name_ar, v52 data path) wins; the PR #12 built-in
+   AR_PRODUCT_NAMES dictionary then covers the seeded catalog (incl. grocery
+   products) whose name_ar is still NULL; otherwise the English name. */
+function dname(d) {
+  if (!d) return '';
+  if (lang() === 'ar') {
+    if (typeof d.name_ar === 'string' && d.name_ar.trim()) return d.name_ar.trim();
+    const key = String(d.name || '').trim().toLowerCase();
+    if (AR_PRODUCT_NAMES[key]) return AR_PRODUCT_NAMES[key];
+  }
+  return d.name || '';
+}
 function dishText(d, field) { return d ? ((lang() === 'ar' && d[field + '_ar']) ? d[field + '_ar'] : (d[field] || '')) : ''; }
 function optionText(item, field) { return item ? ((lang() === 'ar' && item[field + '_ar']) ? item[field + '_ar'] : (item[field] || '')) : ''; }
 /* Arabic fallback for common catalog ingredients. Vendor-provided *_ar values
@@ -1650,6 +1660,69 @@ function effDiscPct(dish) {
   return Number(dish.discount_percent) || 0;
 }
 /* === END FEATURE 7 === */
+/* Common built-in translations keep the seeded catalog useful immediately.
+   Vendor-supplied name_ar always takes priority; unknown/custom names fall back to English.
+   (PR #12 dictionary — consulted by dname() in AR mode when a dish has no saved name_ar.) */
+const AR_PRODUCT_NAMES = {
+  "egyptian baladi salad": "سلطة بلدي مصرية", "tahini salad": "سلطة طحينة",
+  "baba ghanoush": "بابا غنوج", "hummus": "حمص", "tabbouleh": "تبولة",
+  "fattoush": "فتوش", "greek salad": "سلطة يونانية", "caesar salad": "سلطة سيزر",
+  "chicken caesar salad": "سلطة سيزر بالدجاج", "coleslaw": "سلطة كول سلو",
+  "cucumber yogurt salad": "سلطة خيار بالزبادي", "beet salad": "سلطة بنجر",
+  "potato salad": "سلطة بطاطس", "corn salad": "سلطة ذرة", "pickled eggplant": "باذنجان مخلل",
+  "egyptian pickles": "مخلل مشكل مصري", "kaware' broth (cow trotters soup)": "شوربة كوارع",
+  "orzo soup (lisan asfour)": "شوربة لسان عصفور", "egyptian lentil soup": "شوربة عدس مصرية",
+  "vegetable soup": "شوربة خضار", "beef & pasta soup": "شوربة لحم بالمكرونة",
+  "whole fried fish": "سمك كامل مقلي", "whole grilled fish": "سمك كامل مشوي",
+  "fish fillet": "فيليه سمك", "fried shrimp": "جمبري مقلي", "grilled shrimp": "جمبري مشوي",
+  "shrimp sauteed": "جمبري سوتيه", "spicy shrimp": "جمبري حار",
+  "fried calamari": "كاليماري مقلي", "grilled calamari": "كاليماري مشوي",
+  "mixed seafood platter": "طبق مأكولات بحرية مشكل", "seafood rice": "أرز بالمأكولات البحرية",
+  "shrimp rice": "أرز بالجمبري", "fish rice": "أرز بالسمك", "seafood pasta": "مكرونة بالمأكولات البحرية",
+  "shrimp pasta": "مكرونة بالجمبري", "calamari pasta": "مكرونة بالكاليماري",
+  "seafood soup": "شوربة سي فود", "rice": "أرز", "french fries": "بطاطس مقلية",
+  "garlic bread": "خبز بالثوم", "extra sauce": "صوص إضافي",
+  "egyptian kofta (plate)": "كفتة مصرية (طبق)", "egyptian kofta (sandwich)": "ساندويتش كفتة مصرية",
+  "alexandrian liver (plate)": "كبدة إسكندراني (طبق)", "alexandrian liver (sandwich)": "ساندويتش كبدة إسكندراني",
+  "charcoal-grilled sausage (plate)": "سجق مشوي على الفحم (طبق)",
+  "charcoal-grilled sausage (sandwich)": "ساندويتش سجق مشوي على الفحم",
+  "egyptian-style sausage (plate)": "سجق على الطريقة المصرية (طبق)",
+  "egyptian-style sausage (sandwich)": "ساندويتش سجق مصري",
+  "grilled beef (plate)": "لحم بقري مشوي (طبق)", "grilled beef (sandwich)": "ساندويتش لحم بقري مشوي",
+  "charcoal-grilled kebab (plate)": "كباب مشوي على الفحم (طبق)",
+  "charcoal-grilled kebab (sandwich)": "ساندويتش كباب مشوي",
+  "chicken pane (plate)": "بانيه دجاج (طبق)", "chicken pane (sandwich)": "ساندويتش بانيه دجاج",
+  "grilled chicken (plate)": "دجاج مشوي (طبق)", "grilled chicken (sandwich)": "ساندويتش دجاج مشوي",
+  "charcoal-grilled hawawshi (plate)": "حواوشي مشوي على الفحم",
+  "cow trotters casserole (kaware')": "طاجن كوارع", "oxtail casserole (akawi)": "طاجن عكاوي",
+  "okra with beef (bamia)": "بامية باللحم", "egyptian baked rice with lamb (rice ma'amar)": "أرز معمر باللحم الضأن",
+  "egyptian béchemel pasta (macarona bechamel)": "مكرونة بالبشاميل",
+  "egyptian mombar": "ممبار مصري", "stuffed grape leaves (half tray)": "ورق عنب محشي (صينية نصف)",
+  "stuffed grape leaves (full tray)": "ورق عنب محشي (صينية كاملة)",
+  "stuffed cabbage rolls (half tray)": "محشي كرنب (صينية نصف)", "stuffed cabbage rolls (full tray)": "محشي كرنب (صينية كاملة)",
+  "stuffed eggplant (half tray)": "باذنجان محشي (صينية نصف)", "stuffed eggplant (full tray)": "باذنجان محشي (صينية كاملة)",
+  "stuffed zucchini (half tray)": "كوسة محشية (صينية نصف)", "stuffed zucchini (full tray)": "كوسة محشية (صينية كاملة)",
+  "stuffed tomatoes (half tray)": "طماطم محشية (صينية نصف)", "stuffed tomatoes (full tray)": "طماطم محشية (صينية كاملة)",
+  "mixed mahshi tray (half tray)": "صينية محشي مشكل (نصف)", "mixed mahshi tray (full tray)": "صينية محشي مشكل (كاملة)",
+  "dolma": "دولمة", "baladi bread (5 pc)": "عيش بلدي (٥ أرغفة)", "feteer meshaltet": "فطير مشلتت",
+  "kahk": "كحك", "basbousa": "بسبوسة", "molokhia with chicken": "ملوخية بالدجاج",
+  "koshary": "كشري", "fatta": "فتة", "om ali": "أم علي", "konafa": "كنافة",
+  "qatayef": "قطايف", "ta'ameya (egyptian falafel)": "طعمية مصرية",
+  "koshary": "كشري", "molokhia": "ملوخية", "halva": "حلاوة طحينية",
+  "ground cumin": "كمون مطحون", "cumin": "كمون", "ground coriander": "كزبرة مطحونة",
+  "coriander": "كزبرة", "dried mint": "نعناع مجفف", "dried molokhia": "ملوخية ناشفة",
+  "dried okra": "بامية مجففة", "dukkah": "دقة مصرية", "fava beans": "فول",
+  "fenugreek": "حلبة", "frozen fava beans": "فول مجمد", "grape leaves": "ورق عنب",
+  "green olives": "زيتون أخضر", "medjool dates": "تمر مجدول", "mish cheese": "جبنة مش",
+  "molasses": "دبس", "qamar aldin": "قمر الدين", "red lentils": "عدس أحمر",
+  "sahlab": "سحلب", "short grain rice": "أرز قصير الحبة", "torshi": "طرشي",
+  "turmeric": "كركم", "white beans": "فاصوليا بيضاء", "white cheese": "جبنة بيضاء",
+  "black tea": "شاي أسود", "black seed": "حبة البركة", "canned ful": "فول معلب",
+  "chickpeas": "حمص حب", "frozen molokhia": "ملوخية مجمدة", "frozen okra": "بامية مجمدة",
+  "macaroni": "مكرونة", "greek salad": "سلطة يونانية", "grilled fish": "سمك مشوي",
+  "grilled shrimp": "جمبري مشوي", "hummus": "حمص", "tahini": "طحينة",
+  "pickles": "مخلل", "okra": "بامية", "lentil soup": "شوربة عدس"
+};
 /* Prep time: dish-level minutes override the vendor's shop default (30). */
 function prepMins(dish, vendor) {
   if (dish && dish.prep_minutes !== null && dish.prep_minutes !== undefined && dish.prep_minutes !== '') {
@@ -3668,8 +3741,8 @@ async function vDishDetail(dishId) {
       try { v = await api('/vendors/' + dish.vendor_id); } catch (e) { v = null; }
     }
     if (v) S.vendorById[v.id] = v;
-    setPageSEO(dish.name + ' | ' + (v ? v.name : 'Egyptian Home Food'),
-      dish.description || ('Order ' + dish.name + ' from a local home cook for pickup or delivery.'),
+    setPageSEO(dname(dish) + ' | ' + (v ? v.name : 'Egyptian Home Food'),
+      dish.description || (lang() === 'ar' ? 'اطلب ' + dname(dish) + ' من طاهٍ منزلي محلي للاستلام أو التوصيل.' : 'Order ' + dish.name + ' from a local home cook for pickup or delivery.'),
       dish.photo_url || null, '/dish/' + dish.id);
     let rev = { reviews: [], avg_rating: 0, count: 0 };
     try { rev = await api('/dishes/' + dish.id + '/reviews'); } catch (e) { /* no reviews */ }

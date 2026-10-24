@@ -2081,8 +2081,8 @@ function addDishForm() {
     '<div class="row2"><div><label class="field">' + esc(t('f_dish')) + '</label><input type="text" id="nd-name" required maxlength="160" oninput="previewDishPhoto(\'nd-photo\',\'nd-preview\',\'nd-name\')"></div>' +
     '<div><label class="field">' + esc(t('f_cat')) + '</label><input type="text" id="nd-cat" value="Mains" maxlength="60" list="cat-list">' +
     '<datalist id="cat-list">' + S.categories.map(c => '<option value="' + esc(c) + '">').join('') + '</datalist></div></div>' +
-    // v52: optional Arabic dish name (shown to customers in Arabic mode).
-    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="nd-name-ar" maxlength="200" dir="auto">' +
+    // v52 + PR #12: optional Arabic dish name (shown to customers in Arabic mode).
+    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="nd-name-ar" maxlength="200" dir="rtl" placeholder="مثال: كشري">' +
     '<label class="field">' + esc(t('f_desc')) + '</label><textarea id="nd-desc" rows="2" maxlength="2000"></textarea>' +
     '<label class="field">' + esc(t('f_desc')) + ' (العربية)</label><textarea id="nd-desc-ar" rows="2" maxlength="2000" dir="rtl"></textarea>' +
     '<label class="field">' + esc(t('f_photo')) + '</label>' +
@@ -2175,8 +2175,8 @@ window.editDish = function (id) {
     '<form class="add-dish-form" onsubmit="return submitDishEdit(event,' + d.id + ')">' +
     '<div class="row2"><div><label class="field">' + esc(t('f_dish')) + '</label><input type="text" id="ed-name" required maxlength="160" value="' + esc(d.name) + '" oninput="previewDishPhoto(\'ed-photo\',\'ed-preview\',\'ed-name\')"></div>' +
     '<div><label class="field">' + esc(t('f_cat')) + '</label><input type="text" id="ed-cat" maxlength="60" value="' + esc(d.category || 'Mains') + '" list="cat-list"></div></div>' +
-    // v52: optional Arabic dish name (shown to customers in Arabic mode).
-    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="ed-name-ar" maxlength="200" dir="auto" value="' + esc(d.name_ar || '') + '">' +
+    // v52 + PR #12: optional Arabic dish name (shown to customers in Arabic mode).
+    '<label class="field">' + esc(t('f_name_ar')) + '</label><input type="text" id="ed-name-ar" maxlength="200" dir="rtl" value="' + esc(d.name_ar || '') + '" placeholder="مثال: كشري">' +
     '<label class="field">' + esc(t('f_desc')) + '</label><textarea id="ed-desc" rows="2" maxlength="2000">' + esc(d.description || '') + '</textarea>' +
     '<label class="field">' + esc(t('f_desc')) + ' (العربية)</label><textarea id="ed-desc-ar" rows="2" maxlength="2000" dir="rtl">' + esc(d.description_ar || '') + '</textarea>' +
     '<label class="field">' + esc(t('f_photo')) + '</label><input type="url" id="ed-photo" maxlength="2000" placeholder="' + esc(t('f_photo_ph')) + '" value="' + esc(d.photo_url || '') + '" oninput="previewDishPhoto(\'ed-photo\',\'ed-preview\',\'ed-name\')">' +

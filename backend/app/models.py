@@ -175,7 +175,9 @@ class Dish(Base):
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     # === v52: Arabic dish name (mirrors Bundle.name_ar). NULL = no Arabic
     # name; storefronts fall back to `name` in AR mode. Filled for seeded
-    # dishes by fill_seed_data (only-when-empty); vendor-editable. ===
+    # dishes by fill_seed_data (only-when-empty); vendor-editable. (PR #12
+    # introduced this column at String(160); v52 widens it to 200 to match
+    # the DishCreate/DishUpdate limit.) ===
     name_ar: Mapped[str | None] = mapped_column(String(200), nullable=True, default=None)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     description_ar: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
