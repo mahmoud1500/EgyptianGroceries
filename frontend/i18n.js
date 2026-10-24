@@ -24,6 +24,9 @@ en: {
   footer_terms: 'Terms',
   footer_privacy: 'Privacy',
   footer_help: 'Help',
+  footer_credits: 'Photo credits',
+  help_credits_title: '📸 Photo credits',
+  help_credits_note: 'Dish photos from Wikimedia Commons, credited to their photographers.',
   footer_vendor: 'Vendor portal',
 
   help_title: '🎧 Help & support',
@@ -780,6 +783,9 @@ ar: {
   footer_terms: 'الشروط',
   footer_privacy: 'الخصوصية',
   footer_help: 'المساعدة',
+  footer_credits: 'حقوق الصور',
+  help_credits_title: '📸 حقوق الصور',
+  help_credits_note: 'صور الأطباق من ويكيميديا كومنز، مع الشكر للمصورين.',
   footer_vendor: 'بوابة البائع',
 
   help_title: '🎧 المساعدة والدعم',

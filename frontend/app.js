@@ -1168,11 +1168,37 @@ const PHOTO_RULES = [
   { k: ['fried fish'], img: 'fried_fish.jpg', emoji: '🐟' },
   { k: ['fish fillet'], img: 'fried_fish.jpg', emoji: '🐟' },
   { k: ['tilapia'], img: 'grilled_tilapia.jpg', emoji: '🐟' },
+  /* ---- image-fix: specific dish photos — must precede the generic
+     rules below (first match wins): one generic photo was serving unlike
+     dishes (kebab skewer on liver/sausage/pane, shrimp skewers on fried
+     shrimp/pasta/rice, meze plate on salads). ---- */
+  { k: ['baba ghanoush', 'baba ghanouj', 'ghanoush'], img: 'baba_ghanoush.jpg', emoji: '🍆' },
+  { k: ['fried shrimp'], img: 'fried_shrimp.jpg', emoji: '🍤' },
+  { k: ['shrimp & calamari'], img: 'shrimp_calamari_platter.jpg', emoji: '🍤' },
+  { k: ['shrimp rice'], img: 'shrimp_rice.jpg', emoji: '🍚' },
+  { k: ['grilled calamari'], img: 'grilled_calamari.jpg', emoji: '🦑' },
+  { k: ['king crab'], img: 'crab_legs.jpg', emoji: '🦀' },
+  { k: ['deluxe platter'], img: 'deluxe_platter.jpg', emoji: '🍽️' },
+  { k: ['seafood soup'], img: 'seafood_soup.jpg', emoji: '🍲' },
+  { k: ['seafood pasta'], img: 'seafood_pasta.jpg', emoji: '🍝' },
+  { k: ['beet salad'], img: 'beet_salad.jpg', emoji: '🥗' },
+  { k: ['corn salad'], img: 'corn_salad.jpg', emoji: '🥗' },
+  { k: ['cucumber yogurt'], img: 'yogurt_cucumber_salad.jpg', emoji: '🥗' },
+  { k: ['potato salad'], img: 'potato_salad.jpg', emoji: '🥗' },
+  { k: ['extra sauce'], img: 'sauce_bowls.jpg', emoji: '🥣' },
+  { k: ['mombar'], img: 'mombar.jpg', emoji: '🫔' },
+  { k: ['stuffed cabbage'], img: 'cabbage_rolls.jpg', emoji: '🫔' },
+  { k: ['stuffed grape leaves'], img: 'grape_leaves.jpg', emoji: '🫔' },
+  { k: ['trotters casserole'], img: 'kaware_casserole.jpg', emoji: '🍲' },
+  { k: ['bechamel', 'macarona'], img: 'bechamel_pasta.jpg', emoji: '🍝' },
+  { k: ['oxtail', 'akawi'], img: 'oxtail_casserole.jpg', emoji: '🍲' },
   { k: ['shrimp'], img: 'grilled_shrimp.jpg', emoji: '🍤' },
   { k: ['calamari'], img: 'fried_calamari.jpg', emoji: '🦑' },
   { k: ['crab'], img: 'blue_crab.jpg', emoji: '🦀' },
   { k: ['seafood platter', 'platter'], img: 'seafood.jpg', emoji: '🦐' },
-  { k: ['shrimp rice', 'fish rice', 'seafood rice'], img: 'cooked_rice.jpg', emoji: '🍚' },
+  { k: ['fish rice'], img: 'fish_rice.jpg', emoji: '🍚' },
+  { k: ['seafood rice'], img: 'seafood_rice.jpg', emoji: '🍚' },
+  { k: ['shrimp rice'], img: 'shrimp_rice.jpg', emoji: '🍚' },
   { k: ['seafood'], img: 'seafood.jpg', emoji: '🦐' },
   { k: ['tahini'], img: 'tahini.jpg', emoji: '🥣' },
   { k: ['hummus'], img: 'hummus.jpg', emoji: '🧆' },
@@ -1182,40 +1208,48 @@ const PHOTO_RULES = [
   { k: ['greek salad'], img: 'greek_salad.jpg', emoji: '🥗' },
   { k: ['caesar'], img: 'caesar_salad.jpg', emoji: '🥗' },
   { k: ['coleslaw'], img: 'coleslaw.jpg', emoji: '🥗' },
-  { k: ['pickle'], img: 'pickles.jpg', emoji: '🥒' },
+  { k: ['pickle'], img: 'pickled_eggplant.jpg', emoji: '🥒' },
   { k: ['koshary', 'koshari', 'kushari'], img: 'koshary.jpg', emoji: '🍚' },
   { k: ['kofta'], img: 'kofta.jpg', emoji: '🍢' },
   { k: ['kebab'], img: 'adana_kebab.jpg', emoji: '🍢' },
-  { k: ['hawawshi'], img: 'feteer.jpg', emoji: '🫓' },
+  { k: ['hawawshi'], img: 'hawawshi.jpg', emoji: '🫓' },
   { k: ['feteer'], img: 'feteer.jpg', emoji: '🫓' },
-  { k: ['baladi bread'], img: 'feteer.jpg', emoji: '🫓' },
-  { k: ['garlic bread'], img: 'feteer.jpg', emoji: '🍞' },
-  { k: ['sausage'], img: 'adana_kebab.jpg', emoji: '🌭' },
-  { k: ['liver'], img: 'adana_kebab.jpg', emoji: '🍢' },
-  { k: ['grilled beef', 'grilled chicken'], img: 'adana_kebab.jpg', emoji: '🍖' },
-  { k: ['chicken pane'], img: 'adana_kebab.jpg', emoji: '🍗' },
+  { k: ['baladi bread'], img: 'baladi_bread.jpg', emoji: '🫓' },
+  { k: ['garlic bread'], img: 'garlic_bread.jpg', emoji: '🍞' },
+  { k: ['sausage'], img: 'grilled_sausage.jpg', emoji: '🌭' },
+  { k: ['liver'], img: 'liver.jpg', emoji: '🍢' },
+  { k: ['grilled beef'], img: 'grilled_beef.jpg', emoji: '🍖' },
+  { k: ['grilled chicken'], img: 'grilled_chicken.jpg', emoji: '🍖' },
+  { k: ['chicken pane'], img: 'chicken_pane.jpg', emoji: '🍗' },
   { k: ['molokhia'], img: 'molokhia.jpg', emoji: '🍲' },
-  { k: ['bamia', 'okra'], img: 'okra.jpg', emoji: '🍲' },
+  { k: ['bamia', 'okra'], img: 'bamia_stew.jpg', emoji: '🍲' },
   { k: ['kahk', 'kaak'], img: 'kahk.jpg', emoji: '🍪' },
-  { k: ['basbousa'], img: 'baklava.jpg', emoji: '🍰' },
-  { k: ['om ali', 'omali', 'umm ali'], img: 'rice_pudding.jpg', emoji: '🍮' },
+  { k: ['basbousa'], img: 'basbousa.jpg', emoji: '🍰' },
+  { k: ['om ali', 'omali', 'umm ali'], img: 'om_ali.jpg', emoji: '🍮' },
   { k: ['dolma', 'grape leaves'], img: 'dolma.jpg', emoji: '🫔' },
   { k: ['mahshi', 'mombar'], img: 'dolma.jpg', emoji: '🫔' },
   { k: ['stuffed cabbage', 'stuffed zucchini', 'stuffed eggplant', 'stuffed tomato', 'stuffed pepper'], img: 'dolma.jpg', emoji: '🫔' },
   { k: ['kaware', 'broth'], img: 'lentil_soup.jpg', emoji: '🍲' },
-  { k: ['orzo', 'lisan asfour'], img: 'lentil_soup.jpg', emoji: '🍲' },
+  { k: ['orzo', 'lisan asfour'], img: 'orzo_soup.jpg', emoji: '🍲' },
   { k: ['lentil soup'], img: 'lentil_soup.jpg', emoji: '🍲' },
   { k: ['soup'], img: 'lentil_soup.jpg', emoji: '🍲' },
   { k: ['fries'], img: 'french_fries.jpg', emoji: '🍟' },
-  { k: ['fatta'], img: 'cooked_rice.jpg', emoji: '🍚' },
+  { k: ['fatta'], img: 'fatta.jpg', emoji: '🍚' },
   { k: ['rice'], img: 'cooked_rice.jpg', emoji: '🍚' },
-  { k: ['salad'], img: 'meze.jpg', emoji: '🥗' },
+  { k: ['salad'], img: 'green_salad.jpg', emoji: '🥗' },
   { k: ['appetizer', 'meze'], img: 'meze.jpg', emoji: '🫒' },
 ];
 const AR_PHOTO_RULES = [
   // Arabic catalog names -> the same item-specific photos as the English names.
-  { k: ['\u0645\u062d\u0634\u064a \u0648\u0631\u0642 \u0639\u0646\u0628', '\u0645\u062d\u0634\u064a \u0643\u0631\u0646\u0628', '\u0645\u062d\u0634\u064a \u0628\u062a\u0646\u062c\u0627\u0646', '\u0645\u062d\u0634\u064a \u0643\u0648\u0633\u0629', '\u0645\u062d\u0634\u064a \u0637\u0645\u0627\u0637\u0645', '\u0645\u062d\u0634\u064a \u0645\u0634\u0643\u0644', '\u062f\u0648\u0644\u0645\u0629'], img: 'dolma.jpg', emoji: '\u{1F9EB}' },
-  { k: ['\u0645\u0643\u0631\u0648\u0646\u0629 \u0643\u0627\u0644\u064a\u0645\u0627\u0631\u064a', '\u0645\u0643\u0631\u0648\u0646\u0629 \u062c\u0645\u0628\u0631\u064a', '\u0645\u0643\u0631\u0648\u0646\u0629 \u0633\u064a \u0641\u0648\u062f'], img: 'seafood.jpg', emoji: '\u{1F990}' },
+  /* ---- image-fix: specific Arabic-name photos before the generic
+     dolma rule (first match wins). ---- */
+  { k: ['\u0628\u0627\u0628\u0627 \u063a\u0646\u0648\u062c'], img: 'baba_ghanoush.jpg', emoji: '\u{1F346}' },
+  { k: ['\u0645\u062d\u0634\u064a \u0643\u0631\u0646\u0628'], img: 'cabbage_rolls.jpg', emoji: '\u{1F9EB}' },
+  { k: ['\u0645\u062d\u0634\u064a \u0648\u0631\u0642 \u0639\u0646\u0628'], img: 'grape_leaves.jpg', emoji: '\u{1F9EB}' },
+  { k: ['\u0645\u062d\u0634\u064a \u0628\u062a\u0646\u062c\u0627\u0646', '\u0645\u062d\u0634\u064a \u0643\u0648\u0633\u0629', '\u0645\u062d\u0634\u064a \u0637\u0645\u0627\u0637\u0645', '\u0645\u062d\u0634\u064a \u0645\u0634\u0643\u0644', '\u062f\u0648\u0644\u0645\u0629'], img: 'dolma.jpg', emoji: '\u{1F9EB}' },
+  { k: ['\u0645\u0643\u0631\u0648\u0646\u0629 \u0643\u0627\u0644\u064a\u0645\u0627\u0631\u064a'], img: 'calamari_pasta.jpg', emoji: '\u{1F990}' },
+  { k: ['\u0645\u0643\u0631\u0648\u0646\u0629 \u062c\u0645\u0628\u0631\u064a'], img: 'shrimp_pasta.jpg', emoji: '\u{1F990}' },
+  { k: ['\u0645\u0643\u0631\u0648\u0646\u0629 \u0633\u064a \u0641\u0648\u062f'], img: 'seafood_pasta.jpg', emoji: '\u{1F990}' },
   { k: ['\u0645\u0644\u0648\u062e\u064a\u0629 \u0645\u062c\u0645\u062f\u0629'], img: 'g_frozen_molokhia.jpg', emoji: '\u2744\ufe0f' },
   { k: ['\u0628\u0627\u0645\u064a\u0629 \u0645\u062c\u0645\u062f\u0629'], img: 'g_frozen_okra.jpg', emoji: '\u2744\ufe0f' },
   { k: ['\u0641\u0648\u0644 \u0623\u062e\u0636\u0631 \u0645\u062c\u0645\u062f'], img: 'g_frozen_fava.jpg', emoji: '\u{1FAD8}' },
@@ -1266,20 +1300,20 @@ const AR_PHOTO_RULES = [
   { k: ['\u0641\u0637\u0627\u064a\u0631 \u062c\u0628\u0646\u0629'], img: 'um_cheese_pastry.jpg', emoji: '\u{1F9C0}' },
   { k: ['\u0645\u064a\u0646\u064a \u0628\u064a\u062a\u0632\u0627'], img: 'um_mini_pizza.jpg', emoji: '\u{1F355}' },
   { k: ['\u0635\u064a\u0646\u064a\u0629 \u0641\u0631\u0627\u062e \u0628\u0627\u0644\u0631\u0632'], img: 'um_chicken_tray.jpg', emoji: '\u{1F357}' },
-  { k: ['\u062d\u0648\u0627\u0648\u0634\u064a'], img: 'feteer.jpg', emoji: '\u{1FAD3}' },
+  { k: ['\u062d\u0648\u0627\u0648\u0634\u064a'], img: 'hawawshi.jpg', emoji: '\u{1FAD3}' },
   { k: ['\u0643\u0641\u062a\u0629'], img: 'kofta.jpg', emoji: '\u{1F362}' },
   { k: ['\u0643\u0628\u0627\u0628'], img: 'adana_kebab.jpg', emoji: '\u{1F362}' },
-  { k: ['\u0643\u0628\u062f\u0629'], img: 'adana_kebab.jpg', emoji: '\u{1F362}' },
-  { k: ['\u0633\u062c\u0642'], img: 'adana_kebab.jpg', emoji: '\u{1F32d}' },
+  { k: ['\u0643\u0628\u062f\u0629'], img: 'liver.jpg', emoji: '\u{1F362}' },
+  { k: ['\u0633\u062c\u0642'], img: 'grilled_sausage.jpg', emoji: '\u{1F32d}' },
   { k: ['\u0645\u0644\u0648\u062e\u064a\u0629'], img: 'molokhia.jpg', emoji: '\u{1F372}' },
-  { k: ['\u0628\u0627\u0645\u064a\u0629'], img: 'okra.jpg', emoji: '\u{1F372}' },
+  { k: ['\u0628\u0627\u0645\u064a\u0629'], img: 'bamia_stew.jpg', emoji: '\u{1F372}' },
   { k: ['\u0643\u062d\u0643'], img: 'kahk.jpg', emoji: '\u{1F36A}' },
-  { k: ['\u0628\u0633\u0628\u0648\u0633\u0629'], img: 'baklava.jpg', emoji: '\u{1F370}' },
-  { k: ['\u0623\u0645 \u0639\u0644\u064a'], img: 'rice_pudding.jpg', emoji: '\u{1F36E}' },
-  { k: ['\u0641\u062a\u0629'], img: 'cooked_rice.jpg', emoji: '\u{1F35A}' },
+  { k: ['\u0628\u0633\u0628\u0648\u0633\u0629'], img: 'basbousa.jpg', emoji: '\u{1F370}' },
+  { k: ['\u0623\u0645 \u0639\u0644\u064a'], img: 'om_ali.jpg', emoji: '\u{1F36E}' },
+  { k: ['\u0641\u062a\u0629'], img: 'fatta.jpg', emoji: '\u{1F35A}' },
   { k: ['\u0633\u0645\u0643\u0629 \u0643\u0627\u0645\u0644\u0629 \u0645\u0634\u0648\u064a\u0629'], img: 'grilled_fish.jpg', emoji: '\u{1F41F}' },
-  { k: ['\u0633\u0645\u0643\u0629 \u0643\u0627\u0645\u0644\u0629 \u0645\u0642\u0644\u064a\u0629'], img: 'fried_fish.jpg', emoji: '\u{1F41F}' },
-  { k: ['\u0634\u0648\u0631\u0628\u0629 \u0639\u062f\u0633'], img: 'lentil_soup.jpg', emoji: '\u{1F372}' },
+  { k: ['\u0633\u0645\u0643\u0629 \u0643\u0627\u0645\u0644\u0629 \u0645\u0642\u0644\u064a\u0629'], img: 'whole_fried_fish.jpg', emoji: '\u{1F41F}' },
+  { k: ['\u0634\u0648\u0631\u0628\u0629 \u0639\u062f\u0633'], img: 'lentil_soup_cooked.jpg', emoji: '\u{1F372}' },
   { k: ['\u0628\u0637\u0627\u0637\u0633 \u0645\u0642\u0644\u064a\u0629'], img: 'french_fries.jpg', emoji: '\u{1F35F}' },
   { k: ['\u0633\u0644\u0637\u0629 \u0633\u064a\u0632\u0631'], img: 'caesar_salad.jpg', emoji: '\u{1F957}' },
   { k: ['\u0641\u062a\u0648\u0634'], img: 'fattoush.jpg', emoji: '\u{1F957}' },
@@ -5573,11 +5607,286 @@ function vPrivacy() { return t('page_privacy'); }
 const HELP_CATS = ['order', 'vendor', 'payment', 'account', 'technical', 'other'];
 function helpCatLabel(c) { return t('sup_cat_' + c); }
 
+/* ---- image-fix: photo credits (Wikimedia Commons; CC BY / CC BY-SA
+   photos require attribution — full list on the Help page). ---- */
+const PHOTO_CREDITS = [
+ [
+  "Baladi Bread (5 pc)",
+  "Cairocamels B. Simpson",
+  "Public domain",
+  "https://commons.wikimedia.org/wiki/File:Baladi_bread.JPG"
+ ],
+ [
+  "Okra with Beef (Bamia)",
+  "Benoît Prieur",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Du_bamia_avec_du_riz_en_f%C3%A9vrier_2022.jpg"
+ ],
+ [
+  "Basbousa",
+  "Sami Mlouhi",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Basboussa_-_harisa_-_%D8%A8%D8%B3%D8%A8%D9%88%D8%B3%D8%A9_photo1.jpg"
+ ],
+ [
+  "Egyptian Béchemel Pasta (Macarona Bechamel)",
+  "Zebi2424",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Macarona_bechamel.jpg"
+ ],
+ [
+  "Beet Salad",
+  "Daderot",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Beet_salad_-_Boston,_MA.jpg"
+ ],
+ [
+  "Stuffed Cabbage Rolls, Stuffed Cabbage Rolls (Full Tray), Stuffed Cabbage Rolls (Half Tray)",
+  "Shixart1985",
+  "CC BY 2.0",
+  "https://commons.wikimedia.org/wiki/File:Delicious_stuffed_cabbage_rolls_prepared_in_a_pot.jpg"
+ ],
+ [
+  "Calamari Pasta",
+  "stu_spivack",
+  "CC BY-SA 2.0",
+  "https://commons.wikimedia.org/wiki/File:Calamari_pasta_at_Ortolan.jpg"
+ ],
+ [
+  "Chicken Pane (Plate), Chicken Pane (Sandwich)",
+  "HutheMeow",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Chicken_schnitzel_6.jpg"
+ ],
+ [
+  "Corn Salad",
+  "Kgbo",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Rocket_lettuce,_Zucchini,_Beetroot,_Corn_kernels,_Pumpkin_seeds_and_Yogurt_sauce_salad_plus_spices.jpg"
+ ],
+ [
+  "King Crab Legs",
+  "pelican",
+  "CC BY-SA 2.0",
+  "https://commons.wikimedia.org/wiki/File:Crab_legs_%2811297865614%29.jpg"
+ ],
+ [
+  "Deluxe Platter",
+  "Kalesh",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Mixed_Grill_Platter.jpg"
+ ],
+ [
+  "Fatta",
+  "Mkevy",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Egyptian_fatta.gif"
+ ],
+ [
+  "Fish Rice",
+  "Miansari66",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Sayadiyah_Fish.jpg"
+ ],
+ [
+  "Freekeh with Chicken",
+  "Rotana Nawwaf Al Hasanat",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:%D8%AF%D8%AC%D8%A7%D8%AC_%D9%85%D8%AD%D8%B4%D9%8A.jpg"
+ ],
+ [
+  "Fried Shrimp",
+  "Ser Amantio di Nicolao",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Skrimp_Shack_fried_shrimp_dinner_with_french_fries_in_styrofoam.jpg"
+ ],
+ [
+  "Garlic Bread",
+  "Scudsvlad",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Garlic_toast.jpg"
+ ],
+ [
+  "Stuffed Grape Leaves, Stuffed Grape Leaves (Full Tray), Stuffed Grape Leaves (Half Tray)",
+  "Aseel zm",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Yalanji_dish.jpg"
+ ],
+ [
+  "Greek Salad",
+  "Myfri9694",
+  "CC BY-SA 3.0",
+  "https://commons.wikimedia.org/wiki/File:Feta_Cheese_Greek_Salad.jpg"
+ ],
+ [
+  "Salad",
+  "Marco Antonio Correa Flores",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Ensalada_de_Lechuga.JPG"
+ ],
+ [
+  "Grilled Beef (Plate), Grilled Beef (Sandwich)",
+  "Ossewa",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Carne_Asada_at_Amerigos.jpg"
+ ],
+ [
+  "Grilled Calamari",
+  "Mack Male",
+  "CC BY-SA 2.0",
+  "https://commons.wikimedia.org/wiki/File:Grilled_Calamari_%283567740233%29.jpg"
+ ],
+ [
+  "Grilled Chicken (Plate), Grilled Chicken (Sandwich)",
+  "Marilyn Acosta",
+  "CC BY-SA 2.0",
+  "https://commons.wikimedia.org/wiki/File:Grilled_chicken_pieces.jpg"
+ ],
+ [
+  "Charcoal-Grilled Sausage (Plate), Charcoal-Grilled Sausage (Sandwich), Egyptian-Style Sausage (Plate), Egyptian-Style Sausage (Sandwich)",
+  "The Digital Marketing Collaboration thedmcsa",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Grilling_Sausages_%28Unsplash%29.jpg"
+ ],
+ [
+  "Charcoal-Grilled Hawawshi (Plate)",
+  "Mohamed Moheyeldin",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Hawawshi_Main_1_Mohamed_Moheyeldin.jpg"
+ ],
+ [
+  "Cow Trotters Casserole (Kaware')",
+  "TARO EATandART",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:%D9%83%D9%88%D8%A7%D8%B1%D8%B9.jpg"
+ ],
+ [
+  "Egyptian Lentil Soup",
+  "Dmitry Bagrov",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Lentil_soup_in_a_bowl,_top_view.jpg"
+ ],
+ [
+  "Alexandrian Liver (Plate), Alexandrian Liver (Sandwich)",
+  "Hassan Hassoon",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:%D8%B7%D8%A8%D9%82_%D9%83%D8%A8%D8%AF%D8%A9_%D8%B9%D9%84%D9%8A_%D8%A7%D9%84%D9%86%D8%A7%D8%B1_02.jpg"
+ ],
+ [
+  "Egyptian Mombar",
+  "Muhammad Abul-Futooh",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Egyptian_Mumbaar.jpg"
+ ],
+ [
+  "Om Ali",
+  "Miansari66",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Umm_Ali.JPG"
+ ],
+ [
+  "Orzo Soup (Lisan Asfour)",
+  "E4024",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Arpa_%C5%9Fehriye_soup.jpg"
+ ],
+ [
+  "Oxtail Casserole (Akawi)",
+  "CharmaineZoe's Marvelous Melange from England",
+  "CC BY 2.0",
+  "https://commons.wikimedia.org/wiki/File:Oxtail_stew%2C_mashed_potato_and_broccoli_%2836249955535%29.jpg"
+ ],
+ [
+  "Pickled Eggplant",
+  "Tamorlan",
+  "CC BY-SA 3.0",
+  "https://commons.wikimedia.org/wiki/File:Pickled_Eggplant_-_Spain.JPG"
+ ],
+ [
+  "Potato Salad",
+  "Ocdp",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Potato_salad_001.jpg"
+ ],
+ [
+  "Extra Sauce",
+  "Raveesh Vyas",
+  "CC BY-SA 2.0",
+  "https://commons.wikimedia.org/wiki/File:Aloo_Tikki_served_with_chutneys.jpg"
+ ],
+ [
+  "Seafood Pasta",
+  "Cooking etc.",
+  "CC BY 2.0",
+  "https://commons.wikimedia.org/wiki/File:Seafood_pasta_%286792548256%29.jpg"
+ ],
+ [
+  "Seafood Rice",
+  "ProjectManhattan",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Seafood_Fried_Rice.jpg"
+ ],
+ [
+  "Seafood Soup",
+  "eric molina",
+  "CC BY 2.0",
+  "https://commons.wikimedia.org/wiki/File:Sopa_de_mariscos_%28seafood_soup%29_in_Nicaragua.jpg"
+ ],
+ [
+  "Shrimp & Calamari Platter",
+  "Neeta Lind",
+  "CC BY 2.0",
+  "https://commons.wikimedia.org/wiki/File:Jalea_at_Limon_in_Burlingame.jpg"
+ ],
+ [
+  "Shrimp Pasta",
+  "FranHogan",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Shrimp_pasta.jpg"
+ ],
+ [
+  "Shrimp Rice",
+  "Forssa01",
+  "CC BY 4.0",
+  "https://commons.wikimedia.org/wiki/File:Bowl_of_homemade_shrimp_fried_rice_-_Forsythe_0.jpg"
+ ],
+ [
+  "Spinach Pastry",
+  "terri_bateman",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Little_spinach_pies_for_a_pot_luck_%2820265738272%29.jpg"
+ ],
+ [
+  "Whole Fried Fish",
+  "google104",
+  "CC0",
+  "https://commons.wikimedia.org/wiki/File:Fried_whole_fish.jpg"
+ ],
+ [
+  "Cucumber Yogurt Salad",
+  "Eikonografos at en.wikipedia",
+  "Public domain",
+  "https://commons.wikimedia.org/wiki/File:Tzatziki1.jpg"
+ ],
+ [
+  "Baba Ghanoush",
+  "Ji-Elle",
+  "CC BY-SA 4.0",
+  "https://commons.wikimedia.org/wiki/File:Baba_ganoush-Jordanie.jpg"
+ ]
+];
+function photoCreditsHtml() {
+  return '<div id="photo-credits"><h3 class="section-title">' + esc(t('help_credits_title')) + '</h3>' +
+    '<p>' + esc(t('help_credits_note')) + '</p><ul>' +
+    PHOTO_CREDITS.map(function (c) { return '<li>' + esc(c[0]) + ' \u2014 ' + esc(c[1]) + ', ' + esc(c[2]) +
+      ' \u2014 <a href="' + esc(c[3]) + '" target="_blank" rel="noopener">Wikimedia Commons</a></li>'; }).join('') + '</ul></div>';
+}
+
 async function vHelp() {
   const view = document.getElementById('view');
   if (!S.user) {
     view.innerHTML = '<div class="empty"><span class="big">🎧</span>' + esc(t('help_need_login')) +
-      '<br><br><a class="btn" href="#" data-go="login">' + esc(t('nav_login')) + '</a></div>';
+      '<br><br><a class="btn" href="#" data-go="login">' + esc(t('nav_login')) + '</a></div>' + photoCreditsHtml();
     return;
   }
   view.innerHTML = '<h2 class="section-title">' + esc(t('help_title')) + '</h2><div id="help-msg"></div>' +
@@ -5588,7 +5897,7 @@ async function vHelp() {
     '<label class="field">' + esc(t('help_subject')) + '</label><input type="text" id="help-subject" maxlength="160">' +
     '<label class="field">' + esc(t('help_message')) + '</label><textarea id="help-message" rows="4" maxlength="5000"></textarea>' +
     '<div class="mt"><button class="btn" onclick="submitHelpTicket()">' + esc(t('help_send')) + '</button></div></div>' +
-    '<h3 class="section-title">' + esc(t('help_mine')) + '</h3><div id="help-list"><div class="empty">' + esc(t('orders_loading')) + '</div></div>';
+    '<h3 class="section-title">' + esc(t('help_mine')) + '</h3><div id="help-list"><div class="empty">' + esc(t('orders_loading')) + '</div></div>' + photoCreditsHtml();
   try {
     const [orders, tickets] = await Promise.all([
       api('/orders').catch(() => []),
