@@ -248,6 +248,163 @@ UM_SOHAIB_OPTIONS: list[tuple[str, str, list[tuple[str, float]]]] = [
 ]
 
 
+# v53: Arabic dish descriptions (English description -> Arabic). Fills Dish.description_ar
+# only when empty, same contract as ingredients/names — vendor edits win.
+DISH_DESCRIPTIONS_AR: dict[str, str] = {
+    "All-purpose Egyptian spice blend": "خلطة بهارات مصرية لكل الاستخدامات",
+    "Any extra sauce": "أي صوص إضافي",
+    "Assorted Egyptian pickles": "مخللات مصرية مشكلة",
+    "Assorted pickled vegetables, Egyptian style": "خضار مخلل مشكل على الطريقة المصرية",
+    "Baked rice with lamb, Egyptian style": "أرز بالفرن مع لحم الضأن على الطريقة المصرية",
+    "Brined grape leaves, ready to stuff": "ورق عنب مملح جاهز للحشو",
+    "Cabbage and carrots in creamy dressing": "كرنب وجزر بصوص كريمي",
+    "Calamari in creamy or red sauce": "كاليماري بالصوص الكريمي أو الأحمر",
+    "Char-grilled calamari": "كاليماري مشوي على الفحم",
+    "Chickpeas blended with tahini, lemon, and olive oil": "حمص مهروس بالطحينة والليمون وزيت الزيتون",
+    "Chopped frozen molokhia, ready to cook": "ملوخية مفرومة مجمدة جاهزة للطبخ",
+    "Classic seafood soup": "شوربة مأكولات بحرية كلاسيكية",
+    "Creamy tahini with lemon and fresh herbs": "طحينة كريمية بالليمون والأعشاب الطازجة",
+    "Crispy breaded chicken breast in fresh bread": "صدر دجاج مقرمش بانيه في عيش طازج",
+    "Crispy breaded chicken breast — served with rice, salad, bread": "صدر دجاج مقرمش بانيه — يقدم مع الأرز والسلطة والعيش",
+    "Crispy fried calamari": "كاليماري مقلي مقرمش",
+    "Crispy fried shrimp": "جمبري مقلي مقرمش",
+    "Crispy fries": "بطاطس مقلية مقرمشة",
+    "Cucumbers, yogurt, garlic, and mint": "خيار وزبادي وثوم ونعناع",
+    "Dried apricot sheets for Ramadan drinks": "قمر الدين لمشروبات رمضان",
+    "Dried molokhia for the classic stew": "ملوخية مجففة للطبخة الكلاسيكية",
+    "Dried okra for bamia stew": "بامية مجففة لطبخ البامية",
+    "Egyptian fava beans, perfect for ful medames": "فول مصري مثالي للفول المدمس",
+    "Egyptian stuffed bread with seasoned beef": "حواوشي مصري محشي بلحم بقري متبل",
+    "Egyptian-style pickled eggplant": "باذنجان مخلل على الطريقة المصرية",
+    "Fish, shrimp, calamari and more": "سمك وجمبري وكاليماري وأكثر",
+    "Fish, shrimp, calamari, and crab — serves 2-3": "سمك وجمبري وكاليماري وسلطعون — يكفي ٢-٣ أشخاص",
+    "For Egyptian lentil soup (shorbet ads)": "لشوربة العدس المصرية",
+    "For dukkah, ful, and stews": "للدقة والفول والطواجن",
+    "For fasolia beida stew": "لطبخ الفاصوليا البيضاء",
+    "For ful akhdar and stews": "للفول الأخضر والطواجن",
+    "For helba tea and baking": "لشاي الحلبة والمخبوزات",
+    "For hot or iced karkadeh drink": "لمشروب الكركديه الساخن أو المثلج",
+    "For hummus and koshary": "للحمص والكشري",
+    "For koshary and bechamel": "للكشري والبشاميل",
+    "For rice and stews": "للأرز والطواجن",
+    "For salads, ful, and tea": "للسلطات والفول والشاي",
+    "Fresh parsley, tomatoes, onions, bulgur, and lemon": "بقدونس طازج وطماطم وبصل وبرغل وليمون",
+    "Fresh tomatoes, cucumbers, red onion, and herbs": "طماطم وخيار طازج وبصل أحمر وأعشاب",
+    "Fresh vegetables in homemade broth": "خضار طازج في مرق بيتي",
+    "Freshly ground, the backbone of Egyptian cooking": "مطحون طازج، أساس الطبخ المصري",
+    "Fried or grilled — your choice": "مقلي أو مشوي — على اختيارك",
+    "Full tray of stuffed cabbage rolls": "صينية كاملة من الكرنب المحشي",
+    "Full tray of stuffed eggplant": "صينية كاملة من الباذنجان المحشي",
+    "Full tray of stuffed grape leaves": "صينية كاملة من ورق العنب المحشي",
+    "Full tray of stuffed tomatoes": "صينية كاملة من الطماطم المحشية",
+    "Full tray of stuffed zucchini": "صينية كاملة من الكوسة المحشية",
+    "Grape leaves, cabbage, zucchini, eggplant, and tomatoes": "ورق عنب وكرنب وكوسة وباذنجان وطماطم",
+    "Grilled chicken, romaine, parmesan, and Caesar dressing": "دجاج مشوي وخس روماني وبارميزان وصوص سيزر",
+    "Grilled shrimp": "جمبري مشوي",
+    "Half tray of stuffed cabbage rolls": "نصف صينية من الكرنب المحشي",
+    "Half tray of stuffed eggplant": "نصف صينية من الباذنجان المحشي",
+    "Half tray of stuffed grape leaves": "نصف صينية من ورق العنب المحشي",
+    "Half tray of stuffed tomatoes": "نصف صينية من الطماطم المحشية",
+    "Half tray of stuffed zucchini": "نصف صينية من الكوسة المحشية",
+    "Hot orchid-root drink mix with cinnamon": "مشروب السحلب الساخن بالقرفة",
+    "Juicy grilled sausage in fresh bread": "سجق مشوي طري في عيش طازج",
+    "Juicy grilled sausage — served with rice, salad, bread": "سجق مشوي طري — يقدم مع الأرز والسلطة والعيش",
+    "Layered pasta with béchamel sauce": "مكرونة بالبشاميل في طبقات",
+    "Lettuce, tomatoes, cucumbers, red onion, feta, and olives": "خس وطماطم وخيار وبصل أحمر وجبنة فيتا وزيتون",
+    "Marinated and grilled to perfection": "متبل ومشوي بإتقان",
+    "Marinated beef chunks grilled over charcoal — served with rice, salad, bread": "قطع لحم بقري متبلة مشوية على الفحم — تقدم مع الأرز والسلطة والعيش",
+    "Marinated beef chunks in fresh bread": "قطع لحم بقري متبلة في عيش طازج",
+    "Marinated beef, char-grilled — served with rice, salad, bread": "لحم بقري متبل مشوي على الفحم — يقدم مع الأرز والسلطة والعيش",
+    "Marinated char-grilled beef in fresh bread": "لحم بقري متبل مشوي على الفحم في عيش طازج",
+    "Marinated char-grilled chicken in fresh bread": "دجاج متبل مشوي على الفحم في عيش طازج",
+    "Marinated chicken, char-grilled — served with rice, salad, bread": "دجاج متبل مشوي على الفحم — يقدم مع الأرز والسلطة والعيش",
+    "Mixed greens and vegetables with crispy pita and sumac dressing": "خضار وورقيات مشكلة مع خبز بيتا مقرمش وصوص السماق",
+    "Mixed seafood in creamy or red sauce": "مأكولات بحرية مشكلة بالصوص الكريمي أو الأحمر",
+    "Nigella seeds for bread and cheese": "حبة البركة للعيش والجبن",
+    "Nut and spice blend for bread dipping": "خلطة المكسرات والبهارات لغمس العيش",
+    "Okra cooked with tender beef": "بامية مطبوخة مع لحم بقري طري",
+    "Our signature seasoned rice with mixed seafood": "أرزنا المتبل المميز مع المأكولات البحرية المشكلة",
+    "Potatoes, herbs, and special dressing": "بطاطس وأعشاب وصوص خاص",
+    "Ready-to-eat fava beans, Egyptian style": "فول مصري جاهز للأكل",
+    "Red lentils, vegetables, and authentic spices": "عدس أحمر وخضار وبهارات أصيلة",
+    "Rich traditional Egyptian broth, slow-cooked with herbs and spices": "مرق مصري تقليدي غني، مطهو ببطء بالأعشاب والبهارات",
+    "Romaine, parmesan, and Caesar dressing": "خس روماني وبارميزان وصوص سيزر",
+    "Salty white cheese for breakfast": "جبنة بيضاء مالحة للفطار",
+    "Sausage with a special spice blend — served with rice, salad, bread": "سجق بخلطة بهارات خاصة — يقدم مع الأرز والسلطة والعيش",
+    "Sausage with special spice blend in fresh bread": "سجق بخلطة بهارات خاصة في عيش طازج",
+    "Sauteed liver in fresh bread": "كبدة سوتيه في عيش طازج",
+    "Sauteed liver with Alexandrian spices — served with rice, salad, bread": "كبدة سوتيه ببهارات إسكندراني — تقدم مع الأرز والسلطة والعيش",
+    "Seasoned and fried to golden perfection": "متبل ومقلي حتى يصبح ذهبياً",
+    "Seasoned beets with herbs": "بنجر متبل بالأعشاب",
+    "Seasoned green olives": "زيتون أخضر متبل",
+    "Seasoned ground beef in fresh bread": "لحم بقري مفروم متبل في عيش طازج",
+    "Seasoned ground beef with Egyptian spices — served with rice, salad, bread": "لحم بقري مفروم ببهارات مصرية — يقدم مع الأرز والسلطة والعيش",
+    "Seasoned rice with fish": "أرز متبل مع السمك",
+    "Seasoned rice with shrimp": "أرز متبل مع الجمبري",
+    "Sesame halva with pistachios": "حلاوة طحينية بالفستق",
+    "Shrimp and calamari platter": "طبق جمبري وكاليماري",
+    "Shrimp in creamy or red sauce": "جمبري بالصوص الكريمي أو الأحمر",
+    "Shrimp in our special house sauce": "جمبري بصوصنا الخاص",
+    "Shrimp sauteed in garlic butter sauce": "جمبري سوتيه بصوص زبدة الثوم",
+    "Slow-cooked oxtail casserole": "طاجن ذيل بقري مطهو ببطء",
+    "Smoked eggplant blended with tahini and special spices": "باذنجان مشوي مهروس بالطحينة والبهارات الخاصة",
+    "Soft fresh karish cheese": "جبنة قريش طرية طازجة",
+    "Soft premium dates": "تمر طري فاخر",
+    "Steamed or sauced": "على البخار أو بالصوص",
+    "Steamed rice": "أرز مطهو على البخار",
+    "Steamed with butter — market price, confirmed at pickup": "مطهو على البخار بالزبدة — السعر حسب السوق ويؤكد عند الاستلام",
+    "Stuffed grape leaves — price pending, call the vendor to confirm": "ورق عنب محشي — السعر قيد التحديد، اتصل بالطباخ للتأكيد",
+    "Stuffed with rice, herbs, and spices — priced per lb": "محشي بالأرز والأعشاب والبهارات — السعر للرطل",
+    "Sugarcane molasses with tahini — a classic": "عسل أسود بالطحينة — كلاسيكية",
+    "Sweet corn, red & green peppers, and herbs": "ذرة حلوة وفلفل أحمر وأخضر وأعشاب",
+    "Tender beef, pasta, and vegetables in rich broth": "لحم بقري طري ومكرونة وخضار في مرق غني",
+    "The everyday Egyptian tea": "الشاي المصري اليومي",
+    "The rice for mahshi, fatta, and everyday cooking": "الأرز المناسب للمحشي والفتة والطبخ اليومي",
+    "Toasted garlic bread": "عيش بالثوم محمص",
+    "Traditional Egyptian cow trotters casserole": "طاجن كوارع بقري مصري تقليدي",
+    "Traditional Egyptian orzo pasta soup": "شوربة لسان العصفور المصرية التقليدية",
+    "Traditional fermented mish": "مش تقليدي مخمر",
+    "Whole frozen okra for bamia": "بامية كاملة مجمدة",
+    "Egyptian sourdough flatbread": "عيش بلدي مصري بالتخمير الطبيعي",
+    "Layered Egyptian pastry": "فطير مصري بطبقات هشة",
+    "Egyptian butter cookies": "كحك مصري بالسمنة",
+    "Semolina cake with syrup": "بسبوسة بالسميد والشيرة",
+    "Molokhia stew with chicken, served with rice": "ملوخية بالدجاج تقدم مع الأرز",
+    "Rice, lentils, pasta, chickpeas, and spicy tomato sauce": "أرز وعدس ومكرونة وحمص مع صلصة طماطم حارة",
+    "Layered bread, rice, and meat with garlic-vinegar sauce": "عيش وأرز ولحم في طبقات مع صلصة الثوم والخل",
+    "Egyptian bread pudding": "بودينج العيش المصري",
+    "Crispy shredded pastry layered with sweet cheese and cream, baked golden, soaked in syrup, and crowned with pistachio (كنافة)": "كنافة مقرمشة بطبقات من الجبنة الحلوة والقشطة، مخبوزة حتى تصبح ذهبية ومغمورة بالشيرة ومزينة بالفستق",
+    "Golden folded pancakes stuffed with nuts and cream, kissed with syrup — the Ramadan favorite (قطايف)": "قطايف ذهبية محشوة بالمكسرات والقشطة ومغموسة بالشيرة — المفضلة في رمضان",
+    "Crisp fava-bean falafel with herbs — served with baladi bread, salad, and tahini (طعمية)": "طعمية مقرمشة من الفول بالأعشاب — تقدم مع العيش البلدي والسلطة والطحينة",
+    "الأوزي · Fragrant spiced rice platter": "الأوزي · طبق أرز متبل عطري",
+    "السلطة · Fresh chopped salad — one size / حجم واحد": "السلطة · سلطة مفرومة طازجة — حجم واحد",
+    "الشيشبرك · Meat dumplings in yogurt sauce": "الشيشبرك · عجائن محشوة باللحم في صلصة الزبادي",
+    "الكبة · Crispy stuffed kibbeh — per piece / للحبة": "الكبة · كبة محشية مقرمشة — للحبة",
+    "المسخن · Sumac chicken over flatbread — whole tray": "المسخن · دجاج بالسماق على خبز مسطح — صينية كاملة",
+    "المقلوبة · Upside-down rice — chicken or meat, serves 6": "المقلوبة · أرز مقلوب — دجاج أو لحم، يكفي ٦ أشخاص",
+    "المنسف · Traditional mansaf — choose a serving size": "المنسف · منسف تقليدي — اختر حجم الحصة",
+    "برياني · Spiced biryani rice": "برياني · أرز برياني متبل",
+    "جبنة · Cheese-filled pastry — per piece / للحبة": "جبنة · معجنات محشوة بالجبنة — للحبة",
+    "سبانخ · Spinach-filled pastry — per piece / للحبة": "سبانخ · معجنات محشوة بالسبانخ — للحبة",
+    "صفيحة لحمة · Savory meat pastry — per piece / للحبة": "صفيحة لحمة · معجنات باللحم — للحبة",
+    "صينية دجاج مع رز · Roasted chicken tray with rice": "صينية دجاج مع رز · صينية دجاج محمر مع الأرز",
+    "صينية كفتة بالطحينية مع رز · Kofta tray with tahini sauce and rice": "صينية كفتة بالطحينية مع رز · صينية كفتة بصلصة الطحينة والأرز",
+    "فريكة مع دجاج · Roasted green wheat with chicken": "فريكة مع دجاج · قمح أخضر محمر مع الدجاج",
+    "ملفوف محشي · Stuffed cabbage leaves": "ملفوف محشي · ورق كرنب محشي",
+    "ميني بيتزا · Mini pizza — per piece / للحبة": "ميني بيتزا · بيتزا صغيرة — للحبة",
+    "ورق عنب (دوالي) · Stuffed grape leaves — choose your pot": "ورق عنب (دوالي) · ورق عنب محشي — اختر نوع القدر",
+    "يالنجي · Stuffed vegetables (yalanji)": "يالنجي · خضار محشي (يالنجي)",
+}
+
+# Arabic names for the seeded option groups and their choices.
+OPTION_GROUPS_AR: dict[str, str] = {"Serving size": "حجم الحصة", "Protein": "نوع البروتين", "Pot": "نوع القدر"}
+OPTION_CHOICES_AR: dict[str, str] = {
+    "2 persons": "لشخصين", "4 persons": "لـ ٤ أشخاص", "6 persons": "لـ ٦ أشخاص",
+    "Chicken (serves 6)": "دجاج (يكفي ٦)", "Meat (serves 6)": "لحم (يكفي ٦)",
+    "Dawali with ground meat": "دوالي باللحم المفروم", "With meat & ribs": "باللحم والضلوع",
+    "With meat, ribs & kousa": "باللحم والضلوع والكوسة",
+}
+
 # (dish_name -> ingredients text) — fills Dish.ingredients for the prepared-food
 # dishes so the dish page "Ingredients" section has data. Only fills when
 # empty, so vendor edits in the portal are never overwritten.
@@ -600,6 +757,25 @@ def fill_seed_data(db):
         _d = db.scalar(select(models.Dish).where(models.Dish.name == _name))
         if _d is not None and not _d.name_ar:
             _d.name_ar = _ar
+    # v53: Arabic descriptions + option group/choice labels (only-when-empty).
+    for _d in db.scalars(select(models.Dish).where(models.Dish.description_ar.is_(None))):
+        _ar = DISH_DESCRIPTIONS_AR.get(_d.description)
+        if _ar:
+            _d.description_ar = _ar
+    for _o in db.scalars(select(models.DishOption)):
+        if not _o.name_ar and _o.name in OPTION_GROUPS_AR:
+            _o.name_ar = OPTION_GROUPS_AR[_o.name]
+        try:
+            _choices = json.loads(_o.choices or "[]")
+        except (TypeError, ValueError):
+            continue
+        _changed = False
+        for _c in _choices:
+            if isinstance(_c, dict) and not _c.get("label_ar") and _c.get("label") in OPTION_CHOICES_AR:
+                _c["label_ar"] = OPTION_CHOICES_AR[_c["label"]]
+                _changed = True
+        if _changed:
+            _o.choices = json.dumps(_choices, ensure_ascii=False)
     # Default prep minutes by category.
     for _d in db.scalars(select(models.Dish).where(models.Dish.prep_minutes.is_(None))):
         if _d.category in CATEGORY_PREP:
