@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker
 from starlette.requests import Request
 
 from app import models
-from app.routers.search import _expand_query, smart_search
+from app.routers.search import _expand_query, normalize, smart_search
 
 
 def _req():
@@ -60,6 +60,13 @@ class SearchRankingTests(unittest.TestCase):
             ("Grill Plate", "Served with baladi bread and salad", None),
             ("Om Ali", "Sweet milk pudding with nuts", "أم علي"),
             ("Koshary", "Rice, pasta and lentils", "كشري"),
+            ("Taameya", "Fried fava bean patties", "طعمية"),
+            ("Laban Rayeb", "Cultured milk drink", "لبن رايب"),
+            ("Egyptian Kofta", "Grilled minced meat", "كفتة مصرية"),
+            ("Konafa", "Shredded pastry with cream", "كنافة"),
+            ("Basbousa", "Semolina cake", "بسبوسة"),
+            ("Ayran", "Yogurt drink", "عيران"),
+            ("Stuffed Grape Leaves", "Vine leaves stuffed with rice", "محشي ورق عنب"),
         ]:
             self.db.add(
                 models.Dish(
@@ -108,6 +115,72 @@ class SearchRankingTests(unittest.TestCase):
 
     def test_arabic_name_match_scores_top(self):
         self.assertEqual(self._search("كشري"), [("Koshary", 4)])
+
+    def test_expand_falafel_arabic_pulls_taameya_terms(self):
+        needles = _expand_query("فلافل")
+        self.assertIn("طعميه", needles)
+        self.assertIn("tameya", needles)
+        self.assertIn("falafel", needles)
+
+    def test_expand_haleeb_pulls_laban_and_milk(self):
+        needles = _expand_query("حليب")
+        self.assertIn("لبن", needles)
+        self.assertIn("milk", needles)
+
+    def test_expand_laban_pulls_haleeb_and_milk(self):
+        needles = _expand_query("لبن")
+        self.assertIn("حليب", needles)
+        self.assertIn("milk", needles)
+
+    def test_falafel_arabic_finds_taameya(self):
+        self.assertEqual(self._search("فلافل"), [("Taameya", 4)])
+
+    def test_haleeb_finds_laban_dish(self):
+        names = [n for n, _ in self._search("حليب")]
+        self.assertIn("Laban Rayeb", names)
+
+    def test_second_name_batch_expands(self):
+        # (query, term that must be among its needles) — Oct 2026 batch.
+        pairs = [
+            ("kafta", "kofta"), ("fatteh", "fatta"), ("kabab", "kebab"),
+            ("shawerma", "shawarma"), ("tehina", "tahini"),
+            ("hommos", "hummus"), ("namoura", "basbousa"),
+            ("knafeh", "konafa"), ("knafeh", "kunefe"),
+            ("katayef", "qatayef"), ("fesikh", "feseekh"),
+            ("ringa", "renga"), ("salep", "sahlab"), ("rumi", "roomy"),
+            ("pastirma", "basterma"), ("fasoulia", "fasolia"),
+            ("jibna", "gibna"), ("za'atar", "zaatar"),
+            ("halva", "halawa"), ("doogh", "ayran"),
+            ("tamr hindi", "tamarind"), ("aish", "baladi bread"),
+            ("dolma", "grape leaves"),
+        ]
+        for query, expected in pairs:
+            with self.subTest(query=query):
+                # _expand_query takes the normalized query, as the route
+                # passes it (normalization turns "za'atar" into "za atar").
+                self.assertIn(expected, _expand_query(normalize(query)))
+
+    def test_kafta_finds_kofta_first_not_konafa(self):
+        # Live v60 behavior: "kafta" fuzzy-matched Konafa. Now Kofta
+        # matches by name (4) and outranks any fuzzy hit.
+        hits = self._search("kafta")
+        self.assertEqual(hits[0], ("Egyptian Kofta", 4))
+
+    def test_knafeh_finds_konafa(self):
+        names = [n for n, _ in self._search("knafeh")]
+        self.assertIn("Konafa", names)
+
+    def test_namoura_finds_basbousa(self):
+        names = [n for n, _ in self._search("namoura")]
+        self.assertIn("Basbousa", names)
+
+    def test_doogh_finds_ayran(self):
+        names = [n for n, _ in self._search("doogh")]
+        self.assertIn("Ayran", names)
+
+    def test_dolma_finds_grape_leaves_trays(self):
+        hits = self._search("dolma")
+        self.assertEqual(hits[0], ("Stuffed Grape Leaves", 4))
 
 
 if __name__ == "__main__":

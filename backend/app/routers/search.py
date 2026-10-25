@@ -70,7 +70,7 @@ def normalize(text: str) -> str:
 TRANSLITERATION_GROUPS: list[list[str]] = [
     ["koshary", "koshari", "كشري"],
     ["mahshi", "محشي", "stuffed vegetables", "stuffed peppers"],
-    ["warak enab", "warak eneb", "ورق عنب", "grape leaves", "stuffed grape leaves"],
+    ["warak enab", "warak eneb", "ورق عنب", "grape leaves", "stuffed grape leaves", "dolma"],
     ["kibbeh", "kibbe", "كبه", "كبة"],
     ["sfiha", "sfeeha", "صفيحه", "صفيحة", "meat pie"],
     ["maqlouba", "maqluba", "maklouba", "مقلوبه", "مقلوبة", "upside down rice"],
@@ -83,10 +83,38 @@ TRANSLITERATION_GROUPS: list[list[str]] = [
     ["molokhia", "mulukhiyah", "ملوخيه", "ملوخية", "jute mallow"],
     ["foul", "fool", "فول", "fava beans"],
     ["feteer", "fateer", "فطير"],
-    ["tameya", "taameya", "tamia", "طعميه", "طعمية", "falafel"],
+    ["tameya", "taameya", "tamia", "طعميه", "طعمية", "falafel", "فلافل"],
     ["bamya", "bamia", "باميه", "بامية", "okra"],
     ["mahshy", "محشي"],
     ["om ali", "umm ali", "ام علي", "أم علي", "bread pudding"],
+    # Regional variants of the same food: Egyptian لبن vs Palestinian
+    # حليب for milk (Oct 2026). Add new pairs here, not in dish data —
+    # one alias group covers every dish that mentions any of its terms.
+    ["milk", "لبن", "حليب"],
+    # Second-name batch (Oct 2026, user-approved "clear ones"): same
+    # dish, different spelling, or a genuinely different word per
+    # country. Arabic forms verified against the live catalog names.
+    ["kofta", "kafta", "كفتة"],
+    ["fatta", "fatteh", "فتة"],
+    ["kebab", "kabab", "كباب"],
+    ["shawarma", "shawerma", "شاورما"],
+    ["tahini", "tehina", "طحينة"],
+    ["hummus", "hommos", "حمص"],
+    ["basbousa", "namoura", "بسبوسة", "نمورة"],
+    ["konafa", "kunafa", "kunefe", "knafeh", "كنافة"],
+    ["qatayef", "katayef", "atayef", "قطايف"],
+    ["feseekh", "fesikh", "فسيخ"],
+    ["renga", "ringa", "رنجة"],
+    ["sahlab", "salep", "سحلب"],
+    ["roomy", "rumi", "رومي"],
+    ["basterma", "basturma", "pastirma", "بسطرمة"],
+    ["fasolia", "fasoulia", "فاصوليا"],
+    ["gibna", "jibna", "jibneh", "جبنة"],
+    ["zaatar", "za'atar", "زعتر"],
+    ["halawa", "halva", "halava", "حلاوة"],
+    ["ayran", "doogh", "عيران"],
+    ["tamarind", "tamr hindi", "تمر هندي"],
+    ["baladi bread", "aish baladi", "aish", "eish", "عيش بلدي"],
 ]
 
 # Pre-normalized term sets for fast expansion.
