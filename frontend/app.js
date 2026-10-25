@@ -1268,6 +1268,64 @@ const PHOTO_RULES = [
   { k: ['rice'], img: 'cooked_rice.jpg', emoji: '🍚' },
   { k: ['salad'], img: 'green_salad.jpg', emoji: '🥗' },
   { k: ['appetizer', 'meze'], img: 'meze.jpg', emoji: '🫒' },
+  /* ---- v59: real photos for the 71 DEFAULT_PHOTO fallbacks
+     (Wikimedia Commons, CC0 / CC BY / CC BY-SA — see PHOTO_CREDITS).
+     Appended last on purpose: these dishes matched no earlier rule,
+     and earlier rules still win for every other dish, so nothing
+     else can change resolution. Keywords are full dish names. ---- */
+  { k: ['100% whole wheat pita bread - golden mill', 'authentic lebanese pita bread - sam\'s', 'crescent premium quality pocket pita bread (white)', 'crescent premium quality pocket pita bread (whole wheat)'], img: 'pantry_pita.jpg', emoji: '🛒' },
+  { k: ['arz labne kefir cheese, 16oz'], img: 'dairy_labneh.jpg', emoji: '🧀' },
+  { k: ['arz original ayran yogurt drink, 16 fl oz'], img: 'dairy_ayran.jpg', emoji: '🧀' },
+  { k: ['abu auf anise, 12 bags'], img: 'pantry_tea_bags.jpg', emoji: '🛒' },
+  { k: ['abu auf lemon & ginger, 12 bags'], img: 'pantry_lemon_ginger_tea.jpg', emoji: '🛒' },
+  { k: ['almond halawa – el rashidi el mizan'], img: 'sweets_halva_almond.jpg', emoji: '🍬' },
+  { k: ['bake rolz - ketchup flavor', 'bake rolz - olive flavor'], img: 'pantry_rusk.jpg', emoji: '🛒' },
+  { k: ['bab el sham chunky spicy crispy chicken coating'], img: 'pantry_breadcrumbs.jpg', emoji: '🛒' },
+  { k: ['baraka brown lentils, 908g', 'ziyad whole small lentils 16oz (453g)'], img: 'pantry_brown_lentils.jpg', emoji: '🛒' },
+  { k: ['baraka cheese feta 500g'], img: 'dairy_feta.jpg', emoji: '🧀' },
+  { k: ['baraka husked wheat 2lb'], img: 'pantry_wheatberries.jpg', emoji: '🛒' },
+  { k: ['baraka lupini - 600g jar', 'baraka lupini dry, 850g'], img: 'pantry_lupini.jpg', emoji: '🛒' },
+  { k: ['barbican apple non-alcoholic drink - halal'], img: 'bev_apple_juice.jpg', emoji: '🥤' },
+  { k: ['barbican malt non-alcoholic drink - halal'], img: 'bev_malt_drink.jpg', emoji: '🥤' },
+  { k: ['basak - baking powder'], img: 'pantry_baking_powder.jpg', emoji: '🛒' },
+  { k: ['basil seed mango drink', 'basil seed mango drink (6 count)', 'basil seed pomegranate drink', 'basil seed pomegranate drink (6 count)'], img: 'bev_basil_seed_drink.jpg', emoji: '🥤' },
+  { k: ['best juice mango - 235ml', 'wellmade mango juice 1l', 'wellmade mango mini juice - 250ml'], img: 'bev_mango_juice.jpg', emoji: '🥤' },
+  { k: ['best juice juava - (1l / 33.8 oz)'], img: 'bev_guava_juice.jpg', emoji: '🥤' },
+  { k: ['blossom water - crescent'], img: 'pantry_blossom_water.jpg', emoji: '🛒' },
+  { k: ['butter ghee, ziyad (14 oz)'], img: 'dairy_ghee.jpg', emoji: '🧀' },
+  { k: ['cream natural - puck 6oz'], img: 'dairy_cream_cheese.jpg', emoji: '🧀' },
+  { k: ['dried apricots - crescent'], img: 'sweets_dried_apricots.jpg', emoji: '🍬' },
+  { k: ['el rashidi el mizan chocolate halawa spread, 300g'], img: 'sweets_chocolate_halawa_spread.jpg', emoji: '🍬' },
+  { k: ['farina - crescent'], img: 'pantry_farina.jpg', emoji: '🛒' },
+  { k: ['feseekh'], img: 'lynn_feseekh.jpg', emoji: '🛒' },
+  { k: ['fillo pastry sheets - kontos #4'], img: 'pantry_phyllo.jpg', emoji: '🛒' },
+  { k: ['fine cut vermicelli noodles (reshteh or sharya) - sipa', 'royal chef vermicelli - 454g'], img: 'pantry_vermicelli.jpg', emoji: '🛒' },
+  { k: ['freez kiwi & lime'], img: 'bev_kiwi_lime.jpg', emoji: '🥤' },
+  { k: ['freez pomegranate'], img: 'bev_pomegranate_juice.jpg', emoji: '🥤' },
+  { k: ['freez, lemon & mint', 'freez, lemon & mint (6 count)'], img: 'bev_lemon_mint.jpg', emoji: '🥤' },
+  { k: ['grilled eggplant - four seasons (2.9 lb)'], img: 'pantry_grilled_eggplant.jpg', emoji: '🛒' },
+  { k: ['halava plain - al kanater (1 lb)', 'plain halawa – el bawadi traditional sesame'], img: 'sweets_halva_plain.jpg', emoji: '🍬' },
+  { k: ['honey with nuts, wild garden (14 oz, 400g)'], img: 'sweets_honey_nuts.jpg', emoji: '🍬' },
+  { k: ['molto magnum chocolate & hazelnut'], img: 'sweets_chocolate_croissant.jpg', emoji: '🍬' },
+  { k: ['pistachio spreadable cream'], img: 'sweets_pistachio_butter.jpg', emoji: '🍬' },
+  { k: ['renga'], img: 'lynn_renga_smoked_herring.jpg', emoji: '🛒' },
+  { k: ['roomy cheese'], img: 'dairy_roomy_cheese.jpg', emoji: '🧀' },
+  { k: ['rose water - crescent', 'rose water, baraka (8.45 fl oz / 250ml)'], img: 'pantry_rose_water.jpg', emoji: '🛒' },
+  { k: ['semolina - crescent'], img: 'pantry_semolina.jpg', emoji: '🛒' },
+  { k: ['sesame seeds - basak'], img: 'pantry_sesame.jpg', emoji: '🛒' },
+  { k: ['seyidoglu cotton candy pistachio 125g', 'seyidoglu cotton candy plain 125g'], img: 'sweets_cotton_candy.jpg', emoji: '🍬' },
+  { k: ['shamshiri earl grey tea, 250g'], img: 'bev_earl_grey_tea.jpg', emoji: '🥤' },
+  { k: ['shamshiri green tea, 250g'], img: 'bev_green_tea.jpg', emoji: '🥤' },
+  { k: ['shamshiri persian tea, 250g'], img: 'bev_persian_tea.jpg', emoji: '🥤' },
+  { k: ['shatta hot pepper sauce - al dayaa'], img: 'pantry_hot_sauce.jpg', emoji: '🛒' },
+  { k: ['sultan sliced basterma 10oz (0.66 ib)'], img: 'pantry_basturma.jpg', emoji: '🛒' },
+  { k: ['turkish labneh 400g'], img: 'dairy_turkish_labneh.jpg', emoji: '🧀' },
+  { k: ['vanilla orange sugar - dreem (4g)', 'vanilla sugar - dreem (4g)'], img: 'pantry_vanilla_sugar.jpg', emoji: '🛒' },
+  { k: ['vimto soft drink - 330 ml'], img: 'bev_red_soft_drink.jpg', emoji: '🥤' },
+  { k: ['whipped cream powder - basak 150g'], img: 'dairy_whipped_cream_powder.jpg', emoji: '🧀' },
+  { k: ['whipping cream (sachet) - dreem'], img: 'dairy_whipping_cream.jpg', emoji: '🧀' },
+  { k: ['whole wheat bread'], img: 'lynn_whole_wheat_bread.jpg', emoji: '🛒' },
+  { k: ['wild garden toum garlic aioli - 9.3 oz'], img: 'pantry_toum.jpg', emoji: '🛒' },
 ];
 const AR_PHOTO_RULES = [
   // Arabic catalog names -> the same item-specific photos as the English names.
@@ -5968,7 +6026,326 @@ const PHOTO_CREDITS = [
   "Ji-Elle",
   "CC BY-SA 4.0",
   "https://commons.wikimedia.org/wiki/File:Baba_ganoush-Jordanie.jpg"
- ]
+ ],
+  /* ---- v59: real photos for the 71 fallbacks (see PHOTO_RULES) ---- */
+ [
+  '100% Whole Wheat Pita Bread - Golden Mill, Authentic Lebanese Pita Bread - Sam\'s, Crescent Premium Quality Pocket Pita Bread (White), Crescent Premium Quality Pocket Pita Bread (Whole Wheat)',
+  'fugzu',
+  'CC BY 2.0',
+  'https://commons.wikimedia.org/wiki/File:Pita_Flatbread.jpg'
+ ],
+ [
+  'ARZ Labne Kefir Cheese, 16oz',
+  'Leslie Seaton',
+  'CC BY 2.0',
+  'https://commons.wikimedia.org/wiki/File:Labneh_(5196911587).jpg'
+ ],
+ [
+  'ARZ Original Ayran Yogurt Drink, 16 fl oz',
+  'E4024',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Ayran_in_a_beer_glass.jpg'
+ ],
+ [
+  'Abu Auf Anise, 12 bags',
+  'André Karwath aka Aka',
+  'CC BY-SA 2.5',
+  'https://commons.wikimedia.org/wiki/File:Tea_bags.jpg'
+ ],
+ [
+  'Abu Auf Lemon & Ginger, 12 bags',
+  'Erasmus Kamugisha',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:A_boiled_Lemon_and_ginger_tea.jpg'
+ ],
+ [
+  'Almond Halawa – El Rashidi El Mizan',
+  'Jin Zan',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Halva_with_almonds,_250_g.jpg'
+ ],
+ [
+  'BaKe ROLZ - Ketchup Flavor, BaKe ROLZ - Olive Flavor',
+  'Barthateslisa',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Rusk_from_India.jpg'
+ ],
+ [
+  'Bab El Sham Chunky Spicy Crispy Chicken Coating',
+  'Yvwv',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Breadcrumb.jpg'
+ ],
+ [
+  'Baraka Brown Lentils, 908g, Ziyad Whole Small Lentils 16oz (453g)',
+  'Illustratedjc',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Brown_lentils.JPG'
+ ],
+ [
+  'Baraka Cheese Feta 500g',
+  'JJ Harrison',
+  'CC BY-SA 2.5',
+  'https://commons.wikimedia.org/wiki/File:Feta_Cheese.jpg'
+ ],
+ [
+  'Baraka Husked Wheat 2lb',
+  'zandland',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Wheatberries.jpg'
+ ],
+ [
+  'Baraka Lupini - 600g jar, Baraka Lupini Dry, 850g',
+  'Lupino',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:Ciotola_di_lupini.jpg'
+ ],
+ [
+  'Barbican Apple Non-Alcoholic Drink - Halal',
+  'Flunse (Patrick Geltinger)',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Apple_juice_with_3apples.jpg'
+ ],
+ [
+  'Barbican Malt Non-Alcoholic Drink - Halal',
+  'Mx. Granger',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:Malta_Goya.jpg'
+ ],
+ [
+  'Basak - Baking Powder',
+  'DrRachT',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:Levure_chimique_tunisienne.jpg'
+ ],
+ [
+  'Basil Seed Mango Drink, Basil Seed Mango Drink (6 Count), Basil Seed Pomegranate Drink, Basil Seed Pomegranate Drink (6 Count)',
+  'Daderot',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:Basil_seed_melon_flavored_drink_-_Massachusetts.jpg'
+ ],
+ [
+  'Best Juice Mango - 235ml, Wellmade Mango Juice 1L, Wellmade Mango Mini Juice - 250ml',
+  'Lisa Pinehill',
+  'CC BY-SA 2.0',
+  'https://commons.wikimedia.org/wiki/File:Glass_of_Mango_Juice.jpg'
+ ],
+ [
+  'Best Juice juava - (1L / 33.8 oz)',
+  'Eugene Peretz',
+  'CC BY-SA 2.0',
+  'https://commons.wikimedia.org/wiki/File:Guava_juice_(3110765359).jpg'
+ ],
+ [
+  'Blossom Water - Crescent',
+  'Youssefbensaad',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Fechka_d_eau_de_fleurs_d_oranger.jpg'
+ ],
+ [
+  'Butter Ghee, Ziyad (14 oz)',
+  'Gaurav Dhwaj Khadka',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Ghee_2.jpg'
+ ],
+ [
+  'Cream Natural - Puck 6oz',
+  'Bodhi Peace',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Philadelphia_cream_cheese_(no_flash).jpg'
+ ],
+ [
+  'Dried Apricots - Crescent',
+  'Fumikas Sagisavas',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:Turkey_dried_apricots.jpg'
+ ],
+ [
+  'El Rashidi El Mizan Chocolate Halawa Spread, 300g',
+  'BAGANIAH LAW',
+  'CC BY 4.0',
+  'https://commons.wikimedia.org/wiki/File:Chocolate_spread.jpg'
+ ],
+ [
+  'Farina - Crescent',
+  'Rillke',
+  'CC BY-SA 3.0 de',
+  'https://commons.wikimedia.org/wiki/File:Semolina_300260.jpg'
+ ],
+ [
+  'Feseekh',
+  'Ashashyou',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Fesikh_2.jpg'
+ ],
+ [
+  'Fillo Pastry Sheets - Kontos #4',
+  'Emma Jane',
+  'CC BY 2.0',
+  'https://commons.wikimedia.org/wiki/File:Phyllo_bed.jpg'
+ ],
+ [
+  'Fine Cut Vermicelli Noodles (Reshteh Or Sharya) - Sipa, Royal Chef Vermicelli - 454g',
+  'Popo le Chien',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Rice_vermicelli.jpg'
+ ],
+ [
+  'Freez Kiwi & Lime',
+  'rawpixel.com',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:Kiwi_Smoothie.jpg'
+ ],
+ [
+  'Freez Pomegranate',
+  'Augustus Binu',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Pomegranate_Juice_(2019).jpg'
+ ],
+ [
+  'Freez, Lemon & Mint, Freez, Lemon & Mint (6 Count)',
+  'Bernard Gagnon',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Mint_lemonade.jpg'
+ ],
+ [
+  'Grilled Eggplant - Four Seasons (2.9 lb)',
+  'rex pe',
+  'CC BY 2.0',
+  'https://commons.wikimedia.org/wiki/File:Grilled_eggplants.jpg'
+ ],
+ [
+  'Halava Plain - Al Kanater (1 lb), Plain Halawa – El Bawadi Traditional Sesame',
+  'Drejwen',
+  'CC BY 4.0',
+  'https://commons.wikimedia.org/wiki/File:Halva_at_Kapani_Market.jpg'
+ ],
+ [
+  'Honey with Nuts, Wild Garden (14 oz, 400g)',
+  'Gaurav Dhwaj Khadka',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Nuts_with_honey.jpg'
+ ],
+ [
+  'Molto Magnum Chocolate & Hazelnut',
+  'Acabashi',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Chocolate_croissant_Cranbrook_Walk_Exchange_Ilford_London_England.jpg'
+ ],
+ [
+  'Pistachio Spreadable Cream',
+  'Steven Pavlov',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:The_Nutty_Gourmet_Pistachio_Butter,_10_oz_jar.jpg'
+ ],
+ [
+  'Renga',
+  'daSupremo',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Smoked_Herrings.jpg'
+ ],
+ [
+  'Roomy Cheese',
+  'Jon Sullivan',
+  'Public domain',
+  'https://commons.wikimedia.org/wiki/File:Pecorino_romano_cheese.jpg'
+ ],
+ [
+  'Rose Water - Crescent, Rose Water, Baraka (8.45 fl oz / 250ml)',
+  'DrRachT',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:Dog_rose_water.jpg'
+ ],
+ [
+  'Semolina - Crescent',
+  'Sanjay ach',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Sa_semolina_far.jpg'
+ ],
+ [
+  'Sesame Seeds - Basak',
+  'Sanjay ach',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Sa_white_sesame_seeds.jpg'
+ ],
+ [
+  'Seyidoglu Cotton Candy Pistachio 125g, Seyidoglu Cotton Candy Plain 125g',
+  'Joseolgon',
+  'CC BY-SA 3.0',
+  'https://commons.wikimedia.org/wiki/File:Cotton_candy_01_(cropped).JPG'
+ ],
+ [
+  'Shamshiri Earl Grey Tea, 250g',
+  'Sebastian Stabinger',
+  'CC BY 3.0',
+  'https://commons.wikimedia.org/wiki/File:Earl_Grey_Tea.jpg'
+ ],
+ [
+  'Shamshiri Green Tea, 250g',
+  'Kanko*',
+  'CC BY 2.0',
+  'https://commons.wikimedia.org/wiki/File:Green_tea_-_%E7%B7%91%E8%8C%B6_-_Flickr_-_Kanko.jpg'
+ ],
+ [
+  'Shamshiri Persian Tea, 250g',
+  'Mondephile',
+  'Public domain',
+  'https://commons.wikimedia.org/wiki/File:Persian_tea_glass.JPG'
+ ],
+ [
+  'Shatta Hot Pepper Sauce - Al Dayaa',
+  'Spatms',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Bottle_of_Crystal_Hot_Sauce%2C_Baumer_Foods%2C_Inc.jpg'
+ ],
+ [
+  'Sultan Sliced Basterma 10oz (0.66 Ib)',
+  'E4024',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Turkish_pastirma.jpg'
+ ],
+ [
+  'Turkish Labneh 400g',
+  'Takeaway',
+  'CC BY-SA 4.0',
+  'https://commons.wikimedia.org/wiki/File:Turkish_strained_yogurt.jpg'
+ ],
+ [
+  'Vanilla Orange Sugar - Dreem (4g), Vanilla Sugar - Dreem (4g)',
+  'Whitney from Chicago, IL',
+  'CC BY 2.0',
+  'https://commons.wikimedia.org/wiki/File:Vanilla_sugar.jpg'
+ ],
+ [
+  'Vimto Soft Drink - 330 ml',
+  'Smirkybec',
+  'CC BY 4.0',
+  'https://commons.wikimedia.org/wiki/File:Glass_of_red_lemonade_01.jpg'
+ ],
+ [
+  'Whipped Cream Powder - Basak 150g',
+  'Mx. Granger',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:Vegan_whipped_cream.jpg'
+ ],
+ [
+  'Whipping Cream (Sachet) - Dreem',
+  'Rhett Sutphin',
+  'CC BY 2.0',
+  'https://commons.wikimedia.org/wiki/File:Whipped_Cream.jpg'
+ ],
+ [
+  'Whole Wheat Bread',
+  'GOLANYASSAF',
+  'CC BY 4.0',
+  'https://commons.wikimedia.org/wiki/File:Whole_wheat_bread1.jpg'
+ ],
+ [
+  'Wild Garden Toum Garlic Aioli - 9.3 oz',
+  'Miansari66',
+  'CC0',
+  'https://commons.wikimedia.org/wiki/File:Toum_%28Lebanese_Garlic_Sauce%29.JPG'
+ ],
 ];
 function photoCreditsHtml() {
   return '<div id="photo-credits"><h3 class="section-title">' + esc(t('help_credits_title')) + '</h3>' +
