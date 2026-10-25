@@ -3471,6 +3471,10 @@ window.homeSearch = function (form) {
   S.filter.vegan = false;
   S.filter.deliversMe = false;
   S.filter.sort = 'relevance';
+  // Dismiss the mobile keyboard on submit: this is an SPA view switch
+  // (no page reload), so without an explicit blur the keyboard would
+  // stay open over the dishes results (Oct 2026).
+  if (input) input.blur();
   go('dishes');
   return false;
 };
@@ -3535,6 +3539,10 @@ function bindDishBrowseControls() {
   const dietChips = $('#diet-chips');
   if (!q || !chips || !dietChips) return;
   q.addEventListener('input', debounce(() => { S.filter.q = q.value; loadGrid(); }, 300));
+  // Dismiss the mobile keyboard once the query is typed: the dishes
+  // search is live (no submit button), so pressing the keyboard's
+  // Search/Enter key otherwise leaves the keyboard over the results.
+  q.addEventListener('keydown', e => { if (e.key === 'Enter') q.blur(); });
   chips.addEventListener('click', e => {
     const b = e.target.closest('[data-cat]');
     if (!b) return;
@@ -3704,6 +3712,8 @@ async function vGroceries() {
         : '<div class="empty"><span class="big">🛒</span>' + esc(t('groc_none')) + '</div>';
     };
     $('#gq').addEventListener('input', debounce(() => { gq = $('#gq').value; renderGroceries(); }, 300));
+    // Same as the dishes search: Enter dismisses the mobile keyboard.
+    $('#gq').addEventListener('keydown', e => { if (e.key === 'Enter') $('#gq').blur(); });
     $('#gchips').addEventListener('click', (e) => {
       const b = e.target.closest('[data-cat]');
       if (!b) return;
