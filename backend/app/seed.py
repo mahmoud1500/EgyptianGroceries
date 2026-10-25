@@ -10,7 +10,7 @@ Run (from the backend/ folder, VS Code terminal):
 import json
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 
 from . import auth, models
 from .database import Base, SessionLocal, engine, ensure_schema
@@ -1067,6 +1067,102 @@ VENDOR_NAMES_AR: dict[str, str] = {
 }
 
 
+def _rename_nile_to_lynnwood(db):
+    """Rename "Nile Groceries" -> "Lynnwood Groceries" in place.
+
+    name_ar follows only when it still holds the old Arabic name (or is
+    empty) — a vendor's custom Arabic name is never overwritten.
+    """
+    _old = db.scalar(select(models.Vendor).where(models.Vendor.name == "Nile Groceries"))
+    if _old is not None:
+        _old.name = "Lynnwood Groceries"
+        if not _old.name_ar or _old.name_ar == "بقالة النيل":
+            _old.name_ar = "بقالة لينوود"
+
+
+def _dedupe_vendors(db):
+    """Merge vendor rows that share one name; keep the lowest id.
+
+    Heals the v55 double-create (seed() created a second "Lynnwood
+    Groceries" row before the rename ran). Vendor-level references move to
+    the kept row; a duplicate dish with the same name as a kept dish has
+    its references moved onto the kept dish and is then deleted, while a
+    uniquely-named duplicate dish is reassigned to the kept vendor.
+    Idempotent — a clean database is a no-op. Runs in a SAVEPOINT so a
+    failure rolls back just the merge and never breaks startup.
+    """
+    try:
+        with db.begin_nested():
+            _dup_names = [
+                r[0]
+                for r in db.execute(
+                    select(models.Vendor.name)
+                    .group_by(models.Vendor.name)
+                    .having(func.count(models.Vendor.id) > 1)
+                )
+            ]
+            for _name in _dup_names:
+                _vendors = (
+                    db.scalars(
+                        select(models.Vendor)
+                        .where(models.Vendor.name == _name)
+                        .order_by(models.Vendor.id)
+                    ).all()
+                )
+                _kept, _dups = _vendors[0], _vendors[1:]
+                _kept_dishes = {
+                    d.name: d
+                    for d in db.scalars(
+                        select(models.Dish).where(models.Dish.vendor_id == _kept.id)
+                    ).all()
+                }
+                for _dup in _dups:
+                    for _model, _col in (
+                        (models.Order, "vendor_id"),
+                        (models.Order, "attributed_vendor_id"),
+                        (models.VendorPayout, "vendor_id"),
+                        (models.VendorSettlement, "vendor_id"),
+                        (models.Review, "vendor_id"),
+                        (models.DishAnnouncement, "vendor_id"),
+                    ):
+                        db.execute(
+                            update(_model)
+                            .where(getattr(_model, _col) == _dup.id)
+                            .values({_col: _kept.id})
+                        )
+                    for _dish in list(
+                        db.scalars(
+                            select(models.Dish).where(models.Dish.vendor_id == _dup.id)
+                        ).all()
+                    ):
+                        _target = _kept_dishes.get(_dish.name)
+                        if _target is None:
+                            _dish.vendor_id = _kept.id
+                            _kept_dishes[_dish.name] = _dish
+                            continue
+                        db.execute(update(models.OrderItem).where(models.OrderItem.dish_id == _dish.id).values(dish_id=_target.id))
+                        db.execute(update(models.Review).where(models.Review.dish_id == _dish.id).values(dish_id=_target.id))
+                        db.execute(update(models.DishOption).where(models.DishOption.dish_id == _dish.id).values(dish_id=_target.id))
+                        db.execute(update(models.DishIngredient).where(models.DishIngredient.dish_id == _dish.id).values(dish_id=_target.id))
+                        for _fav in db.scalars(select(models.Favorite).where(models.Favorite.dish_id == _dish.id)).all():
+                            _existing = db.scalar(select(models.Favorite).where(models.Favorite.user_id == _fav.user_id, models.Favorite.dish_id == _target.id))
+                            if _existing is not None:
+                                db.delete(_fav)
+                            else:
+                                _fav.dish_id = _target.id
+                        for _ann in db.scalars(select(models.DishAnnouncement).where(models.DishAnnouncement.dish_id == _dish.id)).all():
+                            _existing = db.scalar(select(models.DishAnnouncement).where(models.DishAnnouncement.dish_id == _target.id))
+                            if _existing is not None:
+                                db.delete(_ann)
+                            else:
+                                _ann.dish_id = _target.id
+                        db.delete(_dish)
+                    db.delete(_dup)
+            db.flush()
+    except Exception as exc:  # never break startup over a merge
+        print(f"[seed] vendor dedupe skipped ({exc!r})")
+
+
 def fill_seed_data(db):
     """Idempotent seed-*data* fills (not schema): ingredients text + category
     prep-minute defaults. Only fills blanks, so vendor edits in the portal are
@@ -1092,13 +1188,12 @@ def fill_seed_data(db):
             _d.ingredients_ar = _ar
     # Rename (Oct 2026): "Nile Groceries" -> "Lynnwood Groceries".
     # Runs on every startup, so existing databases are renamed in place.
-    # name_ar follows only when it still holds the old Arabic name (or is
-    # empty) — a vendor's custom Arabic name is never overwritten.
-    _old = db.scalar(select(models.Vendor).where(models.Vendor.name == "Nile Groceries"))
-    if _old is not None:
-        _old.name = "Lynnwood Groceries"
-        if not _old.name_ar or _old.name_ar == "بقالة النيل":
-            _old.name_ar = "بقالة لينوود"
+    # NOTE (v56): this MUST run before any vendor creation in seed() — v55
+    # created a second "Lynnwood Groceries" row because creation ran first
+    # (lookup by the new name missed the old row) and the rename ran after.
+    _rename_nile_to_lynnwood(db)
+    # v56: merge any same-name vendor rows (heals the v55 double-create).
+    _dedupe_vendors(db)
 
     # v53 remainder: Arabic vendor names (only-when-empty).
     for _name, _ar in VENDOR_NAMES_AR.items():
@@ -1145,6 +1240,10 @@ def seed():
     ensure_schema()
     db = SessionLocal()
     try:
+        # v56: rename BEFORE any vendor creation — otherwise the groceries
+        # lookup below (by the new name) misses the old row, creates a
+        # second vendor, and the later rename duplicates it (v55 live bug).
+        _rename_nile_to_lynnwood(db)
         # Demo accounts (only if missing)
         customer = db.scalar(select(models.User).where(models.User.email == "customer@demo.com"))
         if not customer:
