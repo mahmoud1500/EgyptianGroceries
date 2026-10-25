@@ -95,10 +95,16 @@ _NORM_GROUPS = [[normalize(term) for term in group] for group in TRANSLITERATION
 
 def _expand_query(qn: str) -> list[str]:
     """All search needles: the normalized query plus every alias-group term
-    from groups where ANY term appears in the query."""
+    from groups where ANY term appears in the query.
+
+    Only term-in-query expands a group — never query-in-term: "bread"
+    must not pull in the "om ali" group just because that group contains
+    "bread pudding" (Oct 2026: that over-expansion, plus flat scoring,
+    is why searching "Bread" surfaced unrelated dishes).
+    """
     needles = {qn} if qn else set()
     for group in _NORM_GROUPS:
-        if any(term and (term in qn or qn in term and len(qn) >= 3) for term in group):
+        if any(term and term in qn for term in group):
             needles.update(t for t in group if t)
     return sorted(needles, key=len, reverse=True)
 
@@ -120,8 +126,21 @@ def _dish_search_haystack(dish: models.Dish) -> str:
 _FUZZY_THRESHOLD = 0.62
 
 
-def _match_score(qn: str, needles: list[str], haystack: str, name: str) -> int:
-    """3 = normalized/alias substring, 2 = token-prefix, 1 = fuzzy, 0 = miss."""
+def _match_score(qn: str, needles: list[str], haystack: str, name: str, en_name: str) -> int:
+    """4 = name substring (query/alias in the EN or AR name),
+    3 = haystack substring (description/ingredients/allergens),
+    2 = token-prefix, 1 = fuzzy on the English name, 0 = miss.
+
+    Name matches outrank description/ingredient matches: without the
+    tiering, a grill plate "served with baladi bread" tied with Baladi
+    Bread itself and the results came out alphabetical (Oct 2026:
+    searching "Bread" surfaced liver and kebab plates first).
+    """
+    if qn and qn in name:
+        return 4
+    for needle in needles:
+        if len(needle) >= 2 and needle in name:
+            return 4
     if qn and qn in haystack:
         return 3
     for needle in needles:
@@ -138,7 +157,7 @@ def _match_score(qn: str, needles: list[str], haystack: str, name: str) -> int:
     # Light fuzzy fallback on the dish NAME only (names are short and
     # distinctive; running it on long descriptions is noisy).
     if qn and len(qn) >= 4:
-        if difflib.SequenceMatcher(None, qn, name).ratio() >= _FUZZY_THRESHOLD:
+        if difflib.SequenceMatcher(None, qn, en_name).ratio() >= _FUZZY_THRESHOLD:
             return 1
     return 0
 
@@ -198,8 +217,8 @@ def smart_search(
         # names and English description. This lets Arabic ingredient queries
         # find dishes even when the term is absent from the dish name.
         haystack = _dish_search_haystack(d)
-        name = normalize(d.name)
-        score = _match_score(qn, needles, haystack, name)
+        name = normalize((d.name or "") + " " + (d.name_ar or ""))
+        score = _match_score(qn, needles, haystack, name, normalize(d.name))
         if score:
             scored.append((score, d))
     if sort == "price_asc":

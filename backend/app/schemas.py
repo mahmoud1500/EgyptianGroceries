@@ -2098,7 +2098,7 @@ class FavoriteToggleOut(BaseModel):
 class SearchHitOut(_Out):
     """One /api/search hit: the dish plus why it matched."""
     dish: DishOut
-    score: int = 0  # 3 = exact/normalized substring, 2 = alias/prefix, 1 = fuzzy
+    score: int = 0  # 4 = name substring, 3 = haystack substring, 2 = token-prefix, 1 = fuzzy
 
 
 class SearchOut(BaseModel):
