@@ -235,13 +235,20 @@ class ArabicSearchAndOrderTests(unittest.TestCase):
 
     def test_order_snapshots_arabic_name(self):
         import datetime as dt
+        from zoneinfo import ZoneInfo
 
+        # _validate_pickup_time interprets naive values as marketplace time;
+        # use an explicit Pacific-local noon so CI's UTC clock cannot make
+        # this test land outside the vendor's default 10:00–20:00 window.
+        pickup_at = (
+            dt.datetime.now(ZoneInfo("America/Los_Angeles")) + dt.timedelta(days=1)
+        ).replace(hour=12, minute=0, second=0, microsecond=0)
         order = orders_router._prepare_order(
             self.db, self.customer,
             vendor_id=self.vendor.id,
             items=[schemas.OrderItemIn(dish_id=self.dishes["Koshary"].id, quantity=2)],
             fulfillment="pickup",
-            pickup_at=dt.datetime.now() + dt.timedelta(days=1),
+            pickup_at=pickup_at,
             delivery_address=None,
             payment_method="cash", notes=None, checkout_group=None,
         )
