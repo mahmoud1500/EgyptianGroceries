@@ -47,17 +47,30 @@ def commission_for_amount(amount, rate: Decimal) -> Decimal:
     )
 
 
+def commissionable_food_amount(order) -> Decimal:
+    """Food subtotal after order-level promo and loyalty discounts.
+
+    Tax and delivery fees are intentionally excluded. Legacy orders with
+    missing discount fields treat those discounts as zero.
+    """
+    subtotal = Decimal(str(getattr(order, "subtotal", 0) or 0))
+    promo_discount = Decimal(str(getattr(order, "discount_amount", 0) or 0))
+    points_discount = Decimal(str(getattr(order, "points_discount", 0) or 0))
+    return max(Decimal("0.00"), subtotal - promo_discount - points_discount).quantize(CENT)
+
+
 def commission_due_for_order(order, vendor, default_rate: Decimal) -> Decimal:
     """Commission attributable to a completed order, net of proportional refunds.
 
     New orders use the commission snapshot saved at checkout. Legacy orders
-    without a snapshot are calculated with the vendor's current configured rate.
+    without a snapshot use the current policy: discounted food subtotal only.
+    Existing non-null snapshots are preserved for historical consistency.
     """
     if order.commission_due is not None:
         due = Decimal(str(order.commission_due or 0))
     else:
         due = commission_for_amount(
-            order.total, effective_commission_rate(vendor, default_rate)
+            commissionable_food_amount(order), effective_commission_rate(vendor, default_rate)
         )
     total = Decimal(str(order.total or 0))
     refunded = Decimal(str(getattr(order, "refunded_amount", 0) or 0))
