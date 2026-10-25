@@ -60,7 +60,7 @@ def _seed_all_menus(db):
     add_menu("Omar Caboose", OMAR_MENU)
     for v in SAMPLE_VENDORS:
         add_menu(v["name"], v["dishes"])
-    add_menu("Nile Groceries", GROCERY_ITEMS)
+    add_menu("Lynnwood Groceries", GROCERY_ITEMS)
     add_menu("Um Sohaib's Kitchen", UM_SOHAIB_MENU, with_photo=True)
     db.commit()
 
@@ -82,10 +82,14 @@ class ArabicNameFillTests(unittest.TestCase):
         self.assertEqual(names, set(DISH_NAMES_AR))
 
     def test_fill_sets_all_144_arabic_names(self):
+        # The 144-dish Arabic map: every dish in DISH_NAMES_AR must be
+        # filled. Dishes from vendors added later (e.g. Alpha-T Grocery)
+        # are not in the map and must simply be left alone, not KeyError.
         fill_seed_data(self.db)
         dishes = self.db.query(models.Dish).all()
-        self.assertEqual(len(dishes), 144)
-        for d in dishes:
+        named = [d for d in dishes if d.name in DISH_NAMES_AR]
+        self.assertEqual(len(named), 144)
+        for d in named:
             self.assertEqual(d.name_ar, DISH_NAMES_AR[d.name], d.name)
 
     def test_fill_is_only_when_empty(self):
@@ -101,11 +105,14 @@ class ArabicNameFillTests(unittest.TestCase):
     def test_fill_is_idempotent(self):
         fill_seed_data(self.db)
         first = {d.name: d.name_ar for d in self.db.query(models.Dish).all()}
+        first_count = self.db.query(models.Dish).count()
         fill_seed_data(self.db)
         fill_seed_data(self.db)
         second = {d.name: d.name_ar for d in self.db.query(models.Dish).all()}
         self.assertEqual(first, second)
-        self.assertEqual(self.db.query(models.Dish).count(), 144)
+        # No hardcoded total: later vendors (e.g. Alpha-T's 149 dishes)
+        # legitimately raise the count; idempotency means it stays put.
+        self.assertEqual(self.db.query(models.Dish).count(), first_count)
 
 
 class ArabicNameMigrationTests(unittest.TestCase):

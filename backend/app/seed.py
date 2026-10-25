@@ -195,13 +195,212 @@ GROCERY_ITEMS: list[tuple[str, str, float, str, bool]] = [
 ]
 
 GROCERY_VENDOR = {
-    "name": "Nile Groceries",
+    "name": "Lynnwood Groceries",
     "tagline": "Egyptian pantry staples, spices & sweets",
     "area": "Everett, WA",
     "phone": "206-555-0345",
     "fulfillment": "both",
     "delivery_fee": 3.99,
 }
+
+# === Alpha-T Grocery (Oct 2026 — Mediterranean grocery, Everett, WA) ===
+# Vendor + grocery items from the store's public catalog (names + current
+# prices only; no photos — groceries render emoji tiles; no copied
+# descriptions — the short descriptors below are generic, written here.
+# Sale prices were captured as the current price (no discount_percent),
+# so the listing never shows a stale "was" price. The one out-of-stock
+# item at capture time (Pocket Pita Bread - Sam's 4 Count) is omitted.
+# Only-if-missing via _ensure_alpha_t() in fill_seed_data, so fresh and
+# existing databases (including the live site) all pick it up.
+ALPHA_T_VENDOR = {
+    "name": "Alpha-T Grocery",
+    "tagline": "Mediterranean & Egyptian grocery — Everett",
+    "area": "Everett, WA",
+    "phone": "",
+    "fulfillment": "both",
+    "delivery_fee": 3.99,
+}
+
+ALPHA_T_ITEMS: list[tuple[str, str, float, str, bool]] = [
+    ("El Rashidi El Mizan Chocolate Halawa Spread, 300g", "Middle Eastern sweet — 300g", 7.99, "Sweets", False),
+    ("El Rashidi El Mizan Molasses (Asal Eswed), 350g", "Middle Eastern sweet — 350g", 3.99, "Sweets", False),
+    ("El Rashidi El Mizan Molasses (Asal Eswed), 650g", "Middle Eastern sweet — 650g", 7.49, "Sweets", False),
+    ("Domty Istanbolly White Cheese", "Middle Eastern dairy / cheese", 11.99, "Dairy & Cheese", False),
+    ("Bab El Sham Chunky Spicy Crispy Chicken Coating", "Middle Eastern pantry staple", 4.99, "Pantry", False),
+    ("Bab El Sham 7 Spices Mix", "Middle Eastern spice / herb", 4.49, "Spices & Herbs", False),
+    ("Bab El Sham Dried Basil", "Middle Eastern spice / herb", 3.99, "Spices & Herbs", False),
+    ("Bab El Sham Curry Powder", "Middle Eastern spice / herb", 4.49, "Spices & Herbs", False),
+    ("Bab El Sham Turmeric", "Middle Eastern spice / herb", 2.99, "Spices & Herbs", False),
+    ("Bab El Sham Mixed Meat Spices", "Middle Eastern spice / herb", 3.99, "Spices & Herbs", False),
+    ("Bab Elsham Egyptian Liver Spices", "Middle Eastern spice / herb", 2.99, "Spices & Herbs", False),
+    ("Bab El Sham Seafood Spices", "Middle Eastern spice / herb", 3.99, "Spices & Herbs", False),
+    ("Bab El Sham Potato Spices Mix", "Middle Eastern spice / herb", 3.49, "Spices & Herbs", False),
+    ("Bab El Sham Perfect BBQ Blend", "Middle Eastern spice / herb", 2.99, "Spices & Herbs", False),
+    ("Bab El Sham Ground Sumac", "Middle Eastern spice / herb", 2.99, "Spices & Herbs", False),
+    ("Molto Magnum Chocolate & Hazelnut", "Middle Eastern sweet", 2.99, "Sweets", False),
+    ("Baraka Cheese Feta 500g", "Middle Eastern dairy / cheese — 500g", 7.87, "Dairy & Cheese", False),
+    ("Ziyad Whole Small Lentils 16oz (453g)", "Middle Eastern pantry staple", 3.8, "Pantry", False),
+    ("Small Fava Beans Dried, Ziyad (16 oz)", "Middle Eastern pantry staple", 4.26, "Pantry", False),
+    ("Butter Ghee, Ziyad (14 oz)", "Middle Eastern dairy / cheese", 14.99, "Dairy & Cheese", False),
+    ("Bay Leaves - Botany 50g", "Middle Eastern spice / herb — 50g", 7.99, "Spices & Herbs", False),
+    ("Kunefe with Syrup & Plate, Ipek (200g)", "Middle Eastern sweet", 9.99, "Sweets", False),
+    ("Whipped Cream Powder - Basak 150g", "Middle Eastern dairy / cheese — 150g", 4.99, "Dairy & Cheese", False),
+    ("Stuffed Grape Leaves - Tamek", "Middle Eastern pantry staple", 8.29, "Pantry", False),
+    ("Sesame Seeds - Basak", "Middle Eastern pantry staple", 3.49, "Pantry", False),
+    ("Basak - Baking Powder", "Middle Eastern pantry staple", 2.25, "Pantry", False),
+    ("Honey with Nuts, Wild Garden (14 oz, 400g)", "Middle Eastern sweet", 7.99, "Sweets", False),
+    ("Wild Garden Traditional Tahini Sauce & Dressing 9.9oz", "Middle Eastern pantry staple — 9.9oz", 6.99, "Pantry", False),
+    ("Baraka Halva Plain 400g", "Middle Eastern sweet — 400g", 5.49, "Sweets", False),
+    ("Seyidoglu Cotton Candy Pistachio 125g", "Middle Eastern sweet — 125g", 4.49, "Sweets", False),
+    ("Seyidoglu Cotton Candy Plain 125g", "Middle Eastern sweet — 125g", 3.99, "Sweets", False),
+    ("Wellmade Mango Juice 1L", "Middle Eastern drink — 1L", 3.99, "Beverages", False),
+    ("Wellmade Mango Mini Juice - 250ml", "Middle Eastern drink — 250ml", 2.45, "Beverages", False),
+    ("Rose Water, Baraka (8.45 fl oz / 250ml)", "Middle Eastern pantry staple", 2.99, "Pantry", False),
+    ("Baraka Halva Pistachio - 400g", "Middle Eastern sweet — 400g", 6.99, "Sweets", False),
+    ("Egyptian Baraka Spicy Pickled Onion 950g", "Middle Eastern pantry staple — 950g", 7.95, "Pantry", False),
+    ("Egyptian Spicy Pickled Mixed Vegetables - 1300 g", "Middle Eastern pantry staple — 1300 g", 6.49, "Pantry", False),
+    ("Baraka Frozen Minced Molokhia - 400g", "Frozen Middle Eastern grocery — 400g", 2.75, "Frozen", False),
+    ("Royal Chef Vermicelli - 454g", "Middle Eastern pantry staple — 454g", 2.75, "Pantry", False),
+    ("Baraka White Kidney Beans 850g", "Middle Eastern pantry staple — 850g", 4.99, "Pantry", False),
+    ("Baraka Lupini Dry, 850g", "Middle Eastern pantry staple — 850g", 4.8, "Pantry", False),
+    ("Baraka Brown Lentils, 908g", "Middle Eastern pantry staple — 908g", 4.19, "Pantry", False),
+    ("Baraka Dry Chickpeas - 908g", "Middle Eastern pantry staple — 908g", 4.49, "Pantry", False),
+    ("Baraka Small Whole Fava Beans - 908g", "Middle Eastern pantry staple — 908g", 4.4, "Pantry", False),
+    ("Baraka Split Red Lentils - 908g", "Middle Eastern pantry staple — 908g", 4.49, "Pantry", False),
+    ("Baraka Lupini - 600g jar", "Middle Eastern pantry staple — 600g jar", 4.99, "Pantry", False),
+    ("Freez Tamarind", "Middle Eastern drink", 2.6, "Beverages", False),
+    ("Freez Kiwi & Lime", "Middle Eastern drink", 2.6, "Beverages", False),
+    ("Best Juice juava - (1L / 33.8 oz)", "Middle Eastern drink", 5.89, "Beverages", False),
+    ("Best Juice Mango - 235ml", "Middle Eastern drink — 235ml", 1.99, "Beverages", False),
+    ("Wild Garden Toum Garlic Aioli - 9.3 oz", "Middle Eastern pantry staple — 9.3 oz", 6.99, "Pantry", False),
+    ("Ziyad Frozen Baby Okra - 14oz", "Frozen Middle Eastern grocery — 14oz", 4.49, "Frozen", False),
+    ("Ziyad Kefta Spice Blend - 5.5oz", "Middle Eastern spice / herb — 5.5oz", 6.49, "Spices & Herbs", False),
+    ("Ziyad Dried Zaatar Leaves - 100 g", "Middle Eastern spice / herb — 100 g", 5.99, "Spices & Herbs", False),
+    ("Ziyad Halva Chocolate - 12.34 oz", "Middle Eastern sweet — 12.34 oz", 5.99, "Sweets", False),
+    ("Barbican Malt Non-Alcoholic Drink - Halal", "Middle Eastern drink", 2.49, "Beverages", False),
+    ("Barbican Apple Non-Alcoholic Drink - Halal", "Middle Eastern drink", 2.49, "Beverages", False),
+    ("Halwani Maamoul Date Cookies 480g", "Middle Eastern sweet — 480g", 6.99, "Sweets", False),
+    ("Al Afia Grape Leaves 32oz", "Middle Eastern pantry staple — 32oz", 11.9, "Pantry", False),
+    ("Ziyad Freekeh 28oz", "Middle Eastern pantry staple — 28oz", 8.25, "Pantry", False),
+    ("Ziyad Green Zaatar 16oz (453g)", "Middle Eastern spice / herb", 5.99, "Spices & Herbs", False),
+    ("Baraka Husked Wheat 2lb", "Middle Eastern pantry staple — 2lb", 3.99, "Pantry", False),
+    ("Baraka Whole Coriander 140 g", "Middle Eastern spice / herb — 140 g", 3.99, "Spices & Herbs", False),
+    ("Baraka Sumac 300g", "Middle Eastern spice / herb — 300g", 4.49, "Spices & Herbs", False),
+    ("Baraka Biryani Spice 7 oz", "Middle Eastern spice / herb — 7 oz", 5.99, "Spices & Herbs", False),
+    ("Baraka Seven Spices 7.5 oz", "Middle Eastern spice / herb — 7.5 oz", 5.49, "Spices & Herbs", False),
+    ("Baraka Tawook Spice 8 oz", "Middle Eastern spice / herb — 8 oz", 5.99, "Spices & Herbs", False),
+    ("Baraka Grill & BBQ Spice 8 oz", "Middle Eastern spice / herb — 8 oz", 5.99, "Spices & Herbs", False),
+    ("Baraka Kabseh Spice 8 oz", "Middle Eastern spice / herb — 8 oz", 5.99, "Spices & Herbs", False),
+    ("Baraka Chicken Shawarma Spice 7.5 oz", "Middle Eastern spice / herb — 7.5 oz", 5.99, "Spices & Herbs", False),
+    ("Cream Natural - Puck 6oz", "Middle Eastern dairy / cheese — 6oz", 3.99, "Dairy & Cheese", False),
+    ("Baraka Meat Shawarma Spice 7.5 oz", "Middle Eastern spice / herb — 7.5 oz", 5.99, "Spices & Herbs", False),
+    ("Baraka Bay Leaves 25 g", "Middle Eastern spice / herb — 25 g", 2.99, "Spices & Herbs", False),
+    ("Baraka Frozen Taro (Coulcas) with Spices 400g", "Frozen Middle Eastern grocery — 400g", 3.25, "Frozen", False),
+    ("Roomy Cheese", "Middle Eastern dairy / cheese", 9.99, "Dairy & Cheese", False),
+    ("Merve Beef Soujouk Mild - 1LB", "Middle Eastern pantry staple — 1LB", 12.99, "Pantry", False),
+    ("Sultan Sliced Basterma 10oz (0.66 Ib)", "Middle Eastern pantry staple", 16.99, "Pantry", False),
+    ("Shamshiri Persian Tea, 250g", "Middle Eastern drink — 250g", 10.49, "Beverages", False),
+    ("Shamshiri Earl Grey Tea, 250g", "Middle Eastern drink — 250g", 11.99, "Beverages", False),
+    ("Shamshiri Green Tea, 250g", "Middle Eastern drink — 250g", 9.99, "Beverages", False),
+    ("Crescent Premium Quality Pocket Pita Bread (Whole Wheat)", "Middle Eastern pantry staple", 2.49, "Pantry", False),
+    ("Crescent Premium Quality Pocket Pita Bread (White)", "Middle Eastern pantry staple", 2.49, "Pantry", False),
+    ("Crescent Turmeric, 7oz", "Middle Eastern spice / herb — 7oz", 5.49, "Spices & Herbs", False),
+    ("Crescent Curry Powder Mild, 7oz", "Middle Eastern spice / herb — 7oz", 5.49, "Spices & Herbs", False),
+    ("Crescent Paprika, 7oz", "Middle Eastern spice / herb — 7oz", 5.49, "Spices & Herbs", False),
+    ("Abu Auf Lemon & Ginger, 12 bags", "Middle Eastern pantry staple — 12 bags", 1.49, "Pantry", False),
+    ("Faiez Al Suhagy White Beans (Fasolia Beida), 400g", "Middle Eastern pantry staple — 400g", 2.99, "Pantry", False),
+    ("Abu Auf Anise, 12 bags", "Middle Eastern pantry staple — 12 bags", 1.49, "Pantry", False),
+    ("Safi Roasted Sesame Oil 16 Fl. Oz", "Middle Eastern pantry staple", 7.99, "Pantry", False),
+    ("Crescent Sumac, 7oz", "Middle Eastern spice / herb — 7oz", 5.99, "Spices & Herbs", False),
+    ("ARZ Labne Kefir Cheese, 16oz", "Middle Eastern dairy / cheese — 16oz", 4.99, "Dairy & Cheese", False),
+    ("Turkish Labneh 400g", "Middle Eastern dairy / cheese — 400g", 5.99, "Dairy & Cheese", False),
+    ("ARZ Original Ayran Yogurt Drink, 16 fl oz", "Middle Eastern dairy / cheese", 2.79, "Dairy & Cheese", False),
+    ("Royal Palm Premium Date Paste 14.2oz (400g)", "Middle Eastern sweet", 3.99, "Sweets", False),
+    ("Freez Pomegranate", "Middle Eastern drink", 2.6, "Beverages", False),
+    ("Fillo Pastry Sheets - Kontos #4", "Middle Eastern pantry staple", 5.99, "Pantry", False),
+    ("Molokhya Minced - Montana", "Frozen Middle Eastern grocery", 2.99, "Frozen", False),
+    ("Pickled Turnips Sliced - Al Dayaa (1000g)", "Middle Eastern pantry staple", 5.99, "Pantry", False),
+    ("Tahini - Al Dayaa (800g)", "Middle Eastern pantry staple", 10.99, "Pantry", False),
+    ("Fava Beans, Egyptian Recipe - California Garden", "Middle Eastern pantry staple", 2.59, "Pantry", False),
+    ("Fava Beans, Palestinian Recipe - California Garden", "Middle Eastern pantry staple", 2.19, "Pantry", False),
+    ("Vacuumed Sukari Dates – 100% Natural Saudi Dates (2.2 lb / 1kg)", "Middle Eastern sweet", 8.99, "Sweets", False),
+    ("Eggplant with Tahini(Baba Ganoush) - Four Seasons (400G)", "Middle Eastern pantry staple", 6.49, "Pantry", False),
+    ("Grilled Eggplant - Four Seasons (2.9 lb)", "Middle Eastern pantry staple", 12.99, "Pantry", False),
+    ("BaKe ROLZ - Ketchup Flavor", "Middle Eastern pantry staple", 2.99, "Pantry", False),
+    ("BaKe ROLZ - Olive Flavor", "Middle Eastern pantry staple", 3.49, "Pantry", False),
+    ("Maamoul with Dates – Traditional Date Filled Cookies", "Middle Eastern sweet", 1.89, "Sweets", False),
+    ("Mandolin", "Middle Eastern sweet", 2.89, "Sweets", False),
+    ("Pistachio Spreadable Cream", "Middle Eastern sweet", 9.99, "Sweets", False),
+    ("Authentic Lebanese Pita Bread - Sam's", "Middle Eastern pantry staple", 2.99, "Pantry", False),
+    ("100% Whole Wheat Pita Bread - Golden Mill", "Middle Eastern pantry staple", 2.99, "Pantry", False),
+    ("Almond Halawa – El Rashidi El Mizan", "Middle Eastern sweet", 1.99, "Sweets", False),
+    ("Plain Halawa – El Bawadi Traditional Sesame", "Middle Eastern sweet", 1.99, "Sweets", False),
+    ("Sugar Cane Molasses – Nemah", "Middle Eastern sweet", 2.99, "Sweets", False),
+    ("Ahmad Tea Special Blend – Black Tea Bags (100 Count)", "Middle Eastern drink", 7.99, "Beverages", False),
+    ("Kharaz Yellow Label Black Tea – Lipton", "Middle Eastern drink", 5.99, "Beverages", False),
+    ("Al Arosa - Black Tea", "Middle Eastern drink", 4.99, "Beverages", False),
+    ("Red Split Lentils - Al Mazrah 2 LB", "Middle Eastern pantry staple — 2 LB", 4.49, "Pantry", False),
+    ("Freekeh - Crescent", "Middle Eastern pantry staple", 6.5, "Pantry", False),
+    ("Basil Seed Pomegranate Drink (6 Count)", "Middle Eastern drink", 10.8, "Beverages", False),
+    ("Basil Seed Pomegranate Drink", "Middle Eastern drink", 1.99, "Beverages", False),
+    ("Basil Seed Mango Drink (6 Count)", "Middle Eastern drink", 10.8, "Beverages", False),
+    ("Basil Seed Mango Drink", "Middle Eastern drink", 1.99, "Beverages", False),
+    ("Freez, Lemon & Mint (6 Count)", "Middle Eastern drink", 14.99, "Beverages", False),
+    ("Freez, Lemon & Mint", "Middle Eastern drink", 2.6, "Beverages", False),
+    ("Kalamata Olives - Sultan Garden (1kg)", "Middle Eastern pantry staple", 10.99, "Pantry", False),
+    ("Blossom Water - Crescent", "Middle Eastern pantry staple", 3.75, "Pantry", False),
+    ("Bechamel with Cheese Sauce Mix - Ebhar Food (50g)", "Middle Eastern pantry staple", 2.99, "Pantry", False),
+    ("Split Fava Beans - Crescent", "Middle Eastern pantry staple", 3.75, "Pantry", False),
+    ("Semolina - Crescent", "Middle Eastern pantry staple", 3.99, "Pantry", False),
+    ("Farina - Crescent", "Middle Eastern pantry staple", 3.99, "Pantry", False),
+    ("Halava Plain - Al Kanater (1 lb)", "Middle Eastern sweet", 5.99, "Sweets", False),
+    ("Dried Apricots - Crescent", "Middle Eastern sweet", 7.99, "Sweets", False),
+    ("Vanilla Orange Sugar - Dreem (4g)", "Middle Eastern pantry staple", 1.99, "Pantry", False),
+    ("Vanilla Sugar - Dreem (4g)", "Middle Eastern pantry staple", 1.99, "Pantry", False),
+    ("Whipping Cream (Sachet) - Dreem", "Middle Eastern dairy / cheese", 6.49, "Dairy & Cheese", False),
+    ("Palm Dates - Royal", "Middle Eastern sweet", 9.99, "Sweets", False),
+    ("Rose Water - Crescent", "Middle Eastern pantry staple", 3.99, "Pantry", False),
+    ("PLAIN Fava Beans - California Garden", "Middle Eastern pantry staple", 2.25, "Pantry", False),
+    ("Tahini - Al Mazrah 2 LB", "Middle Eastern pantry staple — 2 LB", 12.99, "Pantry", False),
+    ("Fine Cut Vermicelli Noodles (Reshteh Or Sharya) - Sipa", "Middle Eastern pantry staple", 3.49, "Pantry", False),
+    ("Taro & Spices - Silva", "Frozen Middle Eastern grocery", 2.99, "Frozen", False),
+    ("Vimto Soft Drink - 330 ml", "Middle Eastern drink — 330 ml", 1.99, "Beverages", False),
+    ("Mixed Pickles - Al Dayaa", "Middle Eastern pantry staple", 5.99, "Pantry", False),
+    ("Shatta Hot Pepper Sauce - Al Dayaa", "Middle Eastern pantry staple", 4.49, "Pantry", False),
+    ("Okra Zero - Silva", "Frozen Middle Eastern grocery", 3.99, "Frozen", False),
+    ("Grape Leaves - Orlando", "Middle Eastern pantry staple", 9.49, "Pantry", False),
+    ("Kataifi (Kadayif) Phyllo - Kontos", "Middle Eastern pantry staple", 6.99, "Pantry", False),
+    ("Pomegranate Molasses - El Mazrah", "Middle Eastern pantry staple", 4.49, "Pantry", False),
+]
+
+def _ensure_alpha_t(db):
+    """Create Alpha-T Grocery + its items only where missing (idempotent).
+    Called from fill_seed_data on every startup, which is also the tail
+    of seed(), so fresh and existing databases both get it."""
+    vendor = _get_vendor(db, ALPHA_T_VENDOR["name"])
+    if not vendor:
+        vendor = models.Vendor(
+            name=ALPHA_T_VENDOR["name"],
+            tagline=ALPHA_T_VENDOR["tagline"],
+            area=ALPHA_T_VENDOR["area"],
+            phone=ALPHA_T_VENDOR["phone"],
+            fulfillment=ALPHA_T_VENDOR["fulfillment"],
+            delivery_fee=Decimal(str(ALPHA_T_VENDOR["delivery_fee"])),
+        )
+        db.add(vendor)
+        db.flush()
+        _add_dishes(db, vendor, ALPHA_T_ITEMS)
+    else:
+        _have = {
+            d.name
+            for d in db.scalars(
+                select(models.Dish).where(models.Dish.vendor_id == vendor.id)
+            )
+        }
+        _missing = [item for item in ALPHA_T_ITEMS if item[0] not in _have]
+        if _missing:
+            _add_dishes(db, vendor, _missing)
+    db.flush()
 
 # Um Sohaib's Kitchen (Oct 2026 — from the vendor's printed menu flyer).
 # Location/phone were not on the flyer: left empty, the vendor edits them in the portal.
@@ -862,7 +1061,7 @@ DISH_INGREDIENTS_AR: dict[str, str] = {
 VENDOR_NAMES_AR: dict[str, str] = {
     "Mama Samia's Kitchen": "مطبخ ماما سامية",
     "Nile Bakery": "مخبز النيل",
-    "Nile Groceries": "بقالة النيل",
+    "Lynnwood Groceries": "بقالة لينوود",
     "Omar Caboose": "عمر كابوس",
     "Um Sohaib's Kitchen": "مطبخ أم صهيب",
 }
@@ -891,6 +1090,16 @@ def fill_seed_data(db):
         _d = db.scalar(select(models.Dish).where(models.Dish.name == _name))
         if _d is not None and not _d.ingredients_ar:
             _d.ingredients_ar = _ar
+    # Rename (Oct 2026): "Nile Groceries" -> "Lynnwood Groceries".
+    # Runs on every startup, so existing databases are renamed in place.
+    # name_ar follows only when it still holds the old Arabic name (or is
+    # empty) — a vendor's custom Arabic name is never overwritten.
+    _old = db.scalar(select(models.Vendor).where(models.Vendor.name == "Nile Groceries"))
+    if _old is not None:
+        _old.name = "Lynnwood Groceries"
+        if not _old.name_ar or _old.name_ar == "بقالة النيل":
+            _old.name_ar = "بقالة لينوود"
+
     # v53 remainder: Arabic vendor names (only-when-empty).
     for _name, _ar in VENDOR_NAMES_AR.items():
         _v = db.scalar(select(models.Vendor).where(models.Vendor.name == _name))
@@ -926,6 +1135,8 @@ def fill_seed_data(db):
     ):
         if not _d.is_featured:
             _d.is_featured = True
+    # Alpha-T Grocery (Oct 2026): new vendor + items, only where missing.
+    _ensure_alpha_t(db)
     db.commit()
 
 
@@ -980,7 +1191,7 @@ def seed():
             db.flush()
             _add_dishes(db, omar, OMAR_MENU)
 
-        # Nile Groceries (only if missing)
+        # Lynnwood Groceries (only if missing)
         groceries = _get_vendor(db, GROCERY_VENDOR["name"])
         if not groceries:
             groceries = models.Vendor(

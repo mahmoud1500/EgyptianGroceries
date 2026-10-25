@@ -67,11 +67,14 @@ class FeaturedBackfillTests(unittest.TestCase):
     def test_backfill_is_idempotent_across_boots(self):
         fill_seed_data(self.db)
         first = self._featured_names()
+        first_count = self.db.query(models.Dish).count()
         fill_seed_data(self.db)
         fill_seed_data(self.db)
         self.assertEqual(self._featured_names(), first)
-        count = self.db.query(models.Dish).count()
-        self.assertEqual(count, len(FEATURED_BEST_SELLERS) + 1)
+        # No hardcoded total: fill_seed_data also creates vendors added
+        # later (e.g. Alpha-T's dishes) on a fixture DB; idempotency means
+        # the count stays put across boots, not that it equals the fixture.
+        self.assertEqual(self.db.query(models.Dish).count(), first_count)
 
 
 if __name__ == "__main__":

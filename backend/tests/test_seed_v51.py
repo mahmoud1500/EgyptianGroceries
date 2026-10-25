@@ -55,7 +55,7 @@ class IngredientsCoverageTests(unittest.TestCase):
         add_menu("Omar Caboose", OMAR_MENU)
         for v in SAMPLE_VENDORS:
             add_menu(v["name"], v["dishes"])
-        add_menu("Nile Groceries", GROCERY_ITEMS)
+        add_menu("Lynnwood Groceries", GROCERY_ITEMS)
         self.db.commit()
         # Fresh seed + first startup fill.
         fill_seed_data(self.db)

@@ -68,13 +68,13 @@ $env:DATABASE_URL = "sqlite:///./app.db"
 python -m app.seed
 ```
 
-This creates 4 vendors — **Omar Caboose** with his full menu, **Nile Groceries**
+This creates 4 vendors — **Omar Caboose** with his full menu, **Lynnwood Groceries**
 (33 Egyptian grocery items: pantry, spices, frozen, dairy, sweets, beverages —
 23 with real photos, the rest emoji tiles),
 plus 2 sample vendors — demo accounts, and 2 demo orders so the vendor
 earnings dashboard has something to show. Safe to re-run — it only adds
 whatever is missing, so run it again on an existing database to get
-**Nile Groceries** without touching your data.
+**Lynnwood Groceries** without touching your data.
 
 **Delivery**: vendors with delivery enabled show a Delivery option beside Pickup
 at checkout. Delivery orders require a street address, which is shown with a
@@ -135,7 +135,7 @@ backend/app/
   schemas.py            # Pydantic v2 validation
   auth.py               # bcrypt hashing, JWT issue/verify, role guards
   database.py           # engine + session
-  seed.py               # demo data (Omar Caboose menu + Nile Groceries + sample vendors + demo accounts)
+  seed.py               # demo data (Omar Caboose menu + Lynnwood Groceries + sample vendors + demo accounts)
   routers/
     auth.py             # POST /api/auth/register, /login, GET /me
     vendors.py          # GET /api/vendors, /{id}, /mine, /{id}/earnings
