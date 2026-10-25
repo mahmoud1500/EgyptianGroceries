@@ -54,8 +54,10 @@ class RenameBackfillTests(unittest.TestCase):
         v = self.db.query(models.Vendor).filter_by(id=vid).one()
         self.assertEqual(v.name, "Lynnwood Groceries")
         self.assertEqual(v.name_ar, "بقالة لينوود")
+        # The original dish survives, plus the Oct 2026 backfill adds the
+        # three new Lynnwood items (Feseekh, Renga, Whole Wheat Bread).
         self.assertEqual(
-            self.db.query(models.Dish).filter_by(vendor_id=vid).count(), 1
+            self.db.query(models.Dish).filter_by(vendor_id=vid).count(), 4
         )
         self.assertIsNone(
             self.db.query(models.Vendor).filter_by(name="Nile Groceries").first()

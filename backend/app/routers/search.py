@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from .. import auth, models, schemas
 from ..database import get_db
+from ..flash_sales import effective_discount_percent
 from ..ratelimit import check_rate_limit
 from .dishes import _attach_ingredient_options, _attach_options, _attach_ratings
 
@@ -142,6 +143,15 @@ def _match_score(qn: str, needles: list[str], haystack: str, name: str) -> int:
     return 0
 
 
+def _effective_price(dish) -> float:
+    """Price the customer actually pays (standing/flash discount applied)."""
+    try:
+        d = effective_discount_percent(dish)
+    except Exception:  # noqa: BLE001
+        d = dish.discount_percent or 0
+    return round(float(dish.price) * (1 - d / 100), 2)
+
+
 @router.get("", response_model=schemas.SearchOut)
 def smart_search(
     request: Request,
@@ -150,6 +160,8 @@ def smart_search(
     vegetarian: bool | None = Query(default=None),
     vegan: bool | None = Query(default=None),
     available_only: bool = Query(default=True),
+    vendor_id: int | None = Query(default=None),
+    sort: str = Query(default="relevance"),
     db: Session = Depends(get_db),
     caller: models.User | None = Depends(auth.get_optional_user),
 ):
@@ -176,6 +188,8 @@ def smart_search(
         stmt = stmt.where(models.Dish.is_vegan == vegan)
     if available_only:
         stmt = stmt.where(models.Dish.available == True)  # noqa: E712
+    if vendor_id is not None:
+        stmt = stmt.where(models.Dish.vendor_id == vendor_id)
     dishes = list(db.scalars(stmt).all())
 
     scored: list[tuple[int, models.Dish]] = []
@@ -188,7 +202,12 @@ def smart_search(
         score = _match_score(qn, needles, haystack, name)
         if score:
             scored.append((score, d))
-    scored.sort(key=lambda x: (-x[0], (x[1].name or "").lower()))
+    if sort == "price_asc":
+        scored.sort(key=lambda x: (_effective_price(x[1]), (x[1].name or "").lower()))
+    elif sort == "price_desc":
+        scored.sort(key=lambda x: (-_effective_price(x[1]), (x[1].name or "").lower()))
+    else:
+        scored.sort(key=lambda x: (-x[0], (x[1].name or "").lower()))
 
     matched = [d for _, d in scored]
     _attach_ratings(db, matched)

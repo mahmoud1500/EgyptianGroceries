@@ -1362,7 +1362,7 @@ const S = {
   vendors: [],
   vendorById: {},
   categories: [],
-  filter: { q: '', category: '', veg: false, vegan: false, deliversMe: false },
+  filter: { q: '', category: '', veg: false, vegan: false, deliversMe: false, sort: 'relevance', vendor: '' },
   showAllHomeDishes: false,
   popularDishes: [],
   cart: loadCart(),
@@ -3238,6 +3238,12 @@ async function vHome() {
       '<a class="btn" href="/dishes" data-go="dishes"><span>' + esc(t('hero_browse')) + '</span></a> ' +
       '<a class="btn secondary" href="#" onclick="go(\'groceries\');return false;">' + esc(t('hero_groceries')) + '</a> ' +
       '<a class="btn secondary" href="#" onclick="document.getElementById(\'vendors\').scrollIntoView({behavior:\'smooth\'});return false;">' + esc(t('hero_cooks')) + '</a>' +
+      // === General search (Oct 2026): home search bar across ALL products
+      // (food + groceries) — lands on the browse page with the query applied.
+      '<form class="search-row" onsubmit="return homeSearch(this)">' +
+      '<input type="search" id="home-q" aria-label="' + esc(t('home_search_label')) + '" placeholder="' +
+      esc(t('home_search_ph')) + '">' +
+      '<button class="btn" type="submit">' + esc(t('home_search_btn')) + '</button></form>' +
       '<div class="trust-strip">' + esc(t('hero_trust', {
         vendors: vendors.length,
         dishes: foodOnly.length,
@@ -3395,6 +3401,22 @@ async function vHome() {
   }
 }
 
+/* Home search bar: a fresh general search across ALL products (food +
+   groceries) — lands on the browse page with the query applied and any
+   previous category/vendor/diet filters cleared. */
+window.homeSearch = function (form) {
+  const input = form ? form.querySelector('input') : document.getElementById('home-q');
+  S.filter.q = input ? input.value.trim() : '';
+  S.filter.category = '';
+  S.filter.vendor = '';
+  S.filter.veg = false;
+  S.filter.vegan = false;
+  S.filter.deliversMe = false;
+  S.filter.sort = 'relevance';
+  go('dishes');
+  return false;
+};
+
 async function vDishes() {
   const view = $('#view');
   setPageSEO('Browse Egyptian Dishes | Homemade Egyptian Food',
@@ -3425,7 +3447,18 @@ async function vDishes() {
         esc(catLabel(c)) + '</button>').join('') + '</div>' +
       '<div class="filters" id="diet-chips"><button class="chip' + (S.filter.veg ? ' active' : '') +
       '" data-diet="veg">🌱 ' + esc(t('veg_filter')) + '</button><button class="chip' +
-      (S.filter.vegan ? ' active' : '') + '" data-diet="vegan">🌿 ' + esc(t('vegan_filter')) + '</button></div>';
+      (S.filter.vegan ? ' active' : '') + '" data-diet="vegan">🌿 ' + esc(t('vegan_filter')) + '</button></div>' +
+      // === Sort + vendor filter (Oct 2026) ===
+      '<div class="filters"><label>' + esc(t('sort_label')) + ' <select id="sort" aria-label="' + esc(t('sort_label')) + '">' +
+      '<option value="relevance"' + (S.filter.sort === 'relevance' ? ' selected' : '') + '>' + esc(t('sort_relevance')) + '</option>' +
+      '<option value="price_asc"' + (S.filter.sort === 'price_asc' ? ' selected' : '') + '>' + esc(t('sort_price_asc')) + '</option>' +
+      '<option value="price_desc"' + (S.filter.sort === 'price_desc' ? ' selected' : '') + '>' + esc(t('sort_price_desc')) + '</option>' +
+      '</select></label>' +
+      '<label>' + esc(t('vendor_filter_label')) + ' <select id="vendor-f" aria-label="' + esc(t('vendor_filter_label')) + '">' +
+      '<option value="">' + esc(t('vendor_all')) + '</option>' +
+      vendors.map(v => '<option value="' + v.id + '"' + (String(S.filter.vendor) === String(v.id) ? ' selected' : '') + '>' +
+        esc(vname(v)) + '</option>').join('') +
+      '</select></label></div>';
     if (getZip()) html += '<div class="filters" id="zipf-chips"><button class="chip' +
       (S.filter.deliversMe ? ' active' : '') + '" data-zf="me">🚚 ' + esc(t('delivers_to_me')) + '</button></div>';
     else S.filter.deliversMe = false;
@@ -3466,6 +3499,13 @@ function bindDishBrowseControls() {
     e.target.closest('[data-zf]').classList.toggle('active', S.filter.deliversMe);
     loadGrid();
   });
+  const sortSel = $('#sort');
+  if (sortSel) sortSel.addEventListener('change', () => { S.filter.sort = sortSel.value; loadGrid(); });
+  const vendorSel = $('#vendor-f');
+  if (vendorSel) vendorSel.addEventListener('change', () => {
+    S.filter.vendor = vendorSel.value === '' ? '' : Number(vendorSel.value);
+    loadGrid();
+  });
 }
 
 function renderGrid(dishes, emptyMsg) {
@@ -3484,27 +3524,37 @@ function renderGrid(dishes, emptyMsg) {
     : '<div class="empty"><span class="big">🍽️</span>' + esc(emptyMsg || t('no_dishes')) + '</div>';
   const toggle = $('#home-dishes-toggle');
   if (toggle) {
-    const filtered = !!(S.filter.q || S.filter.category || S.filter.veg || S.filter.vegan || S.filter.deliversMe);
+    const filtered = !!(S.filter.q || S.filter.category || S.filter.veg || S.filter.vegan || S.filter.deliversMe || S.filter.vendor !== '' || (S.filter.sort && S.filter.sort !== 'relevance'));
     const allCount = (S.allDishes || []).filter(d => d.available && !GROCERY_CATS.includes(d.category)).length;
     toggle.hidden = filtered || !S.popularDishes.length || allCount <= S.popularDishes.length;
     toggle.textContent = t(S.showAllHomeDishes ? 'show_fewer_dishes' : 'view_all_dishes');
   }
   const heading = $('#browse');
   if (heading) {
-    const filtered = !!(S.filter.q || S.filter.category || S.filter.veg || S.filter.vegan || S.filter.deliversMe);
+    const filtered = !!(S.filter.q || S.filter.category || S.filter.veg || S.filter.vegan || S.filter.deliversMe || S.filter.vendor !== '' || (S.filter.sort && S.filter.sort !== 'relevance'));
     heading.textContent = t(filtered || S.showAllHomeDishes ? 'browse_h' : 'popular_dishes');
   }
 }
 
+/* Sort a dish list by effective price (what the customer actually pays —
+   salePrice() already mirrors the backend's sale_price). Relevance keeps
+   the server/curated order. */
+function sortDishes(list, sort) {
+  if (sort === 'price_asc') return [...list].sort((a, b) => salePrice(a) - salePrice(b) || String(a.name).localeCompare(String(b.name)));
+  if (sort === 'price_desc') return [...list].sort((a, b) => salePrice(b) - salePrice(a) || String(a.name).localeCompare(String(b.name)));
+  return list;
+}
+
 async function loadGrid() {
   const dietActive = S.filter.veg || S.filter.vegan;
+  const vendorActive = S.filter.vendor !== '' && S.filter.vendor != null;
   // First paint with no filters: vHome already fetched the full list — reuse it
   // instead of firing a second, nearly identical /dishes request.
   // Diet filters always hit the server (?vegetarian / ?vegan) so results are
   // authoritative even if the cached list lacks the flags.
-  if (!S.filter.q && !S.filter.category && S.allDishes && !dietActive) {
+  if (!S.filter.q && !S.filter.category && S.allDishes && !dietActive && !vendorActive) {
     const available = S.allDishes.filter(d => d.available && !GROCERY_CATS.includes(d.category));
-    renderGrid(S.showAllHomeDishes ? available : S.popularDishes);
+    renderGrid(S.showAllHomeDishes ? sortDishes(available, S.filter.sort) : S.popularDishes);
     return;
   }
   const p = new URLSearchParams();
@@ -3512,20 +3562,25 @@ async function loadGrid() {
   if (S.filter.category) p.set('category', S.filter.category);
   if (S.filter.veg) p.set('vegetarian', 'true');
   if (S.filter.vegan) p.set('vegan', 'true');
+  if (vendorActive) p.set('vendor_id', String(S.filter.vendor));
+  if (S.filter.sort && S.filter.sort !== 'relevance') p.set('sort', S.filter.sort);
   try {
     let dishes, emptyMsg;
     if (S.filter.q) {
       // === F4 (Oct 2026): smart bilingual search — typo-tolerant,
       // Arabic-normalized, transliteration-aware. Zero-result queries are
       // logged server-side for the vendors' "what customers searched for" panel.
+      // === General search (Oct 2026): a query searches ALL products —
+      // groceries are NOT stripped here (browsing without a query stays
+      // food-only; groceries keep their own page).
       const res = await api('/search?' + p.toString());
-      dishes = (res.hits || []).map(h => h.dish)
-        .filter(d => !GROCERY_CATS.includes(d.category)); // groceries have their own page
+      dishes = (res.hits || []).map(h => h.dish);
       if (!dishes.length) emptyMsg = t('search_no_results', { q: S.filter.q });
       // === END F4 ===
     } else {
       dishes = (await api('/dishes?' + p.toString()))
         .filter(d => !GROCERY_CATS.includes(d.category)); // groceries have their own page
+      dishes = sortDishes(dishes, S.filter.sort); // /dishes has no sort param
     }
     renderGrid(dishes, emptyMsg);
   } catch (e) {

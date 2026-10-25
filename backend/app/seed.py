@@ -166,6 +166,10 @@ GROCERY_ITEMS: list[tuple[str, str, float, str, bool]] = [
     ("Canned Ful Medames - 14 oz", "Ready-to-eat fava beans, Egyptian style", 2.49, "Pantry", False),
     ("Egyptian Pickles (Torshi) - 32 oz jar", "Assorted pickled vegetables, Egyptian style", 5.99, "Pantry", False),
     ("Green Olives - 16 oz jar", "Seasoned green olives", 5.99, "Pantry", False),
+    # ---- Oct 2026 additions ----
+    ("Feseekh", "Traditional salted fermented fish, Egyptian delicacy", 2.00, "Pantry", False),
+    ("Renga", "Smoked herring, Egyptian style", 2.00, "Pantry", False),
+    ("Whole Wheat Bread", "Whole wheat bread, freshly baked", 2.00, "Pantry", False),
     # ---- Spices & Herbs ----
     ("Ground Cumin - 4 oz", "Freshly ground, the backbone of Egyptian cooking", 3.99, "Spices & Herbs", True),
     ("Ground Coriander - 4 oz", "For dukkah, ful, and stews", 3.49, "Spices & Herbs", False),
@@ -400,6 +404,38 @@ def _ensure_alpha_t(db):
         _missing = [item for item in ALPHA_T_ITEMS if item[0] not in _have]
         if _missing:
             _add_dishes(db, vendor, _missing)
+    db.flush()
+
+
+# New Lynnwood items (Oct 2026): added after the vendor already existed,
+# so GROCERY_ITEMS alone can't reach the live DB (it only seeds at vendor
+# creation). This backfill adds just these three, only where missing —
+# never the whole grocery list, so it can't resurrect anything a vendor
+# deliberately removed.
+_LYNNWOOD_NEW_NAMES = {"Feseekh", "Renga", "Whole Wheat Bread"}
+
+
+def _ensure_lynnwood_new_items(db):
+    """Add the Oct 2026 Lynnwood items to existing databases (idempotent).
+
+    Called from fill_seed_data on every startup, so the live DB picks them
+    up. _add_dishes sets the Arabic names from DISH_NAMES_AR at creation.
+    """
+    vendor = _get_vendor(db, GROCERY_VENDOR["name"])
+    if not vendor:
+        return
+    _have = {
+        d.name
+        for d in db.scalars(
+            select(models.Dish).where(models.Dish.vendor_id == vendor.id)
+        )
+    }
+    _missing = [
+        item for item in GROCERY_ITEMS
+        if item[0] in _LYNNWOOD_NEW_NAMES and item[0] not in _have
+    ]
+    if _missing:
+        _add_dishes(db, vendor, _missing)
     db.flush()
 
 # Um Sohaib's Kitchen (Oct 2026 — from the vendor's printed menu flyer).
@@ -740,6 +776,9 @@ DISH_INGREDIENTS: dict[str, str] = {
 # in the portal are never overwritten.
 DISH_NAMES_AR: dict[str, str] = {
     "Dolma": "دولمة",
+    "Feseekh": "فسيخ",
+    "Renga": "رنجة",
+    "Whole Wheat Bread": "عيش حبة كاملة",
     "Baladi Bread (5 pc)": "عيش بلدي (٥ قطع)",
     "Feteer Meshaltet": "فطير مشلتت",
     "Egyptian Black Tea (El Arosa) - 100 bags": "شاي أسود مصري (العروسة) - ١٠٠ كيس",
@@ -1232,6 +1271,7 @@ def fill_seed_data(db):
             _d.is_featured = True
     # Alpha-T Grocery (Oct 2026): new vendor + items, only where missing.
     _ensure_alpha_t(db)
+    _ensure_lynnwood_new_items(db)
     db.commit()
 
 

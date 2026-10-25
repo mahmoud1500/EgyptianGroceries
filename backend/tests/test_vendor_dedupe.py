@@ -81,7 +81,7 @@ class DedupeTests(unittest.TestCase):
         self.assertEqual(len(lynn), 1)
         self.assertEqual(lynn[0].id, old.id)
         self.assertEqual(
-            self.db.query(models.Dish).filter_by(vendor_id=old.id).count(), 1
+            self.db.query(models.Dish).filter_by(vendor_id=old.id).count(), 4
         )
         self.assertIsNone(
             self.db.query(models.Vendor).filter_by(name="Nile Groceries").first()
@@ -145,7 +145,19 @@ class DedupeTests(unittest.TestCase):
             .filter_by(vendor_id=kept.id)
             .all()
         )
-        self.assertEqual(names, ["Dup Dish", "Dup Only", "Kept Only"])
+        # Kept dishes + the reassigned unique dup dish + the Oct 2026
+        # backfill's three new Lynnwood items.
+        self.assertEqual(
+            names,
+            [
+                "Dup Dish",
+                "Dup Only",
+                "Feseekh",
+                "Kept Only",
+                "Renga",
+                "Whole Wheat Bread",
+            ],
+        )
         self.assertIsNone(
             self.db.query(models.Dish).filter_by(id=dup_a.id).first()
         )
@@ -172,6 +184,11 @@ class DedupeTests(unittest.TestCase):
         self.db.flush()
         self.db.add(_dish(omar.id, "Omar Dish"))
         self.db.add(_dish(lynn.id, "Lynn Dish"))
+        # The Oct 2026 backfill items are already present, so fill adds
+        # nothing and the test isolates the dedupe no-op.
+        self.db.add(_dish(lynn.id, "Feseekh"))
+        self.db.add(_dish(lynn.id, "Renga"))
+        self.db.add(_dish(lynn.id, "Whole Wheat Bread"))
         self.db.commit()
 
         fill_seed_data(self.db)
@@ -187,7 +204,7 @@ class DedupeTests(unittest.TestCase):
             1,
         )
         self.assertEqual(
-            self.db.query(models.Dish).filter_by(vendor_id=lynn.id).count(), 1
+            self.db.query(models.Dish).filter_by(vendor_id=lynn.id).count(), 4
         )
 
 

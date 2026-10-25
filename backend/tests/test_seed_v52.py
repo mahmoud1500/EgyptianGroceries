@@ -78,17 +78,20 @@ class ArabicNameFillTests(unittest.TestCase):
 
     def test_seed_menus_cover_exactly_the_dict(self):
         names = {d.name for d in self.db.query(models.Dish).all()}
-        self.assertEqual(len(names), 144)
+        # No hardcoded total: later menu additions (e.g. the Oct 2026
+        # Lynnwood items) legitimately raise the count; the intent is
+        # exact coverage between menus and the map.
+        self.assertEqual(len(names), len(DISH_NAMES_AR))
         self.assertEqual(names, set(DISH_NAMES_AR))
 
     def test_fill_sets_all_144_arabic_names(self):
-        # The 144-dish Arabic map: every dish in DISH_NAMES_AR must be
+        # The Arabic map: every dish in DISH_NAMES_AR must be
         # filled. Dishes from vendors added later (e.g. Alpha-T Grocery)
         # are not in the map and must simply be left alone, not KeyError.
         fill_seed_data(self.db)
         dishes = self.db.query(models.Dish).all()
         named = [d for d in dishes if d.name in DISH_NAMES_AR]
-        self.assertEqual(len(named), 144)
+        self.assertEqual(len(named), len(DISH_NAMES_AR))
         for d in named:
             self.assertEqual(d.name_ar, DISH_NAMES_AR[d.name], d.name)
 
