@@ -50,9 +50,10 @@ def _serialize(job: models.DeliveryJob) -> dict:
         "provider_reference": job.provider_reference,
         "status": job.status,
         "quoted_cost": str(job.quoted_cost),
-        "actual_cost": str(job.actual_cost),
+        "actual_cost": str(job.actual_cost) if job.actual_cost_confirmed else None,
+        "actual_cost_confirmed": bool(job.actual_cost_confirmed),
         "customer_fee": str(job.customer_fee),
-        "platform_subsidy": str(job.platform_subsidy),
+        "platform_subsidy": str(job.platform_subsidy) if job.actual_cost_confirmed else None,
         "payment_status": job.payment_status,
         "notes": job.notes,
         "created_at": job.created_at,
@@ -61,6 +62,10 @@ def _serialize(job: models.DeliveryJob) -> dict:
 
 
 def _recalculate_subsidy(job: models.DeliveryJob) -> None:
+    if not job.actual_cost_confirmed:
+        # Unknown is not equivalent to zero; the serializer emits null.
+        job.platform_subsidy = Decimal("0.00")
+        return
     actual = Decimal(str(job.actual_cost or 0))
     customer_fee = Decimal(str(job.customer_fee or 0))
     job.platform_subsidy = max(Decimal("0.00"), actual - customer_fee).quantize(Decimal("0.01"))
@@ -117,6 +122,7 @@ def create_delivery_job(
         status="pending",
         quoted_cost=payload.quoted_cost,
         actual_cost=Decimal("0.00"),
+        actual_cost_confirmed=False,
         customer_fee=customer_fee,
         platform_subsidy=Decimal("0.00"),
         payment_status="unpaid",
@@ -158,9 +164,35 @@ def update_delivery_job(
     new_status = changes.get("status", old_status)
     if new_status not in transitions.get(old_status, set()):
         raise HTTPException(status_code=409, detail=f"Invalid delivery status transition: {old_status} -> {new_status}")
+
+    # Explicitly setting actual_cost (including 0.00) is the evidence that
+    # the amount was reviewed. An explicit null clears that confirmation.
+    if "actual_cost" in changes:
+        job.actual_cost_confirmed = changes["actual_cost"] is not None
+        if changes["actual_cost"] is None:
+            changes["actual_cost"] = Decimal("0.00")
+
+    if new_status == "delivered" and not job.actual_cost_confirmed:
+        raise HTTPException(status_code=409, detail="Record the actual delivery cost before marking the job delivered")
+    if changes.get("payment_status") == "paid":
+        if new_status != "delivered" or not job.actual_cost_confirmed:
+            raise HTTPException(status_code=409, detail="A delivery cost can only be marked paid after delivery and cost confirmation")
+
+    order = db.get(models.Order, job.order_id) if new_status == "delivered" else None
+    if order is not None and order.status == "cancelled":
+        raise HTTPException(status_code=409, detail="A cancelled order cannot be marked delivered")
+
     for key, value in changes.items():
         setattr(job, key, value)
     _recalculate_subsidy(job)
+    if new_status == "delivered" and order is not None and order.status != "completed":
+        previous_order_status = order.status
+        order.status = "completed"
+        _record_event(db, order.id, "Order completed by delivery confirmation", {
+            "delivery_job_id": job.id,
+            "status_before": previous_order_status,
+            "status_after": order.status,
+        })
     _record_event(db, job.order_id, "Delivery job updated", {
         "delivery_job_id": job.id, "changes": changes,
         "status_before": old_status, "status_after": job.status,
