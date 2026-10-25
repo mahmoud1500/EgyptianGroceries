@@ -10,7 +10,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from .. import auth, emailer, flash_sales, loyalty, models, notifier, referrals, schemas
-from ..commission import commission_for_amount, is_direct_payment_method
+from ..commission import commission_for_amount, commissionable_food_amount, is_direct_payment_method
 from ..database import get_db
 from ..photo_uploads import delete_uploaded_file, save_uploaded_photo
 from ..ratelimit import check_rate_limit
@@ -127,6 +127,18 @@ def _transition_error(order: models.Order, target: str) -> str | None:
 # and confirmation emails all read this one constant.
 # Frontend mirror: TAX_RATE in frontend/app.js (must be kept in sync).
 TAX_RATE = Decimal("0.00")
+
+
+def _commission_rate_for_order(db: Session, order: models.Order) -> Decimal:
+    """Resolve the effective vendor/global commission rate for a checkout order."""
+    vendor = db.get(models.Vendor, order.vendor_id)
+    if vendor is not None and vendor.commission_rate is not None:
+        return Decimal(str(vendor.commission_rate))
+    row = db.scalar(select(models.Setting).where(models.Setting.key == "commission_percent"))
+    try:
+        return Decimal(str(row.value)) if row is not None else Decimal("0")
+    except (InvalidOperation, ValueError, TypeError):
+        return Decimal("0")
 
 
 def _current_tax_rate(db: Session) -> Decimal:
@@ -1184,6 +1196,13 @@ def _apply_points_redemption(
         alloc = (Decimal(pts) / Decimal(rate)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
         order.points_discount = (order.points_discount or Decimal("0")) + alloc
         order.total = Decimal(order.total) - alloc
+        # Loyalty redemption is applied after the vendor order is created;
+        # refresh the commission snapshot so points discounts reduce the
+        # commissionable food subtotal just like promo discounts do.
+        order.commission_due = commission_for_amount(
+            commissionable_food_amount(order),
+            _commission_rate_for_order(db, order),
+        )
         db.add(
             models.LoyaltyLedger(
                 user_id=user.id,
