@@ -1026,7 +1026,10 @@ def _prepare_order(
         else default_commission_rate
     )
     order_total = subtotal - discount - points_discount + delivery_fee + tax
-    commission_due = commission_for_amount(order_total, commission_rate)
+    commissionable_food_subtotal = max(
+        Decimal("0.00"), subtotal - discount - points_discount
+    )
+    commission_due = commission_for_amount(commissionable_food_subtotal, commission_rate)
     order = models.Order(
         customer_id=user.id if user is not None else None,
         vendor_id=vendor.id,
