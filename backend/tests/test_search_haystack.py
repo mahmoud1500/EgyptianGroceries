@@ -22,7 +22,7 @@ class DishSearchHaystackTests(unittest.TestCase):
 
         self.assertIn("كوسه", haystack)
         self.assertIn("ارز", haystack)
-        self.assertIn("tomato", haystack) if "tomato" in haystack else None
+        self.assertIn("homemade", haystack)
 
     def test_handles_missing_optional_translations(self):
         dish = SimpleNamespace(name="Koshary", name_ar=None, description=None)
