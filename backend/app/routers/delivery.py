@@ -71,6 +71,32 @@ def _recalculate_subsidy(job: models.DeliveryJob) -> None:
     job.platform_subsidy = max(Decimal("0.00"), actual - customer_fee).quantize(Decimal("0.01"))
 
 
+def _delivery_update_error(job: models.DeliveryJob, changes: dict) -> str | None:
+    """Validate status and settlement evidence before mutating a delivery job."""
+    transitions = {
+        "pending": {"pending", "assigned", "cancelled", "failed"},
+        "assigned": {"assigned", "picked_up", "cancelled", "failed"},
+        "picked_up": {"picked_up", "delivered", "failed"},
+        "delivered": {"delivered"},
+        "failed": {"failed", "pending", "cancelled"},
+        "cancelled": {"cancelled", "pending"},
+    }
+    old_status = job.status
+    new_status = changes.get("status", old_status)
+    if new_status not in transitions.get(old_status, set()):
+        return f"Invalid delivery status transition: {old_status} -> {new_status}"
+
+    confirmed = bool(job.actual_cost_confirmed)
+    if "actual_cost" in changes:
+        confirmed = changes["actual_cost"] is not None
+    if new_status == "delivered" and not confirmed:
+        return "Record the actual delivery cost before marking the job delivered"
+    if changes.get("payment_status") == "paid":
+        if new_status != "delivered" or not confirmed:
+            return "A delivery cost can only be marked paid after delivery and cost confirmation"
+    return None
+
+
 def _record_event(db: Session, order_id: int, message: str, meta: dict) -> None:
     import json
     db.add(models.OrderEvent(
@@ -153,17 +179,11 @@ def update_delivery_job(
     if not changes:
         return _serialize(job)
     old_status = job.status
-    transitions = {
-        "pending": {"pending", "assigned", "cancelled", "failed"},
-        "assigned": {"assigned", "picked_up", "cancelled", "failed"},
-        "picked_up": {"picked_up", "delivered", "failed"},
-        "delivered": {"delivered"},
-        "failed": {"failed", "pending", "cancelled"},
-        "cancelled": {"cancelled", "pending"},
-    }
+    old_status = job.status
     new_status = changes.get("status", old_status)
-    if new_status not in transitions.get(old_status, set()):
-        raise HTTPException(status_code=409, detail=f"Invalid delivery status transition: {old_status} -> {new_status}")
+    validation_error = _delivery_update_error(job, changes)
+    if validation_error:
+        raise HTTPException(status_code=409, detail=validation_error)
 
     # Explicitly setting actual_cost (including 0.00) is the evidence that
     # the amount was reviewed. An explicit null clears that confirmation.
@@ -171,12 +191,6 @@ def update_delivery_job(
         job.actual_cost_confirmed = changes["actual_cost"] is not None
         if changes["actual_cost"] is None:
             changes["actual_cost"] = Decimal("0.00")
-
-    if new_status == "delivered" and not job.actual_cost_confirmed:
-        raise HTTPException(status_code=409, detail="Record the actual delivery cost before marking the job delivered")
-    if changes.get("payment_status") == "paid":
-        if new_status != "delivered" or not job.actual_cost_confirmed:
-            raise HTTPException(status_code=409, detail="A delivery cost can only be marked paid after delivery and cost confirmation")
 
     order = db.get(models.Order, job.order_id) if new_status == "delivered" else None
     if order is not None and order.status == "cancelled":
