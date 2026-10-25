@@ -250,6 +250,42 @@ def _stripe_payment_intent_id(db: Session, order: models.Order, stripe) -> str |
     return None
 
 
+def _unmatched_stripe_refunds(db: Session, stripe, payment_intent_id: str) -> list[str]:
+    """Return Stripe refund IDs missing from local refund events for this PaymentIntent.
+
+    Dashboard/API refunds are visible to Stripe but may not exist in order_events.
+    A missing local record makes per-vendor attribution unsafe, so callers must
+    stop automatic refunds and require reconciliation instead of guessing.
+    """
+    listed = stripe.Refund.list(payment_intent=payment_intent_id, limit=100)
+    refunds = listed.get("data", []) if hasattr(listed, "get") else getattr(listed, "data", [])
+    has_more = listed.get("has_more", False) if hasattr(listed, "get") else getattr(listed, "has_more", False)
+    if has_more:
+        raise RuntimeError("Stripe refund list is paginated; complete reconciliation is required")
+
+    known_ids: set[str] = set()
+    events = db.scalars(
+        select(models.OrderEvent).where(models.OrderEvent.event_type == "refund")
+    )
+    for event in events:
+        try:
+            meta = json.loads(event.meta) if event.meta else {}
+        except (ValueError, TypeError):
+            continue
+        if isinstance(meta, dict) and isinstance(meta.get("refund_id"), str):
+            known_ids.add(meta["refund_id"])
+
+    unmatched: list[str] = []
+    for refund in refunds or []:
+        refund_id = refund.get("id") if hasattr(refund, "get") else getattr(refund, "id", None)
+        status = refund.get("status") if hasattr(refund, "get") else getattr(refund, "status", None)
+        # Failed refunds did not move money. Pending/succeeded (and unknown
+        # status) refunds must be reconciled before another automatic refund.
+        if isinstance(refund_id, str) and refund_id not in known_ids and status != "failed":
+            unmatched.append(refund_id)
+    return unmatched
+
+
 def _stripe_refund_on_cancel(db: Session, order: models.Order) -> None:
     """Refund only this vendor sub-order's outstanding amount; never block cancellation."""
     if not order.paid or order.payment_method != "credit_card":
@@ -276,6 +312,27 @@ def _stripe_refund_on_cancel(db: Session, order: models.Order) -> None:
             db, order, "refund",
             "No refund issued — no Stripe PaymentIntent reference found; settle manually",
             {"paid": True},
+        )
+        return
+
+    # Reconcile Stripe's source of truth before issuing another refund. A refund
+    # created in the Stripe Dashboard (or another integration) may not be in
+    # this order's event log. If any refund for this PaymentIntent is unknown,
+    # stop here: a multi-vendor checkout must never guess which sub-order owns it.
+    try:
+        unmatched_refunds = _unmatched_stripe_refunds(db, stripe, pi_id)
+    except Exception as exc:  # Fail closed when reconciliation cannot be completed.
+        _log_event(
+            db, order, "refund",
+            "Stripe refund NOT issued — refund reconciliation unavailable; settle manually",
+            {"payment_intent": pi_id, "reconciliation_error": str(exc)[:200]},
+        )
+        return
+    if unmatched_refunds:
+        _log_event(
+            db, order, "refund",
+            "Stripe refund NOT issued — unmatched Stripe refund(s) require manual reconciliation",
+            {"payment_intent": pi_id, "unmatched_refund_ids": unmatched_refunds},
         )
         return
 
