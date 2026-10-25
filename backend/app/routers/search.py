@@ -102,6 +102,20 @@ def _expand_query(qn: str) -> list[str]:
     return sorted(needles, key=len, reverse=True)
 
 
+def _dish_search_haystack(dish: models.Dish) -> str:
+    """Normalized searchable text from public-facing bilingual catalog fields.
+
+    Keep the canonical dish name as the fuzzy-match input, but include
+    translated descriptions and ingredient/allergen labels for substring and
+    token-prefix matching.
+    """
+    fields = (
+        "name", "name_ar", "description", "description_ar",
+        "ingredients", "ingredients_ar", "allergens", "allergens_ar",
+    )
+    return normalize(" ".join(str(getattr(dish, field, "") or "") for field in fields))
+
+
 _FUZZY_THRESHOLD = 0.62
 
 
@@ -166,9 +180,10 @@ def smart_search(
 
     scored: list[tuple[int, models.Dish]] = []
     for d in dishes:
-        # v52: name_ar joins the haystack so Arabic queries match dishes by
-        # their Arabic name (e.g. كشري -> Koshary).
-        haystack = normalize(f"{d.name} {d.name_ar or ''} {d.description or ''}")
+        # Search all bilingual, customer-facing catalog text, not just the
+        # names and English description. This lets Arabic ingredient queries
+        # find dishes even when the term is absent from the dish name.
+        haystack = _dish_search_haystack(d)
         name = normalize(d.name)
         score = _match_score(qn, needles, haystack, name)
         if score:
