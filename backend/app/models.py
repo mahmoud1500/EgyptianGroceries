@@ -497,6 +497,9 @@ class DeliveryJob(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending", index=True)
     quoted_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     actual_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    # False until an admin explicitly records the actual cost; zero alone is
+    # not evidence that a delivery was free.
+    actual_cost_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     customer_fee: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     platform_subsidy: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="unpaid")

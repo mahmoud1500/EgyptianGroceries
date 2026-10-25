@@ -47,7 +47,10 @@ class CommissionReceivableTests(unittest.TestCase):
         self.assertEqual(commission_due_for_order(order, vendor, Decimal("10")), Decimal("12.00"))
 
     def test_legacy_order_without_snapshot_uses_configured_rate(self):
-        order = SimpleNamespace(commission_due=None, total=Decimal("80.00"), refunded_amount=0)
+        order = SimpleNamespace(
+            commission_due=None, subtotal=Decimal("80.00"),
+            total=Decimal("80.00"), refunded_amount=0,
+        )
         vendor = SimpleNamespace(commission_rate=None)
         self.assertEqual(commission_due_for_order(order, vendor, Decimal("10")), Decimal("8.00"))
 
