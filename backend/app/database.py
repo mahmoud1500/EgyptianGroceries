@@ -58,6 +58,13 @@ def ensure_schema():
     from sqlalchemy import inspect, text
 
     insp = inspect(engine)
+    if "delivery_jobs" in insp.get_table_names():
+        delivery_cols = {c["name"] for c in insp.get_columns("delivery_jobs")}
+        if "actual_cost_confirmed" not in delivery_cols:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE delivery_jobs ADD COLUMN actual_cost_confirmed BOOLEAN NOT NULL DEFAULT FALSE"
+                ))
     if "orders" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("orders")}
         with engine.begin() as conn:
