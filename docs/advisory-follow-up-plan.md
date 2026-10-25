@@ -13,6 +13,8 @@ This document tracks the advisory findings and the remaining review gates. The i
 - [x] Require confirmed actual cost before marking a delivery delivered, and require delivered status plus confirmed cost before marking its cost paid.
 - [x] When an eligible delivery is marked delivered, update the related order to `completed` and record the order event in the same database transaction.
 - [x] Add focused commission and delivery-cost regression tests.
+- [x] Align the legacy commission unit fixture with the required stored subtotal field.
+- [x] Make the Arabic order-snapshot test use an explicit Pacific-local pickup time, avoiding a CI-host timezone-dependent failure.
 - [x] Add a backward-compatible startup schema addition for the delivery-cost confirmation flag.
 
 ## Remaining work
