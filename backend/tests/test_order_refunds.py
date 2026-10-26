@@ -41,7 +41,7 @@ def test_payment_intent_resolves_direct_wallet_reference():
 
 def test_cancel_refund_is_scoped_to_remaining_suborder_amount(monkeypatch):
     db = FakeDB()
-    refund_create = Mock(return_value={"id": "re_test123", "amount": 2500})
+    refund_create = Mock(return_value={"id": "re_test123", "amount": 2500, "status": "succeeded"})
     stripe = SimpleNamespace(Refund=SimpleNamespace(
         create=refund_create,
         list=Mock(return_value={"data": [], "has_more": False}),
@@ -145,3 +145,61 @@ def test_cancel_refund_blocks_when_stripe_refund_list_is_paginated(monkeypatch):
 
     refund_create.assert_not_called()
     assert any("reconciliation unavailable" in e.message for e in db.events)
+
+
+
+def test_successful_refund_total_ignores_pending_and_failed_statuses():
+    db = FakeDB()
+    db.events = [
+        SimpleNamespace(message="Stripe refund issued", meta='{"amount":"10.00","stripe_status":"succeeded"}'),
+        SimpleNamespace(message="Refund pending", meta='{"amount":"5.00","stripe_status":"pending"}'),
+        SimpleNamespace(message="Refund failed", meta='{"amount":"7.00","stripe_status":"failed"}'),
+        SimpleNamespace(message="Legacy refund issued", meta='{"amount":"2.00"}'),
+    ]
+    assert order_routes._successful_refund_total(db, 1) == Decimal("12.00")
+
+
+def test_known_pending_stripe_refund_still_blocks_new_refund():
+    db = FakeDB()
+    db.events = [
+        SimpleNamespace(event_type="refund", meta='{"refund_id":"re_pending","amount":"5.00","stripe_status":"pending"}')
+    ]
+    stripe = SimpleNamespace(Refund=SimpleNamespace(
+        list=Mock(return_value={"data":[{"id":"re_pending","status":"pending"}],"has_more":False})
+    ))
+    try:
+        order_routes._unmatched_stripe_refunds(db, stripe, "pi_group123")
+    except RuntimeError as exc:
+        assert "unresolved status" in str(exc)
+    else:
+        raise AssertionError("pending refund must block additional refunds")
+
+
+def test_unknown_stripe_refund_status_blocks_new_refund():
+    db = FakeDB()
+    stripe = SimpleNamespace(Refund=SimpleNamespace(
+        list=Mock(return_value={"data":[{"id":"re_unknown","status":"processing"}],"has_more":False})
+    ))
+    try:
+        order_routes._unmatched_stripe_refunds(db, stripe, "pi_group123")
+    except RuntimeError as exc:
+        assert "unrecognized status" in str(exc)
+    else:
+        raise AssertionError("unknown status must block additional refunds")
+
+
+def test_cancel_pending_stripe_refund_is_not_counted_as_refunded(monkeypatch):
+    db = FakeDB()
+    stripe = SimpleNamespace(Refund=SimpleNamespace(
+        create=Mock(return_value={"id":"re_pending","amount":1000,"status":"pending"}),
+        list=Mock(return_value={"data":[],"has_more":False}),
+    ))
+    monkeypatch.setattr(order_routes, "_stripe_client", lambda: stripe)
+    monkeypatch.setattr(order_routes, "_stripe_payment_intent_id", lambda *args: "pi_group123")
+    monkeypatch.setattr(order_routes, "_successful_refund_total", lambda *args: Decimal("0"))
+    order = SimpleNamespace(id=49, paid=True, payment_method="credit_card",
+                            total=Decimal("10.00"), refunded_amount=Decimal("0.00"))
+    order_routes._stripe_refund_on_cancel(db, order)
+    assert order.refunded_amount == Decimal("0.00")
+    event = next(e for e in db.events if "NOT confirmed" in e.message)
+    assert '"stripe_status": "pending"' in event.meta
