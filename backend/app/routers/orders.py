@@ -279,10 +279,20 @@ def _unmatched_stripe_refunds(db: Session, stripe, payment_intent_id: str) -> li
     for refund in refunds or []:
         refund_id = refund.get("id") if hasattr(refund, "get") else getattr(refund, "id", None)
         status = refund.get("status") if hasattr(refund, "get") else getattr(refund, "status", None)
-        # Failed refunds did not move money. Pending/succeeded (and unknown
-        # status) refunds must be reconciled before another automatic refund.
-        if isinstance(refund_id, str) and refund_id not in known_ids and status != "failed":
-            unmatched.append(refund_id)
+        # A failed refund did not move money. Every non-terminal/unknown
+        # status blocks a new refund, even when its ID is already logged.
+        if status in (None, "pending", "requires_action"):
+            raise RuntimeError(
+                f"Stripe refund {refund_id or '<unknown>'} has unresolved status {status!r}"
+            )
+        if status not in ("succeeded", "failed"):
+            raise RuntimeError(
+                f"Stripe refund {refund_id or '<unknown>'} has unrecognized status {status!r}"
+            )
+        if status == "succeeded" and (
+            not isinstance(refund_id, str) or refund_id not in known_ids
+        ):
+            unmatched.append(refund_id if isinstance(refund_id, str) else "<missing-refund-id>")
     return unmatched
 
 
@@ -365,13 +375,25 @@ def _stripe_refund_on_cancel(db: Session, order: models.Order) -> None:
     # Stripe has accepted the refund. Record its actual ID/amount separately so
     # a database logging issue is not misrepresented as a Stripe API failure.
     refund_id = refund.get("id") if hasattr(refund, "get") else getattr(refund, "id", None)
+    status = refund.get("status") if hasattr(refund, "get") else getattr(refund, "status", None)
     actual_cents = refund.get("amount", amount_cents) if hasattr(refund, "get") else amount_cents
     actual_amount = (Decimal(str(actual_cents)) / Decimal("100")).quantize(Decimal("0.01"))
+    if status != "succeeded":
+        # Stripe accepted the request but has not confirmed the money moved.
+        # Log it for reconciliation, but never count it as refunded.
+        _log_event(
+            db, order, "refund",
+            f"Stripe refund NOT confirmed (status={status or 'unknown'}); reconcile manually",
+            {"refund_id": refund_id, "amount": str(actual_amount),
+             "payment_intent": pi_id, "stripe_status": status or "unknown"},
+        )
+        return
     try:
         _log_event(
             db, order, "refund",
             f"Stripe refund issued: {refund_id} for ${actual_amount:.2f}",
-            {"refund_id": refund_id, "amount": str(actual_amount), "payment_intent": pi_id},
+            {"refund_id": refund_id, "amount": str(actual_amount),
+             "payment_intent": pi_id, "stripe_status": status},
         )
         order.refunded_amount = Decimal(str(order.refunded_amount or 0)) + actual_amount
     except Exception as exc:  # Reconciliation required; do not claim Stripe failed.
@@ -409,6 +431,10 @@ def _successful_refund_total(db: Session, order_id: int) -> Decimal:
         except (ValueError, TypeError):
             continue
         if not isinstance(meta, dict) or "error" in meta:
+            continue
+        # New events record Stripe's actual status. Only succeeded refunds
+        # count; legacy events without this field retain the old behavior.
+        if "stripe_status" in meta and meta.get("stripe_status") != "succeeded":
             continue
         if meta.get("amount") is None:
             continue
