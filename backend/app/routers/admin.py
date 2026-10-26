@@ -33,6 +33,8 @@ from .orders import (
     _serialize,
     _stripe_payment_intent_id,
     _stripe_refund_on_cancel,
+    _unmatched_stripe_refunds,
+    _successful_refund_total,
 )
 from .stripe import _stripe_client
 
@@ -1359,21 +1361,7 @@ def admin_refund(
     db: Session = Depends(get_db),
     admin: models.User = Depends(_admin),
 ):
-    """Standalone admin refund: full or partial amount via Stripe, WITHOUT
-    changing the order status.
-
-    v40 semantics:
-    - Validates: order exists, order paid, amount > 0 and ≤ order total.
-    - Idempotent: refunded_amount (cumulative, on the order) + new amount
-      may never exceed the order total — a second identical request 400s.
-    - Stripe MUST be configured (STRIPE_SECRET_KEY); otherwise a clear 400
-      ("Stripe not configured") — the old silent "manual" fallback is gone
-      from this endpoint. Settle off-system refunds via the payouts ledger.
-    - The Stripe call itself is wrapped: a Stripe failure returns a 502
-      with the reason (and logs a FAILED refund event, excluded from the
-      cumulative guard) — the request never crashes with a 500.
-    """
-    # Loyalty: earned points are intentionally left alone on a refund-without-cancel (v40 semantics — the order keeps its status, so no earn reversal; clawback only happens on cancel).
+    """Issue a partial/full Stripe refund only after safe reconciliation."""
     order = db.get(models.Order, order_id)
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -1382,21 +1370,13 @@ def admin_refund(
     amount = Decimal(str(payload.amount))
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Refund amount must be greater than 0")
-    total = Decimal(str(order.total))
+    total = Decimal(str(order.total or 0))
     if amount > total:
         raise HTTPException(
             status_code=400,
             detail=f"Refund amount exceeds the order total (${float(total):.2f})",
         )
-    already = Decimal(str(order.refunded_amount or 0))
-    if already + amount > total:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Already refunded ${float(already):.2f} of "
-                f"${float(total):.2f} — this refund would exceed the order total"
-            ),
-        )
+
     stripe = _stripe_client()
     if stripe is None:
         raise HTTPException(
@@ -1405,7 +1385,7 @@ def admin_refund(
         )
     try:
         pi_id = _stripe_payment_intent_id(db, order, stripe)
-    except Exception as exc:  # noqa: BLE001 — Stripe lookup failure, not a crash
+    except Exception as exc:  # Stripe lookup failure must fail closed.
         print(f"[admin] refund payment-intent lookup failed: {exc}")
         pi_id = None
     if not pi_id:
@@ -1413,44 +1393,98 @@ def admin_refund(
             status_code=400,
             detail="No Stripe payment found on this order — cannot issue a card refund",
         )
+
+    # Stripe is the source of truth. Do not issue a refund when another
+    # dashboard/integration refund is unmatched or any refund is unresolved.
+    try:
+        unmatched = _unmatched_stripe_refunds(db, stripe, pi_id)
+    except Exception as exc:
+        print(f"[admin] refund reconciliation unavailable: {exc}")
+        raise HTTPException(
+            status_code=409,
+            detail="Stripe refunds could not be fully reconciled; no new refund was issued",
+        ) from exc
+    if unmatched:
+        raise HTTPException(
+            status_code=409,
+            detail="Unmatched Stripe refund(s) require reconciliation before another refund",
+        )
+
+    successful = _successful_refund_total(db, order.id)
+    # Keep legacy/backfilled cumulative values from allowing an over-refund.
+    already = max(Decimal(str(order.refunded_amount or 0)), successful)
+    if already + amount > total:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Already refunded ${float(already):.2f} of ${float(total):.2f} — "
+                "this refund would exceed the order total"
+            ),
+        )
+    cents = int((amount * 100).to_integral_value())
     try:
         refund = stripe.Refund.create(
-            payment_intent=pi_id, amount=int((amount * 100).to_integral_value()),
-            # SECURITY fix (v40 P2): idempotency key stops a double-click /
-            # concurrent retry from issuing the refund twice at Stripe.
-            idempotency_key=f"refund-{order.id}-{int((amount * 100).to_integral_value())}",
+            payment_intent=pi_id,
+            amount=cents,
+            idempotency_key=f"refund-{order.id}-{cents}",
         )
-    except Exception as exc:  # noqa: BLE001 — Stripe failure, never a 500
+    except Exception as exc:  # Stripe failure, never a 500.
         print(f"[admin] stripe refund failed: {exc}")
         _log_event(
             db, order, "refund",
             f"Admin Stripe refund of ${float(amount):.2f} FAILED — {str(exc)[:150]}",
-            {"amount": float(amount), "admin_id": admin.id, "error": str(exc)[:200]},
+            {"amount": str(amount), "admin_id": admin.id, "error": str(exc)[:200],
+             "payment_intent": pi_id, "stripe_status": "failed"},
         )
-        db.commit()  # persist the FAILED event (excluded from the guard)
+        db.commit()
+        raise HTTPException(status_code=502, detail=f"Stripe refund failed: {str(exc)[:200]}")
+
+    refund_id = refund.get("id") if hasattr(refund, "get") else getattr(refund, "id", None)
+    status = refund.get("status") if hasattr(refund, "get") else getattr(refund, "status", None)
+    actual_cents = refund.get("amount", cents) if hasattr(refund, "get") else cents
+    actual_amount = (Decimal(str(actual_cents)) / Decimal("100")).quantize(Decimal("0.01"))
+    if status != "succeeded":
+        _log_event(
+            db, order, "refund",
+            f"Admin Stripe refund NOT confirmed (status={status or 'unknown'}); reconcile manually",
+            {"refund_id": refund_id, "amount": str(actual_amount), "admin_id": admin.id,
+             "payment_intent": pi_id, "stripe_status": status or "unknown"},
+        )
+        db.commit()
         raise HTTPException(
-            status_code=502,
-            detail=f"Stripe refund failed: {str(exc)[:200]}",
+            status_code=409,
+            detail=f"Stripe refund status is {status or 'unknown'}; reconcile before retrying",
         )
-    refund_id = refund.get("id") if hasattr(refund, "get") else None
-    order.refunded_amount = float(already + amount)
+
+    new_total = already + actual_amount
+    order.refunded_amount = new_total
     _log_event(
         db, order, "refund",
-        f"Admin Stripe refund issued: {refund_id} for ${float(amount):.2f}",
-        {"refund_id": refund_id, "amount": float(amount),
-         "admin_id": admin.id, "refunded_total": float(already + amount)},
+        f"Admin Stripe refund issued: {refund_id} for ${float(actual_amount):.2f}",
+        {"refund_id": refund_id, "amount": str(actual_amount), "admin_id": admin.id,
+         "payment_intent": pi_id, "stripe_status": status, "refunded_total": str(new_total)},
     )
     log_admin_action(
         db, admin, "refund", "order", order.id,
-        {"amount": float(amount), "refund_id": refund_id,
-         "refunded_total": float(already + amount)},
+        {"amount": str(actual_amount), "refund_id": refund_id,
+         "refunded_total": str(new_total)},
     )
-    db.commit()
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        # Stripe may already have completed the refund. Fail loudly and require
+        # reconciliation rather than telling the caller the refund succeeded.
+        print(f"[admin] RECONCILIATION REQUIRED: Stripe refund {refund_id} succeeded, local commit failed: {exc}")
+        raise HTTPException(
+            status_code=503,
+            detail="Stripe refund may have succeeded but local recording failed; reconcile in Stripe before retrying",
+        ) from exc
     db.refresh(order)
     return {
         "order_id": order.id,
-        "refunded": float(amount),
-        "refunded_total": float(already + amount),
+        "refunded": float(actual_amount),
+        "refunded_total": float(new_total),
         "result": "issued",
         "refund_id": refund_id,
     }
