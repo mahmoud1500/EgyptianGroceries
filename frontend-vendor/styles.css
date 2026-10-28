@@ -549,3 +549,11 @@ html { scroll-behavior: smooth; }
   .delivery-panel { padding: .75rem; }
 }
 /* ================= END Admin delivery management ================= */
+
+
+/* Dashboard insights: responsive vendor order/sales visualizations. */
+.dashboard-analytics { margin: 1rem 0 1.5rem; }
+.dashboard-analytics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.dashboard-analytics .form-card { min-width: 0; }
+.dashboard-analytics h4 { margin: 0 0 .7rem; }
+@media (max-width: 700px) { .dashboard-analytics-grid { grid-template-columns: 1fr; } }
