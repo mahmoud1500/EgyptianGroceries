@@ -166,6 +166,8 @@ function updateAuthArea() {
   if (portalLink) portalLink.style.display = (isAdmin || isStaffUser()) ? 'none' : '';
   const stockLink = document.getElementById('nav-stock');
   if (stockLink) stockLink.style.display = isVendor ? '' : 'none';
+  const menuLink = document.getElementById('nav-menu');
+  if (menuLink) menuLink.style.display = isVendor ? '' : 'none';
   const supportLink = document.getElementById('nav-support');
   if (supportLink) supportLink.style.display = (isVendor || isAdmin || isStaffUser()) ? '' : 'none';
   const adminLink = document.getElementById('nav-admin');
@@ -197,14 +199,15 @@ function render() {
   const bo = isBackOffice(); // === v40+: admins + staff land in the back-office ===
   if (S.route === 'home' && S.user && S.user.role === 'vendor') S.route = 'portal'; // logged-in vendors skip the landing
   if (S.route === 'home' && bo) S.route = 'admin'; // admins/staff land in the back-office
-  if (bo && ['portal', 'order', 'settings', 'reports', 'payouts', 'reviews', 'problems', 'stock'].includes(S.route)) S.route = 'admin';
+  if (bo && ['portal', 'order', 'settings', 'reports', 'payouts', 'reviews', 'problems', 'stock', 'menu'].includes(S.route)) S.route = 'admin';
   if (!bo && S.route === 'admin') S.route = 'home';
   if (S.route === 'login') html = vLogin();
   else if (S.route === 'home') html = vVendorHome();
-  else if (S.route !== 'portal' && S.route !== 'order' && S.route !== 'settings' && S.route !== 'reports' && S.route !== 'payouts' && S.route !== 'reviews' && S.route !== 'problems' && S.route !== 'support' && S.route !== 'admin' && S.route !== 'stock') S.route = 'home';
+  else if (S.route !== 'portal' && S.route !== 'order' && S.route !== 'settings' && S.route !== 'reports' && S.route !== 'payouts' && S.route !== 'reviews' && S.route !== 'problems' && S.route !== 'support' && S.route !== 'admin' && S.route !== 'stock' && S.route !== 'menu') S.route = 'home';
   appEl.innerHTML = html;
   if (S.route === 'portal') vPortal();
   else if (S.route === 'stock') vStock();
+  else if (S.route === 'menu') vMenu();
   else if (S.route === 'order') vOrderDetail(S.routeArg);
   else if (S.route === 'settings') vSettings();
   else if (S.route === 'reports') vReports();
@@ -1081,6 +1084,41 @@ function stockThreshold(d) { return d.low_stock_threshold == null ? 5 : d.low_st
 function isLowStock(d) { return d.stock_quantity != null && d.stock_quantity <= stockThreshold(d); }
 function lowStockDishes() { return (S.portal.menu || []).filter(isLowStock); }
 
+function vendorDashboardVisualsHTML() {
+  const orders = S.portal.orders || [];
+  const statuses = ['new', 'preparing', 'ready', 'on_the_way', 'completed', 'cancelled'].map(status => ({
+    status, count: orders.filter(o => o.status === status).length
+  }));
+  const maxStatus = Math.max(1, ...statuses.map(x => x.count));
+  const statusBars = statuses.map(x => '<div class="an-bar-row"><span class="an-bar-lbl">' + esc(statusLabel(x.status)) +
+    '</span><span class="an-bar-track"><span class="an-bar-fill" style="width:' + Math.round(x.count / maxStatus * 100) +
+    '%"></span></span><span class="an-bar-val">' + x.count + '</span></div>').join('');
+  const today = new Date(), days = [];
+  for (let offset = 6; offset >= 0; offset--) {
+    const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - offset);
+    const key = day.getFullYear() + '-' + String(day.getMonth()+1).padStart(2,'0') + '-' + String(day.getDate()).padStart(2,'0');
+    const gross = orders.reduce((sum,o) => String(o.created_at||'').slice(0,10)===key ? sum+Number(o.total||0) : sum, 0);
+    days.push({label:day.toLocaleDateString(lang()==='ar'?'ar-EG':'en-US',{month:'short',day:'numeric'}),gross});
+  }
+  const maxGross = Math.max(1,...days.map(x=>x.gross));
+  const salesBars = days.map(x=>'<div class="an-bar-row"><span class="an-bar-lbl">'+esc(x.label)+'</span><span class="an-bar-track"><span class="an-bar-fill" style="width:'+Math.round(x.gross/maxGross*100)+'%"></span></span><span class="an-bar-val">'+money(x.gross)+'</span></div>').join('');
+  const totals = {};
+  orders.forEach(o=>(o.items||[]).forEach(item=>{
+    const name=iname(item)||item.dish_name||t('th_dish');
+    if(!totals[name]) totals[name]={name,units:0,sales:0};
+    totals[name].units+=Number(item.quantity||0); totals[name].sales+=Number(item.unit_price||0)*Number(item.quantity||0);
+  }));
+  const top=Object.values(totals).sort((a,b)=>b.units-a.units).slice(0,5);
+  const topRows=top.length?'<div class="table-wrap"><table class="menu-table"><thead><tr><th>'+esc(t('th_dish'))+'</th><th>'+esc(t('an_units'))+'</th><th>'+esc(t('tbl_revenue'))+'</th></tr></thead><tbody>'+
+    top.map(x=>'<tr><td><strong>'+esc(x.name)+'</strong></td><td>'+x.units+'</td><td>'+money(x.sales)+'</td></tr>').join('')+'</tbody></table></div>':
+    '<div class="empty">'+esc(t('no_orders'))+'</div>';
+  return '<section class="dashboard-analytics"><h3 class="section-title">'+esc(t('dashboard_analytics'))+'</h3>'+
+    '<div class="dashboard-analytics-grid"><div class="form-card"><h4>'+esc(t('dashboard_order_status'))+'</h4>'+
+    (orders.length?'<div class="an-chart">'+statusBars+'</div>':'<div class="empty">'+esc(t('no_orders'))+'</div>')+
+    '</div><div class="form-card"><h4>'+esc(t('dashboard_sales_7d'))+'</h4><div class="an-chart">'+salesBars+'</div></div></div>'+
+    '<div class="form-card"><h4>'+esc(t('dashboard_top_items'))+'</h4>'+topRows+'</div></section>';
+}
+
 function renderPortalShell() {
   const v = S.portal.vendor;
   const e = S.portal.earnings;
@@ -1111,6 +1149,7 @@ function renderPortalShell() {
         esc(t('low_stock_left', { n: d.stock_quantity, t: stockThreshold(d) })) + '</li>').join('') + '</ul>' +
       '<button class="btn" onclick="go(\'stock\')">' + esc(t('low_stock_goto')) + '</button></div>';
   }
+  html += '<div id="portal-analytics">' + vendorDashboardVisualsHTML() + '</div>';
   html += '<h3 class="section-title">' + esc(t('orders_h')) + '</h3>' +
     '<div class="order-filters"><input id="order-q" placeholder="' + esc(t('order_search_ph')) + '" oninput="setOrderFilter()">' +
     '<select id="order-status" onchange="setOrderFilter()"><option value="all">' + esc(t('status_all')) + '</option>' +
@@ -1121,20 +1160,8 @@ function renderPortalShell() {
   html += shareMenuHTML();
   html += '<div id="ref-earnings"><div class="empty">' + esc(t('portal_loading')) + '</div></div>';
   // === END FEATURE 2 ===
-  html += '<h3 class="section-title">' + esc(t('menu_h')) + '</h3><div style="margin:-.3rem 0 .8rem"><button class="btn" onclick="openBarcodeScanner()">' + esc(t('scan_barcode')) + '</button></div><div id="portal-menu"></div>';
-  html += '<h3 class="section-title">' + esc(t('add_dish_h')) + '</h3><div id="dish-ann-msg"></div>' + bulkImportPanel() + addDishForm();
-  // === F5/F8: family bundles + weekly pickup slots ===
-  html += '<h3 class="section-title">' + esc(t('bundles_h')) + '</h3><div id="portal-bundles"><div class="empty">' + esc(t('v_loading')) + '</div></div>';
-  html += '<h3 class="section-title">' + esc(t('slots_h')) + '</h3><div id="portal-slots"><div class="empty">' + esc(t('v_loading')) + '</div></div>';
-  // === END F5/F8 ===
-  // === Community drops (Oct 2026) ===
-  html += '<h3 class="section-title">📦 ' + esc(t('drops_title')) + '</h3><div id="portal-drops"><div class="empty">' + esc(t('v_loading')) + '</div></div>';
-  // === END community drops ===
   $('#view').innerHTML = html;
   portalRefreshDynamic();
-  loadPortalBundles(); // === F5 ===
-  loadPortalSlots();   // === F8 ===
-  loadPortalDrops();   // === community drops ===
   loadReferralEarnings(); // === FEATURE 2 ===
 }
 
@@ -1205,9 +1232,10 @@ function portalRefreshDynamic() {
   const alertEl = $('#portal-alert');
   const ordersEl = $('#portal-orders');
   const menuEl = $('#portal-menu');
-  if (!alertEl) return; // left the page
+  const analyticsEl = $('#portal-analytics');
+  if (!alertEl && !ordersEl && !menuEl && !analyticsEl) return; // left dashboard/menu views
   const fresh = S.portal.orders.filter(o => o.status === 'new');
-  alertEl.innerHTML = fresh.length
+  if (alertEl) alertEl.innerHTML = fresh.length
     ? '<div class="alert-banner">' + t('new_orders', { n: fresh.length, list: fresh.map(o => '#' + o.id).join(', ') }) + '</div>'
     : '';
   const badge = $('#portal-badge');
@@ -1217,24 +1245,11 @@ function portalRefreshDynamic() {
     badge.classList.toggle('alert', fresh.length > 0);
   }
 
-  ordersEl.innerHTML = S.portal.orders.length
+  if (ordersEl) ordersEl.innerHTML = S.portal.orders.length
     ? filteredPortalOrders().map(portalOrderCard).join('')
     : '<div class="empty">' + esc(t('no_orders')) + '</div>';
-
-  menuEl.innerHTML = '<div class="table-wrap">' + '<table class="menu-table"><thead><tr><th>' + esc(t('th_photo')) + '</th><th>' + esc(t('th_dish')) + '</th><th>' + esc(t('th_category')) + '</th><th>' + esc(t('th_price')) + '</th>' +
-    '<th>' + esc(t('th_discount')) + '</th>' +
-    '<th>' + esc(t('th_stock')) + '</th>' +
-    '<th>' + esc(t('th_available')) + '</th><th></th></tr></thead><tbody>' +
-    S.portal.menu.map(d =>
-      '<tr><td>' + dishThumb(d) + '</td><td><strong>' + esc(dname(d)) + '</strong><br><small style="color:var(--muted)">' + esc(d.description || '') + '</small></td>' +
-      '<td>' + esc(catLabel(d.category)) + '</td><td>' + vPriceHTML(d) + '</td>' +
-      '<td>' + (discOf(d) > 0 ? '<span class="disc-badge">-' + discOf(d) + '%</span>' : '—') + (d.sale_active ? ' ⚡' : '') + '</td>' +
-      '<td>' + (d.stock_quantity == null ? '—' : esc(d.stock_quantity) + (isLowStock(d) ? ' ⚠️' : '')) + '</td>' +
-      '<td><label class="switch"><input type="checkbox" ' + (d.available ? 'checked' : '') +
-      ' onchange="toggleAvail(' + d.id + ', this.checked)"><span class="slider"></span></label></td>' +
-      '<td style="white-space:nowrap"><button class="btn small" onclick="editDish(' + d.id + ')">' + esc(t('edit')) + '</button> ' +
-      '<button class="btn small danger" onclick="deleteDish(' + d.id + ')">' + esc(t('delete')) + '</button></td></tr>'
-    ).join('') + '</tbody></table>' + '</div>';
+  if (menuEl) menuEl.innerHTML = renderMenuTableHTML();
+  if (analyticsEl) analyticsEl.innerHTML = vendorDashboardVisualsHTML();
 }
 
 /* ================= F5: vendor bundle management =================
@@ -1595,6 +1610,32 @@ window.toggleDropOrders = async function (id) {
 /* ================= vendor stock view (inventory) =================
    Bulk stock table (editable quantities + Save all), per-dish Restock
    (reason 'restock') and movement history. */
+function renderMenuTableHTML() {
+  return '<div class="table-wrap"><table class="menu-table"><thead><tr><th>'+esc(t('th_photo'))+'</th><th>'+esc(t('th_dish'))+'</th><th>'+esc(t('th_category'))+'</th><th>'+esc(t('th_price'))+'</th><th>'+esc(t('th_discount'))+'</th><th>'+esc(t('th_stock'))+'</th><th>'+esc(t('th_available'))+'</th><th></th></tr></thead><tbody>'+
+    S.portal.menu.map(d=>'<tr><td>'+dishThumb(d)+'</td><td><strong>'+esc(dname(d))+'</strong><br><small style="color:var(--muted)">'+esc(d.description||'')+'</small></td><td>'+esc(catLabel(d.category))+'</td><td>'+vPriceHTML(d)+'</td><td>'+
+    (discOf(d)>0?'<span class="disc-badge">-'+discOf(d)+'%</span>':'—')+(d.sale_active?' ⚡':'')+'</td><td>'+(d.stock_quantity==null?'—':esc(d.stock_quantity)+(isLowStock(d)?' ⚠️':''))+'</td><td><label class="switch"><input type="checkbox" '+(d.available?'checked':'')+' onchange="toggleAvail('+d.id+', this.checked)"><span class="slider"></span></label></td><td style="white-space:nowrap"><button class="btn small" onclick="editDish('+d.id+')">'+esc(t('edit'))+'</button> <button class="btn small danger" onclick="deleteDish('+d.id+')">'+esc(t('delete'))+'</button></td></tr>').join('')+'</tbody></table></div>';
+}
+async function vMenu() {
+  const view=$('#view');
+  if(!S.user||S.user.role!=='vendor'){view.innerHTML='<div class="empty"><span class="big">🔒</span>'+esc(t('vendor_only'))+'<br><br><button class="btn" onclick="go(\'login\')">'+esc(t('login_as_vendor'))+'</button></div>';return;}
+  view.innerHTML='<div class="empty"><span class="big">🍽️</span>'+esc(t('portal_loading'))+'</div>';
+  try {
+    const vendors=await api('/vendors/mine');
+    if(!vendors.length){view.innerHTML='<div class="empty">'+esc(t('no_shop'))+'</div>';return;}
+    S.portal.vendorId=vendors[0].id; S.portal.vendor=vendors[0];
+    await portalReload(true); S.categories=[...new Set(S.portal.menu.map(d=>d.category))].sort();
+    renderMenuShell();
+  } catch(e){view.innerHTML='<div class="error">'+esc(t('portal_err'))+esc(e.message)+'</div>';}
+}
+function renderMenuShell() {
+  const html='<h2 class="section-title">🍽️ '+esc(t('menu_h'))+'</h2><div style="margin:-.3rem 0 .8rem"><button class="btn" onclick="openBarcodeScanner()">'+esc(t('scan_barcode'))+'</button></div>'+
+    '<div id="portal-menu"></div><h3 class="section-title">'+esc(t('add_dish_h'))+'</h3><div id="dish-ann-msg"></div>'+bulkImportPanel()+addDishForm()+
+    '<h3 class="section-title">'+esc(t('bundles_h'))+'</h3><div id="portal-bundles"><div class="empty">'+esc(t('v_loading'))+'</div></div>'+
+    '<h3 class="section-title">'+esc(t('slots_h'))+'</h3><div id="portal-slots"><div class="empty">'+esc(t('v_loading'))+'</div></div>'+
+    '<h3 class="section-title">📦 '+esc(t('drops_title'))+'</h3><div id="portal-drops"><div class="empty">'+esc(t('v_loading'))+'</div></div>';
+  $('#view').innerHTML=html; portalRefreshDynamic(); loadPortalBundles(); loadPortalSlots(); loadPortalDrops();
+}
+
 async function vStock() {
   const view = $('#view');
   if (!S.user || S.user.role !== 'vendor') {
@@ -3397,7 +3438,7 @@ function _anWeekdayName(w) {
 async function admAnalytics() {
   const days = S.admAnDays || 30;
   const a = await api('/admin/analytics?days=' + days);
-  const t = a.totals;
+  const totals = a.totals;
   const dayBtns = [7, 30, 90].map(d =>
     '<button class="tab' + (days === d ? ' active' : '') + '" onclick="S.admAnDays=' + d + ';vAdmin()">' +
     esc(t('an_days', { n: d })) + '</button>').join('');
@@ -3405,10 +3446,10 @@ async function admAnalytics() {
     '<div class="tabs">' + dayBtns + '</div>';
   // Hero totals
   const cards = [
-    [money(t.gross), t('an_gross')],
-    [t.orders, t('an_orders')],
-    [money(t.avg_order), t('an_avg_order')],
-    [t.customers, t('an_customers')],
+    [money(totals.gross), t('an_gross')],
+    [totals.orders, t('an_orders')],
+    [money(totals.avg_order), t('an_avg_order')],
+    [totals.customers, t('an_customers')],
     [a.repeat_rate + '%', t('an_repeat_rate')],
     [a.new_customers + ' / ' + a.returning_customers, t('an_new_returning')],
   ];
