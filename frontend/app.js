@@ -5148,7 +5148,7 @@ async function vAddresses() {
       '<p class="hint">' + esc(t('addresses_sub')) + '</p><div id="address-list">' + cards + '</div>' +
       '<div class="form-card"><h3 id="address-form-title">' + esc(t('address_add')) + '</h3><div id="address-msg"></div>' +
       '<input type="hidden" id="ad-id" value="">' +
-      '<label class="field">' + esc(t('address_label')) + '</label><select id="ad-label"><option>Home</option><option>Work</option><option>Other</option></select>' +
+      '<label class="field">' + esc(t('address_label')) + '</label><select id="ad-label"><option value="Home">' + esc(t('address_home')) + '</option><option value="Work">' + esc(t('address_work')) + '</option><option value="Other">' + esc(t('address_other')) + '</option></select>' +
       '<label class="field">' + esc(t('name_label')) + '</label><input id="ad-recipient" maxlength="120" value="' + esc(S.user.name || '') + '">' +
       '<label class="field">' + esc(t('phone_label')) + '</label><input id="ad-phone" maxlength="40" value="' + esc(S.user.phone || '') + '">' +
       '<label class="field">' + esc(t('addr_street')) + '</label><input id="ad-street" maxlength="160">' +
