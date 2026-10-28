@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 from . import commission_cycle, flash_sales, models
 from .database import Base, SessionLocal, engine, ensure_schema
+from .routers import customer_addresses as customer_addresses_router
 from .routers import auth as auth_router
 from .routers import admin as admin_router
 from .routers import announcements as announcements_router
@@ -197,6 +198,7 @@ def public_config():
 
 
 app.include_router(auth_router.router)
+app.include_router(customer_addresses_router.router)
 app.include_router(admin_router.router)
 app.include_router(announcements_router.router)  # new-dish announcements (Oct 2026)
 app.include_router(applications_router.router)
