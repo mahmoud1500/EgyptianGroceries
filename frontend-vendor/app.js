@@ -1093,17 +1093,24 @@ function vendorDashboardVisualsHTML() {
   const statusBars = statuses.map(x => '<div class="an-bar-row"><span class="an-bar-lbl">' + esc(statusLabel(x.status)) +
     '</span><span class="an-bar-track"><span class="an-bar-fill" style="width:' + Math.round(x.count / maxStatus * 100) +
     '%"></span></span><span class="an-bar-val">' + x.count + '</span></div>').join('');
+  // Sales and best-seller metrics use completed orders only. Cancelled,
+  // pending, and in-progress orders remain visible in the status chart but
+  // are not counted as realized sales.
+  const completedOrders = orders.filter(o => o.status === 'completed');
+  const orderItemSales = o => (o.items || []).reduce(
+    (sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 0), 0
+  );
   const today = new Date(), days = [];
   for (let offset = 6; offset >= 0; offset--) {
     const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - offset);
     const key = day.getFullYear() + '-' + String(day.getMonth()+1).padStart(2,'0') + '-' + String(day.getDate()).padStart(2,'0');
-    const gross = orders.reduce((sum,o) => String(o.created_at||'').slice(0,10)===key ? sum+Number(o.total||0) : sum, 0);
+    const gross = completedOrders.reduce((sum,o) => String(o.created_at||'').slice(0,10)===key ? sum+orderItemSales(o) : sum, 0);
     days.push({label:day.toLocaleDateString(lang()==='ar'?'ar-EG':'en-US',{month:'short',day:'numeric'}),gross});
   }
   const maxGross = Math.max(1,...days.map(x=>x.gross));
   const salesBars = days.map(x=>'<div class="an-bar-row"><span class="an-bar-lbl">'+esc(x.label)+'</span><span class="an-bar-track"><span class="an-bar-fill" style="width:'+Math.round(x.gross/maxGross*100)+'%"></span></span><span class="an-bar-val">'+money(x.gross)+'</span></div>').join('');
   const totals = {};
-  orders.forEach(o=>(o.items||[]).forEach(item=>{
+  completedOrders.forEach(o=>(o.items||[]).forEach(item=>{
     const name=iname(item)||item.dish_name||t('th_dish');
     if(!totals[name]) totals[name]={name,units:0,sales:0};
     totals[name].units+=Number(item.quantity||0); totals[name].sales+=Number(item.unit_price||0)*Number(item.quantity||0);
