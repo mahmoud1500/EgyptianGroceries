@@ -490,4 +490,4 @@ def send_payment_receipt(order) -> bool:
     if order.delivery_address:
         lines.append(f"Delivery address: {order.delivery_address}")
     lines += ["", "Thank you for shopping with EgyptianGroceries."]
-    return send_email(to, f"Payment receipt — Order #{order.id}", "\\n".join(lines))
+    return send_email(to, f"Payment receipt — Order #{order.id}", "\n".join(lines))
