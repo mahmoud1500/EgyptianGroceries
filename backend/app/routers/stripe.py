@@ -14,11 +14,38 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from .. import auth, models
+from .. import auth, emailer, models
 from ..database import get_db
 from ..ratelimit import check_rate_limit
 
 router = APIRouter(prefix="/api/stripe", tags=["stripe"])
+
+
+def _send_paid_order_receipts(db: Session, orders: list[models.Order]) -> None:
+    """Best-effort, idempotent receipt email after payment is committed."""
+    for order in orders:
+        if order is None or not order.paid:
+            continue
+        already_sent = db.query(models.OrderEvent.id).filter(
+            models.OrderEvent.order_id == order.id,
+            models.OrderEvent.event_type == "receipt",
+        ).first()
+        if already_sent:
+            continue
+        try:
+            sent = emailer.send_payment_receipt(order)
+            if sent:
+                db.add(models.OrderEvent(
+                    order_id=order.id,
+                    event_type="receipt",
+                    message="Payment receipt emailed to customer",
+                    meta=json.dumps({"to": order.customer.email if order.customer else ""}),
+                ))
+                db.commit()
+        except Exception as exc:
+            db.rollback()
+            print(f"[stripe] receipt email failed for order #{order.id}: {exc}")
+
 
 
 class CheckoutSessionIn(BaseModel):
@@ -469,6 +496,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     _sc, db, orders,
                     *_card_from_checkout_session(_sc, sess.get("id")),
                 )
+            _send_paid_order_receipts(db, orders)
             return {"received": True}
         order_id = meta.get("order_id")
         try:
@@ -499,6 +527,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 _sc, db, [order],
                 *_card_from_checkout_session(_sc, sess.get("id")),
             )
+        if order is not None:
+            _send_paid_order_receipts(db, [order])
 
     if event["type"] == "payment_intent.succeeded":
         # Mobile wallet flow (Apple Pay / Google Pay via PaymentSheet).
@@ -533,4 +563,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 _sc, db, [order],
                 *_card_from_payment_intent(_sc, pi.get("id")),
             )
+        if order is not None:
+            _send_paid_order_receipts(db, [order])
     return {"received": True}

@@ -5302,6 +5302,7 @@ function orderCard(o) {
     (o.status === 'completed'
       ? '<button class="btn small secondary" onclick="event.stopPropagation();openReviewForm(' + o.id + ',' + o.vendor_id + ')">' + esc(t('write_review')) + '</button>'
       : '') +
+    (o.paid ? '<button class="btn small secondary" onclick="event.stopPropagation();viewReceipt(' + o.id + ')">' + esc(lang() === 'ar' ? 'عرض الإيصال' : 'View receipt') + '</button>' : '') +
     retryPaymentHTML(o) + // === F10: retry button + countdown ===
     '</div>' +
     '<div id="review-form-' + o.id + '"></div>' +
@@ -5313,6 +5314,39 @@ function orderCard(o) {
    live countdown of the 30-minute window. Clicking mints a FRESH
    PaymentIntent for the stored total, then continues through the normal
    Stripe checkout-session redirect. */
+/* Payment receipt from the immutable order/item snapshots. */
+window.viewReceipt = async function (orderId) {
+  try {
+    const o = await api('/orders/' + Number(orderId));
+    if (!o || !o.paid) { alert(lang() === 'ar' ? 'الإيصال متاح بعد تأكيد الدفع.' : 'A receipt is available after payment is confirmed.'); return; }
+    const items = (o.items || []).map(i => '<tr><td>' + esc(i.quantity + ' × ' + i.dish_name) +
+      (i.modifier_label ? '<small> (' + esc(i.modifier_label) + ')</small>' : '') +
+      '</td><td>' + money(Number(i.unit_price) * Number(i.quantity)) + '</td></tr>').join('');
+    const label = (en, ar) => esc(lang() === 'ar' ? ar : en);
+    const receipt = '<section class="form-card payment-receipt" id="payment-receipt">' +
+      '<div class="order-head"><h2>EgyptianGroceries</h2><span class="status-pill status-completed">' + label('PAID', 'مدفوع') + '</span></div>' +
+      '<p>' + label('Receipt for order', 'إيصال الطلب') + ' #' + Number(o.id) + '</p>' +
+      '<p>' + label('Date', 'التاريخ') + ': ' + esc(fmtDate(o.created_at)) + '</p>' +
+      '<p>' + label('Vendor', 'البائع') + ': ' + esc(o.vendor_name || '') + '</p>' +
+      '<table class="receipt-table"><thead><tr><th>' + label('Item', 'الصنف') + '</th><th>' + label('Amount', 'المبلغ') + '</th></tr></thead><tbody>' + items + '</tbody></table>' +
+      '<div class="receipt-totals">' +
+      '<p>' + label('Food subtotal', 'المجموع الفرعي') + ': ' + money(o.subtotal) + '</p>' +
+      (Number(o.discount_amount || 0) > 0 ? '<p>' + label('Promotion discount', 'خصم العرض') + ': −' + money(o.discount_amount) + '</p>' : '') +
+      (Number(o.points_discount || 0) > 0 ? '<p>' + label('Rewards discount', 'خصم النقاط') + ': −' + money(o.points_discount) + '</p>' : '') +
+      '<p>' + label('Delivery fee', 'رسوم التوصيل') + ': ' + money(o.delivery_fee) + '</p>' +
+      '<p>' + label('Tax', 'الضريبة') + ': ' + money(o.tax) + '</p>' +
+      '<h3>' + label('Total paid', 'إجمالي المدفوع') + ': ' + money(o.total) + '</h3></div>' +
+      (o.card_brand && o.card_last4 ? '<p>' + label('Card', 'البطاقة') + ': ' + esc(o.card_brand) + ' •••• ' + esc(o.card_last4) + '</p>' : '') +
+      '<div class="order-actions"><button class="btn small" onclick="window.print()">' + label('Print receipt', 'طباعة الإيصال') + '</button>' +
+      '<button class="btn small secondary" onclick="document.getElementById(\'payment-receipt\').remove()">' + label('Close', 'إغلاق') + '</button></div></section>';
+    const view = $('#view');
+    const old = document.getElementById('payment-receipt');
+    if (old) old.remove();
+    view.insertAdjacentHTML('afterbegin', receipt);
+    window.scrollTo(0, 0);
+  } catch (e) { alert((lang() === 'ar' ? 'تعذر تحميل الإيصال: ' : 'Could not load receipt: ') + errText(e)); }
+};
+
 function retryMsLeft(o) {
   if (!o.payment_failed_at) return 0;
   const failedAt = new Date(o.payment_failed_at).getTime();
