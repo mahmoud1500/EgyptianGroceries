@@ -5847,7 +5847,6 @@ async function vProfile() {
   view.innerHTML =
     '<h2 class="section-title">' + esc(t('profile_title')) + '</h2>' + nudge +
     '<div class="form-card account-shortcuts"><button class="btn secondary" onclick="go(\'orders\')">' + esc(t('nav_orders')) + '</button> <button class="btn secondary" onclick="go(\'addresses\')">' + esc(t('addresses_title')) + '</button> <button class="btn secondary" onclick="go(\'rewards\')">' + esc(t('rewards_title')) + '</button></div>' +
-    '<div class="form-card"><h3>' + esc(t('points_title')) + '</h3><div id="loy-card">' + esc(t('points_loading')) + '</div></div>' +
     '<div class="form-card"><h3>' + esc(t('reorder_title')) + '</h3>' +
     '<p class="hint">' + esc(t('reorder_sub')) + '</p>' +
     '<div id="reorder-nudges"><div class="empty">' + esc(t('reorder_loading')) + '</div></div></div>' +
@@ -5870,7 +5869,6 @@ async function vProfile() {
     '<label class="field">' + esc(t('current_pw')) + '</label><input type="password" id="pw-cur" autocomplete="current-password">' +
     '<label class="field">' + esc(t('new_password')) + '</label><input type="password" id="pw-new" autocomplete="new-password">' +
     '<div class="mt"><button class="btn" onclick="changePassword()">' + esc(t('change_pw')) + '</button></div></div>';
-  renderLoyaltyCard(); // fills the points card above — non-blocking
   // === Reorder nudges (Oct 2026): "Time to reorder?" — auth-only endpoint. ===
   (function () {
     const el = document.getElementById('reorder-nudges');
