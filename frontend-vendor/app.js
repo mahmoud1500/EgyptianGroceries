@@ -1149,6 +1149,7 @@ function renderPortalShell() {
         esc(t('low_stock_left', { n: d.stock_quantity, t: stockThreshold(d) })) + '</li>').join('') + '</ul>' +
       '<button class="btn" onclick="go(\'stock\')">' + esc(t('low_stock_goto')) + '</button></div>';
   }
+  html += vendorDashboardVisualsHTML();
   html += '<h3 class="section-title">' + esc(t('orders_h')) + '</h3>' +
     '<div class="order-filters"><input id="order-q" placeholder="' + esc(t('order_search_ph')) + '" oninput="setOrderFilter()">' +
     '<select id="order-status" onchange="setOrderFilter()"><option value="all">' + esc(t('status_all')) + '</option>' +
@@ -1159,7 +1160,6 @@ function renderPortalShell() {
   html += shareMenuHTML();
   html += '<div id="ref-earnings"><div class="empty">' + esc(t('portal_loading')) + '</div></div>';
   // === END FEATURE 2 ===
-  html += vendorDashboardVisualsHTML();
   $('#view').innerHTML = html;
   portalRefreshDynamic();
   loadReferralEarnings(); // === FEATURE 2 ===
