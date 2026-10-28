@@ -5880,7 +5880,7 @@ async function vProfile() {
     : '';
   view.innerHTML =
     '<h2 class="section-title">' + esc(t('profile_title')) + '</h2>' + nudge +
-    '<div class="form-card account-shortcuts"><button class="btn secondary" onclick="go(\'orders\')">' + esc(t('nav_orders')) + '</button> <button class="btn secondary" onclick="go(\'addresses\')">' + esc(t('addresses_title')) + '</button> <button class="btn secondary" onclick="go(\'rewards\')">' + esc(t('rewards_title')) + '</button></div>' +
+    '<div class="form-card account-shortcuts"><button class="btn secondary" onclick="go(\'addresses\')">' + esc(t('addresses_title')) + '</button> <button class="btn secondary" onclick="go(\'rewards\')">' + esc(t('rewards_title')) + '</button></div>' +
     '<div class="form-card"><h3>' + esc(t('reorder_title')) + '</h3>' +
     '<p class="hint">' + esc(t('reorder_sub')) + '</p>' +
     '<div id="reorder-nudges"><div class="empty">' + esc(t('reorder_loading')) + '</div></div></div>' +
