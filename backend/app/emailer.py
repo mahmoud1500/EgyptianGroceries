@@ -445,3 +445,49 @@ def send_commission_statement_notice(
             "— Osiris Marketplace",
         ]
     return send_email(to, subject, "\n".join(lines))
+
+
+def send_payment_receipt(order) -> bool:
+    """Email an itemized receipt after payment is confirmed.
+
+    Amounts come only from immutable order/item snapshots; this function
+    deliberately does not recalculate checkout totals.
+    """
+    customer = order.customer
+    to = customer.email if customer else ""
+    if not to:
+        print(f"[emailer] paid order #{order.id} has no account email; receipt skipped")
+        return False
+
+    vendor_name = order.vendor.name if order.vendor else "EgyptianGroceries"
+    lines = [
+        f"Payment receipt — EgyptianGroceries",
+        f"Order: #{order.id}",
+        f"Payment status: PAID",
+        f"Paid/order date: {order.created_at}",
+        f"Customer: {customer.name or customer.email}",
+        f"Vendor: {vendor_name}",
+        "",
+        "ITEMS",
+    ]
+    for item in order.items or []:
+        modifier = f" ({item.modifier_label})" if getattr(item, "modifier_label", None) else ""
+        line_total = float(item.unit_price or 0) * int(item.quantity or 0)
+        lines.append(f"{item.quantity} x {item.dish_name}{modifier} — ${line_total:.2f}")
+    lines += ["", f"Food subtotal: ${float(order.subtotal or 0):.2f}"]
+    if float(getattr(order, "discount_amount", 0) or 0) > 0:
+        lines.append(f"Promotion discount: -${float(order.discount_amount):.2f}")
+    if float(getattr(order, "points_discount", 0) or 0) > 0:
+        lines.append(f"Rewards points discount: -${float(order.points_discount):.2f}")
+    lines.append(f"Delivery fee: ${float(order.delivery_fee or 0):.2f}")
+    lines.append(f"Tax: ${float(order.tax or 0):.2f}")
+    lines.append(f"TOTAL PAID: ${float(order.total or 0):.2f}")
+    lines += [
+        "",
+        f"Payment method: {order.payment_method}",
+        f"Fulfillment: {order.fulfillment}",
+    ]
+    if order.delivery_address:
+        lines.append(f"Delivery address: {order.delivery_address}")
+    lines += ["", "Thank you for shopping with EgyptianGroceries."]
+    return send_email(to, f"Payment receipt — Order #{order.id}", "\\n".join(lines))
