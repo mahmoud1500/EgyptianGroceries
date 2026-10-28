@@ -5302,6 +5302,7 @@ function orderCard(o) {
     (o.status === 'completed'
       ? '<button class="btn small secondary" onclick="event.stopPropagation();openReviewForm(' + o.id + ',' + o.vendor_id + ')">' + esc(t('write_review')) + '</button>'
       : '') +
+    (o.paid ? '<button class="btn small secondary" onclick="event.stopPropagation();viewReceipt(' + o.id + ')">' + esc(lang() === 'ar' ? 'عرض الإيصال' : 'View receipt') + '</button>' : '') +
     retryPaymentHTML(o) + // === F10: retry button + countdown ===
     '</div>' +
     '<div id="review-form-' + o.id + '"></div>' +
