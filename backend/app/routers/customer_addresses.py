@@ -105,7 +105,17 @@ def update_address(
         "city", "state", "zipcode", "instructions",
     ):
         setattr(address, field, getattr(payload, field))
-    address.is_default = payload.is_default or address.is_default
+    address.is_default = payload.is_default
+    if not address.is_default:
+        has_default = db.scalar(
+            select(models.CustomerAddress.id).where(
+                models.CustomerAddress.user_id == user.id,
+                models.CustomerAddress.is_default.is_(True),
+                models.CustomerAddress.id != address.id,
+            ).limit(1)
+        )
+        if has_default is None:
+            address.is_default = True
     db.commit()
     db.refresh(address)
     return address
