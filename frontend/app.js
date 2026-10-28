@@ -2378,7 +2378,7 @@ function parsePathRoute() {
   const pages = {
     '/': 'home', '/home': 'home', '/cart': 'cart', '/checkout': 'review', '/checkout/review': 'review',
     '/confirmation': 'confirm', '/login': 'login', '/signup': 'signup', '/orders': 'orders',
-    '/bundles': 'bundles', '/profile': 'profile', '/groceries': 'groceries', '/dishes': 'dishes',
+    '/bundles': 'bundles', '/profile': 'profile', '/addresses': 'addresses', '/rewards': 'rewards', '/groceries': 'groceries', '/dishes': 'dishes',
     '/favorites': 'favorites', '/forgot-password': 'forgot', '/forgot': 'forgot',
     '/reset-password': 'reset', '/reset': 'reset', '/verify-email': 'verify-email',
     '/about': 'about', '/faq': 'faq', '/terms': 'terms', '/privacy': 'privacy',
@@ -4318,10 +4318,13 @@ async function vCart() {
       const composed = composeAddress(S.user);
       if (composed) S.checkout.address = composed;
     }
-    if (savedAddresses.length && !S.checkout.addressId) {
+    if (savedAddresses.length && (!S.checkout.addressId || !savedAddresses.some(a => String(a.id) === String(S.checkout.addressId)))) {
       const preferred = savedAddresses.find(a => a.is_default) || savedAddresses[0];
       S.checkout.addressId = String(preferred.id);
-      if (!S.checkout.address) S.checkout.address = formatSavedAddress(preferred);
+      S.checkout.address = formatSavedAddress(preferred);
+    } else if (savedAddresses.length && S.checkout.addressId) {
+      const selected = savedAddresses.find(a => String(a.id) === String(S.checkout.addressId));
+      if (selected) S.checkout.address = formatSavedAddress(selected);
     }
     html += '<div class="hint" style="margin-bottom:.4rem;">' + esc(t('delivery_shared')) + '</div>';
     if (savedAddresses.length) {
