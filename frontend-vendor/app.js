@@ -1149,7 +1149,7 @@ function renderPortalShell() {
         esc(t('low_stock_left', { n: d.stock_quantity, t: stockThreshold(d) })) + '</li>').join('') + '</ul>' +
       '<button class="btn" onclick="go(\'stock\')">' + esc(t('low_stock_goto')) + '</button></div>';
   }
-  html += vendorDashboardVisualsHTML();
+  html += '<div id="portal-analytics">' + vendorDashboardVisualsHTML() + '</div>';
   html += '<h3 class="section-title">' + esc(t('orders_h')) + '</h3>' +
     '<div class="order-filters"><input id="order-q" placeholder="' + esc(t('order_search_ph')) + '" oninput="setOrderFilter()">' +
     '<select id="order-status" onchange="setOrderFilter()"><option value="all">' + esc(t('status_all')) + '</option>' +
@@ -1232,7 +1232,8 @@ function portalRefreshDynamic() {
   const alertEl = $('#portal-alert');
   const ordersEl = $('#portal-orders');
   const menuEl = $('#portal-menu');
-  if (!alertEl && !ordersEl && !menuEl) return; // left dashboard/menu views
+  const analyticsEl = $('#portal-analytics');
+  if (!alertEl && !ordersEl && !menuEl && !analyticsEl) return; // left dashboard/menu views
   const fresh = S.portal.orders.filter(o => o.status === 'new');
   if (alertEl) alertEl.innerHTML = fresh.length
     ? '<div class="alert-banner">' + t('new_orders', { n: fresh.length, list: fresh.map(o => '#' + o.id).join(', ') }) + '</div>'
@@ -1248,6 +1249,7 @@ function portalRefreshDynamic() {
     ? filteredPortalOrders().map(portalOrderCard).join('')
     : '<div class="empty">' + esc(t('no_orders')) + '</div>';
   if (menuEl) menuEl.innerHTML = renderMenuTableHTML();
+  if (analyticsEl) analyticsEl.innerHTML = vendorDashboardVisualsHTML();
 }
 
 /* ================= F5: vendor bundle management =================
