@@ -62,6 +62,25 @@ class User(Base):
     orders: Mapped[list["Order"]] = relationship("Order", back_populates="customer")
 
 
+class CustomerAddress(Base):
+    """A customer's reusable delivery address; orders keep their own address snapshot."""
+    __tablename__ = "customer_addresses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(40), nullable=False, default="Other")
+    recipient_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    phone: Mapped[str] = mapped_column(String(40), nullable=False)
+    street_address: Mapped[str] = mapped_column(String(160), nullable=False)
+    apt: Mapped[str | None] = mapped_column(String(60), nullable=True, default=None)
+    city: Mapped[str] = mapped_column(String(80), nullable=False)
+    state: Mapped[str] = mapped_column(String(2), nullable=False)
+    zipcode: Mapped[str] = mapped_column(String(10), nullable=False)
+    instructions: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class Vendor(Base):
     __tablename__ = "vendors"
 

@@ -73,6 +73,65 @@ class LoginIn(BaseModel):
     password: str
 
 
+class CustomerAddressIn(BaseModel):
+    label: str = Field(default="Other", min_length=1, max_length=40)
+    recipient_name: str = Field(min_length=1, max_length=120)
+    phone: str = Field(min_length=1, max_length=40)
+    street_address: str = Field(min_length=1, max_length=160)
+    apt: str | None = Field(default=None, max_length=60)
+    city: str = Field(min_length=1, max_length=80)
+    state: str = Field(min_length=2, max_length=2)
+    zipcode: str = Field(min_length=5, max_length=10)
+    instructions: str | None = Field(default=None, max_length=500)
+    is_default: bool = False
+
+    @field_validator("label", "recipient_name", "phone", "street_address", "city")
+    @classmethod
+    def _address_required_trimmed(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("must not be blank")
+        return v
+
+    @field_validator("state")
+    @classmethod
+    def _address_state_valid(cls, v: str) -> str:
+        value = _state_ok(v)
+        if not value:
+            raise ValueError("state must be a valid 2-letter code")
+        return value
+
+    @field_validator("zipcode")
+    @classmethod
+    def _address_zip_valid(cls, v: str) -> str:
+        value = _zip_ok(v)
+        if not value:
+            raise ValueError("ZIP code must be valid")
+        return value
+
+    @field_validator("apt", "instructions")
+    @classmethod
+    def _address_optional_trimmed(cls, v: str | None) -> str | None:
+        value = (v or "").strip()
+        return value or None
+
+
+class CustomerAddressOut(_Out):
+    id: int
+    user_id: int
+    label: str
+    recipient_name: str
+    phone: str
+    street_address: str
+    apt: str | None = None
+    city: str
+    state: str
+    zipcode: str
+    instructions: str | None = None
+    is_default: bool = False
+    created_at: dt.datetime
+
+
 class ProfileUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     phone: str | None = Field(default=None, max_length=40)

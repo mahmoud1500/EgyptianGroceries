@@ -1429,7 +1429,7 @@ const S = {
   pickCalView: {}, // vendor id -> {y, m} viewed month in the pickup calendar
   // Multi-vendor checkout (Oct 2026): per-vendor groups hold fulfillment +
   // pickup time + notes; payment + delivery address are shared.
-  checkout: { payment: 'zelle', address: '', groups: {}, promo: null, guestMode: false, guest: null,
+  checkout: { payment: 'zelle', address: '', addressId: '', groups: {}, promo: null, guestMode: false, guest: null,
     redeem_points: 0 },
   // Loyalty points cache: balance + redeem rate, refreshed on demand.
   loyalty: { balance: null, rate: null, earn_rate: null },
@@ -2348,7 +2348,7 @@ function routePath(route, arg) {
   const paths = {
     home: '/', cart: '/cart', review: '/checkout/review', confirm: '/confirmation',
     login: '/login', signup: '/signup', orders: '/orders', bundles: '/bundles',
-    profile: '/profile', groceries: '/groceries', dishes: '/dishes', favorites: '/favorites',
+    profile: '/profile', addresses: '/addresses', rewards: '/rewards', groceries: '/groceries', dishes: '/dishes', favorites: '/favorites',
     forgot: '/forgot-password', reset: '/reset-password', 'verify-email': '/verify-email',
     about: '/about', faq: '/faq', terms: '/terms', privacy: '/privacy', help: '/help',
     apply: '/apply', catering: '/catering', 'paid-checkout': '/payment-complete',
@@ -2378,7 +2378,7 @@ function parsePathRoute() {
   const pages = {
     '/': 'home', '/home': 'home', '/cart': 'cart', '/checkout': 'review', '/checkout/review': 'review',
     '/confirmation': 'confirm', '/login': 'login', '/signup': 'signup', '/orders': 'orders',
-    '/bundles': 'bundles', '/profile': 'profile', '/groceries': 'groceries', '/dishes': 'dishes',
+    '/bundles': 'bundles', '/profile': 'profile', '/addresses': 'addresses', '/rewards': 'rewards', '/groceries': 'groceries', '/dishes': 'dishes',
     '/favorites': 'favorites', '/forgot-password': 'forgot', '/forgot': 'forgot',
     '/reset-password': 'reset', '/reset': 'reset', '/verify-email': 'verify-email',
     '/about': 'about', '/faq': 'faq', '/terms': 'terms', '/privacy': 'privacy',
@@ -2458,6 +2458,8 @@ function render() {
       case 'paid': html = '<div id="view"></div>'; break;
       case 'paid-checkout': html = '<div id="view"></div>'; break;
       case 'profile': html = '<div id="view"></div>'; break;
+      case 'addresses': html = '<div id="view"></div>'; break;
+      case 'rewards': html = '<div id="view"></div>'; break;
       case 'groceries': html = '<div id="view"></div>'; break;
       case 'dishes': html = '<div id="view"></div>'; break;
       case 'favorites': html = '<div id="view"></div>'; break;
@@ -2494,6 +2496,8 @@ function render() {
   else if (S.route === 'paid') vPaid(S.routeArg);
   else if (S.route === 'paid-checkout') vPaidCheckout();
   else if (S.route === 'profile') vProfile();
+  else if (S.route === 'addresses') vAddresses();
+  else if (S.route === 'rewards') vRewards();
   else if (S.route === 'groceries') vGroceries();
   else if (S.route === 'dishes') vDishes();
   else if (S.route === 'favorites') vFavorites();
@@ -4163,6 +4167,8 @@ async function cartLines() {
 
 async function vCart() {
   const view = $('#view');
+  const savedAddresses = (S.user && S.user.role === 'customer') ? await api('/addresses').catch(() => []) : [];
+  if (Array.isArray(savedAddresses)) S.savedAddresses = savedAddresses;
   S.leMap = {}; S.leSeq = 0; // v39: fresh inline-editor ids per render
   const groups = await cartGroups().catch(e => ({ error: e.message }));
   if (groups.error) { view.innerHTML = '<div class="error">' + esc(groups.error) + '</div>'; return; }
@@ -4312,10 +4318,25 @@ async function vCart() {
       const composed = composeAddress(S.user);
       if (composed) S.checkout.address = composed;
     }
+    if (savedAddresses.length && (!S.checkout.addressId || !savedAddresses.some(a => String(a.id) === String(S.checkout.addressId)))) {
+      const preferred = savedAddresses.find(a => a.is_default) || savedAddresses[0];
+      S.checkout.addressId = String(preferred.id);
+      S.checkout.address = formatSavedAddress(preferred);
+    } else if (savedAddresses.length && S.checkout.addressId) {
+      const selected = savedAddresses.find(a => String(a.id) === String(S.checkout.addressId));
+      if (selected) S.checkout.address = formatSavedAddress(selected);
+    }
     html += '<div class="hint" style="margin-bottom:.4rem;">' + esc(t('delivery_shared')) + '</div>';
+    if (savedAddresses.length) {
+      html += '<label class="field">' + esc(t('saved_address_choose')) + '</label><select id="saved-address-select" onchange="selectCheckoutAddress(this.value)">' +
+        '<option value="">' + esc(t('address_manual')) + '</option>' +
+        savedAddresses.map(a => '<option value="' + a.id + '"' + (String(a.id) === String(S.checkout.addressId) ? ' selected' : '') + '>' +
+          esc(a.label + ' — ' + a.street_address + ', ' + a.city) + '</option>').join('') + '</select>' +
+        '<p class="hint"><a href="#" data-go="addresses">' + esc(t('manage_addresses')) + '</a></p>';
+    }
     html += '<label class="field">' + esc(t('delivery_address')) + '</label>' +
-      '<textarea id="delivery-address" rows="2" aria-label="' + esc(t('delivery_address')) + '" placeholder="' + esc(t('address_ph')) + '" ' +
-      'oninput="S.checkout.address=this.value;updateMapsLink()">' + esc(S.checkout.address) + '</textarea>' +
+      '<textarea id="delivery-address" rows="3" aria-label="' + esc(t('delivery_address')) + '" placeholder="' + esc(t('address_ph')) + '" ' +
+      'oninput="S.checkout.address=this.value;S.checkout.addressId=\'\';const sel=document.getElementById(\'saved-address-select\');if(sel)sel.value=\'\';updateMapsLink()">' + esc(S.checkout.address) + '</textarea>' +
       '<div id="maps-link" class="maps-link">' + mapsLink(S.checkout.address, t('maps_verify')) + '</div>';
   }
 
@@ -5096,6 +5117,106 @@ async function vVerifyEmail(token) {
   }
 }
 
+
+/* ================= saved customer addresses + dedicated rewards page ================= */
+function formatSavedAddress(a) {
+  if (!a) return '';
+  return [a.recipient_name, a.phone, a.street_address, a.apt, [a.city, a.state, a.zipcode].filter(Boolean).join(', '), a.instructions ? t('delivery_instructions') + ': ' + a.instructions : '']
+    .filter(Boolean).join('\n');
+}
+window.selectCheckoutAddress = function (id) {
+  S.checkout.addressId = id || '';
+  const address = (S.savedAddresses || []).find(a => String(a.id) === String(id));
+  if (address) S.checkout.address = formatSavedAddress(address);
+  const input = document.getElementById('delivery-address');
+  if (input) input.value = S.checkout.address;
+  const map = document.getElementById('maps-link');
+  if (map) map.innerHTML = mapsLink(S.checkout.address, t('maps_verify'));
+};
+async function vAddresses() {
+  const view = $('#view');
+  if (!S.user || S.user.role !== 'customer') { go('login'); return; }
+  view.innerHTML = '<h2 class="section-title">' + esc(t('addresses_title')) + '</h2><div class="empty">' + esc(t('points_loading')) + '</div>';
+  try {
+    const addresses = await api('/addresses');
+    S.savedAddresses = addresses;
+    const cards = addresses.length ? addresses.map(a =>
+      '<div class="order-card"><div class="order-head"><strong>📍 ' + esc(a.label) + (a.is_default ? ' · ' + esc(t('address_default')) : '') + '</strong></div>' +
+      '<p>' + esc(formatSavedAddress(a)).replace(/\n/g, '<br>') + '</p><div class="order-actions">' +
+      '<button class="btn small secondary" onclick="editSavedAddress(' + a.id + ')">' + esc(t('address_edit')) + '</button>' +
+      (a.is_default ? '' : '<button class="btn small secondary" onclick="setDefaultSavedAddress(' + a.id + ')">' + esc(t('address_make_default')) + '</button>') +
+      '<button class="btn small secondary" onclick="deleteSavedAddress(' + a.id + ')">' + esc(t('address_delete')) + '</button></div></div>'
+    ).join('') : '<div class="empty">' + esc(t('addresses_empty')) + '</div>';
+    view.innerHTML = '<h2 class="section-title">' + esc(t('addresses_title')) + '</h2>' +
+      '<p class="hint">' + esc(t('addresses_sub')) + '</p><div id="address-list">' + cards + '</div>' +
+      '<div class="form-card"><h3 id="address-form-title">' + esc(t('address_add')) + '</h3><div id="address-msg"></div>' +
+      '<input type="hidden" id="ad-id" value="">' +
+      '<label class="field">' + esc(t('address_label')) + '</label><select id="ad-label"><option value="Home">' + esc(t('address_home')) + '</option><option value="Work">' + esc(t('address_work')) + '</option><option value="Other">' + esc(t('address_other')) + '</option></select>' +
+      '<label class="field">' + esc(t('name_label')) + '</label><input id="ad-recipient" maxlength="120" value="' + esc(S.user.name || '') + '">' +
+      '<label class="field">' + esc(t('phone_label')) + '</label><input id="ad-phone" maxlength="40" value="' + esc(S.user.phone || '') + '">' +
+      '<label class="field">' + esc(t('addr_street')) + '</label><input id="ad-street" maxlength="160">' +
+      '<label class="field">' + esc(t('addr_apt')) + '</label><input id="ad-apt" maxlength="60">' +
+      '<div class="row2"><div><label class="field">' + esc(t('addr_city')) + '</label><input id="ad-city" maxlength="80"></div>' +
+      '<div><label class="field">' + esc(t('addr_state')) + '</label><select id="ad-state">' + stateOptions('') + '</select></div></div>' +
+      '<label class="field">' + esc(t('addr_zip')) + '</label><input id="ad-zip" maxlength="10" inputmode="numeric">' +
+      '<label class="field">' + esc(t('delivery_instructions')) + '</label><textarea id="ad-instructions" rows="2" maxlength="500"></textarea>' +
+      '<label><input type="checkbox" id="ad-default"> ' + esc(t('address_make_default')) + '</label>' +
+      '<div class="mt"><button class="btn" onclick="saveSavedAddress()">' + esc(t('address_save')) + '</button> <button class="btn secondary" onclick="resetAddressForm()">' + esc(t('cancel')) + '</button></div></div>' +
+      '<button class="btn secondary" onclick="go(\'profile\')">' + esc(t('nav_profile')) + '</button>';
+  } catch (e) { view.innerHTML = '<div class="error">' + esc(e.message) + '</div>'; }
+}
+window.editSavedAddress = async function (id) {
+  const a = (S.savedAddresses || []).find(x => x.id === id);
+  if (!a) return;
+  $('#ad-id').value = a.id; $('#ad-label').value = a.label;
+  $('#ad-recipient').value = a.recipient_name; $('#ad-phone').value = a.phone;
+  $('#ad-street').value = a.street_address; $('#ad-apt').value = a.apt || '';
+  $('#ad-city').value = a.city; $('#ad-state').value = a.state; $('#ad-zip').value = a.zipcode;
+  $('#ad-instructions').value = a.instructions || ''; $('#ad-default').checked = !!a.is_default;
+  $('#address-form-title').textContent = t('address_edit');
+  window.scrollTo(0, document.body.scrollHeight);
+};
+window.resetAddressForm = function () {
+  ['ad-id','ad-street','ad-apt','ad-city','ad-zip','ad-instructions'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  ['ad-recipient','ad-phone'].forEach((id,i) => { const e=document.getElementById(id); if(e)e.value=i===0?(S.user.name||''):(S.user.phone||''); });
+  $('#ad-label').value = 'Home'; $('#ad-state').value = ''; $('#ad-default').checked = false;
+  $('#address-form-title').textContent = t('address_add'); $('#address-msg').innerHTML = '';
+};
+window.saveSavedAddress = async function () {
+  const msg = $('#address-msg');
+  const zip = $('#ad-zip').value.trim();
+  if (!zipOk(zip)) { msg.innerHTML = '<div class="error">' + esc(t('zip_invalid')) + '</div>'; return; }
+  const payload = {
+    label: $('#ad-label').value, recipient_name: $('#ad-recipient').value.trim(),
+    phone: $('#ad-phone').value.trim(), street_address: $('#ad-street').value.trim(),
+    apt: $('#ad-apt').value.trim() || null, city: $('#ad-city').value.trim(),
+    state: $('#ad-state').value, zipcode: zip, instructions: $('#ad-instructions').value.trim() || null,
+    is_default: $('#ad-default').checked
+  };
+  try {
+    const id = $('#ad-id').value;
+    await api('/addresses' + (id ? '/' + id : ''), {method: id ? 'PUT' : 'POST', body: JSON.stringify(payload)});
+    vAddresses();
+  } catch (e) { msg.innerHTML = '<div class="error">' + esc(e.message) + '</div>'; }
+};
+window.setDefaultSavedAddress = async function (id) {
+  try { await api('/addresses/' + id + '/default', {method:'POST'}); vAddresses(); }
+  catch(e) { alert(e.message); }
+};
+window.deleteSavedAddress = async function (id) {
+  if (!confirm(t('address_delete_confirm'))) return;
+  try { await api('/addresses/' + id, {method:'DELETE'}); vAddresses(); }
+  catch(e) { alert(e.message); }
+};
+async function vRewards() {
+  const view = $('#view');
+  if (!S.user || S.user.role !== 'customer') { go('login'); return; }
+  view.innerHTML = '<h2 class="section-title">' + esc(t('rewards_title')) + '</h2><div class="form-card"><div id="loy-card">' + esc(t('points_loading')) + '</div></div>' +
+    '<button class="btn secondary" onclick="go(\'profile\')">' + esc(t('nav_profile')) + '</button>';
+  renderLoyaltyCard();
+}
+/* ================= end saved addresses + rewards ================= */
+
 /* ================= customer orders ================= */
 async function vOrders() {
   const view = $('#view');
@@ -5725,7 +5846,7 @@ async function vProfile() {
     : '';
   view.innerHTML =
     '<h2 class="section-title">' + esc(t('profile_title')) + '</h2>' + nudge +
-    '<div class="form-card"><h3>' + esc(t('points_title')) + '</h3><div id="loy-card">' + esc(t('points_loading')) + '</div></div>' +
+    '<div class="form-card account-shortcuts"><button class="btn secondary" onclick="go(\'orders\')">' + esc(t('nav_orders')) + '</button> <button class="btn secondary" onclick="go(\'addresses\')">' + esc(t('addresses_title')) + '</button> <button class="btn secondary" onclick="go(\'rewards\')">' + esc(t('rewards_title')) + '</button></div>' +
     '<div class="form-card"><h3>' + esc(t('reorder_title')) + '</h3>' +
     '<p class="hint">' + esc(t('reorder_sub')) + '</p>' +
     '<div id="reorder-nudges"><div class="empty">' + esc(t('reorder_loading')) + '</div></div></div>' +
@@ -5748,7 +5869,6 @@ async function vProfile() {
     '<label class="field">' + esc(t('current_pw')) + '</label><input type="password" id="pw-cur" autocomplete="current-password">' +
     '<label class="field">' + esc(t('new_password')) + '</label><input type="password" id="pw-new" autocomplete="new-password">' +
     '<div class="mt"><button class="btn" onclick="changePassword()">' + esc(t('change_pw')) + '</button></div></div>';
-  renderLoyaltyCard(); // fills the points card above — non-blocking
   // === Reorder nudges (Oct 2026): "Time to reorder?" — auth-only endpoint. ===
   (function () {
     const el = document.getElementById('reorder-nudges');
