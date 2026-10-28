@@ -999,3 +999,16 @@ input[type=datetime-local], input[type=search], select, textarea {
   .delivery-panel { padding: .75rem; }
 }
 /* ================= END Admin delivery management ================= */
+
+/* Customer delivery tracking — public progress only; no settlement figures. */
+.customer-delivery-tracking {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+.customer-delivery-tracking h3 { margin: 0 0 .65rem; font-size: 1.05rem; }
+.delivery-tracking-status { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
+.delivery-tracking-updated, .delivery-tracking-note { color: var(--muted); font-size: .85rem; margin: .55rem 0 0; }
+

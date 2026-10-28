@@ -5319,6 +5319,63 @@ window.submitReview = async function (orderId, vendorId) {
 /* Customer order tracking detail. */
 const CUST_EVENT_ICON = { placed: '🧾', status: '🔄', email: '📧', note: '📝' };
 
+/* Customer-safe delivery progress. Cost/subsidy data stays admin-only. */
+function customerDeliveryTrackingHTML(payload) {
+  const box = payload && payload.unavailable
+    ? (lang() === 'ar' ? 'تعذر تحديث حالة التوصيل الآن.' : 'Delivery status is temporarily unavailable.')
+    : !payload || !payload.job
+      ? (lang() === 'ar' ? 'لم يتم تعيين التوصيل بعد. سيتم تحديث الحالة تلقائياً.' : 'Delivery has not been assigned yet. Status refreshes automatically.')
+      : '';
+  if (box) {
+    return '<section class="delivery-tracking customer-delivery-tracking" id="customer-delivery-tracking">' +
+      '<h3>' + (lang() === 'ar' ? 'تتبع التوصيل' : 'Delivery tracking') + '</h3>' +
+      '<p class="vendor-tag">' + esc(box) + '</p></section>';
+  }
+  const job = payload.job;
+  const statuses = {
+    pending: lang() === 'ar' ? 'بانتظار التعيين' : 'Awaiting assignment',
+    assigned: lang() === 'ar' ? 'تم تعيين التوصيل' : 'Delivery assigned',
+    picked_up: lang() === 'ar' ? 'خرج للتوصيل' : 'Picked up / on the way',
+    delivered: lang() === 'ar' ? 'تم التوصيل' : 'Delivered',
+    failed: lang() === 'ar' ? 'تعذر التوصيل' : 'Delivery issue',
+    cancelled: lang() === 'ar' ? 'أُلغي التوصيل' : 'Delivery cancelled'
+  };
+  const mode = job.mode === 'vendor'
+    ? (lang() === 'ar' ? 'توصيل البائع' : 'Vendor delivery')
+    : (lang() === 'ar' ? 'توصيل عبر مندوب' : 'Courier delivery');
+  return '<section class="delivery-tracking customer-delivery-tracking" id="customer-delivery-tracking">' +
+    '<h3>' + (lang() === 'ar' ? 'تتبع التوصيل' : 'Delivery tracking') + '</h3>' +
+    '<div class="delivery-tracking-status"><strong>' + esc(statuses[job.status] || job.status) + '</strong>' +
+    '<span class="delivery-status-pill status-' + esc(job.status) + '">' + esc(job.status.replace('_', ' ')) + '</span></div>' +
+    '<p class="vendor-tag">' + esc(mode) + '</p>' +
+    (job.updated_at ? '<p class="delivery-tracking-updated">' +
+      (lang() === 'ar' ? 'آخر تحديث: ' : 'Last updated: ') + esc(fmtDate(job.updated_at)) + '</p>' : '') +
+    '<p class="delivery-tracking-note">' +
+      (lang() === 'ar' ? 'يتم تحديث هذه الحالة تلقائياً. وقت الوصول المتوقع غير متاح حالياً.' : 'Status refreshes automatically. An arrival-time estimate is not available yet.') +
+    '</p></section>';
+}
+let _customerDeliveryTrackingTimer = null;
+function startCustomerDeliveryTrackingPoll(orderId) {
+  if (_customerDeliveryTrackingTimer) clearInterval(_customerDeliveryTrackingTimer);
+  _customerDeliveryTrackingTimer = setInterval(async function () {
+    const panel = document.getElementById('customer-delivery-tracking');
+    if (!panel || S.route !== 'order') {
+      clearInterval(_customerDeliveryTrackingTimer);
+      _customerDeliveryTrackingTimer = null;
+      return;
+    }
+    try {
+      const latest = await api('/delivery/orders/' + orderId + '/tracking');
+      const current = document.getElementById('customer-delivery-tracking');
+      if (current) current.outerHTML = customerDeliveryTrackingHTML(latest);
+      if (latest.job && ['delivered', 'failed', 'cancelled'].includes(latest.job.status)) {
+        clearInterval(_customerDeliveryTrackingTimer);
+        _customerDeliveryTrackingTimer = null;
+      }
+    } catch (e) { /* Keep the last visible status; retry on the next interval. */ }
+  }, 20000);
+}
+
 async function vCustomerOrder(orderId) {
   const view = $('#view');
   if (!S.user) { go('login'); return; }
@@ -5328,6 +5385,11 @@ async function vCustomerOrder(orderId) {
       api('/orders/' + orderId),
       api('/orders/' + orderId + '/events'),
     ]);
+    let deliveryTracking = null;
+    if (order.fulfillment === 'delivery') {
+      try { deliveryTracking = await api('/delivery/orders/' + orderId + '/tracking'); }
+      catch (trackingError) { deliveryTracking = { unavailable: true }; }
+    }
     // Pickup address from the vendor's structured address — pickup only.
     let pickupHTML = '';
     if (order.fulfillment === 'pickup') {
@@ -5353,6 +5415,9 @@ async function vCustomerOrder(orderId) {
     html += '<h2 class="section-title">' + esc(t('order_title')) + order.id +
       ' <span class="status-pill status-' + esc(order.status) + '">' + esc(statusLabel(order.status)) + '</span></h2>';
     html += steps;
+    if (order.fulfillment === 'delivery') {
+      html += customerDeliveryTrackingHTML(deliveryTracking);
+    }
     html += '<div class="order-card"><div class="order-head"><strong>' + esc(order.vendor_name) + '</strong></div>' +
       '<ul class="order-items">' + order.items.map(i =>
         '<li>' + i.quantity + ' × ' + esc(iname(i)) + orderItemExtraHTML(i) +
@@ -5424,6 +5489,7 @@ async function vCustomerOrder(orderId) {
       '<div class="msg-input-row"><input type="text" id="msg-input" maxlength="2000" placeholder="' + esc(t('msg_ph')) + '">' +
       '<button class="btn small" onclick="sendOrderMessage(' + order.id + ',\'customer\')">' + esc(t('msg_send')) + '</button></div>';
     view.innerHTML = html;
+    if (order.fulfillment === 'delivery') startCustomerDeliveryTrackingPoll(order.id);
     startMsgPoll(order.id, 'customer');
   } catch (e) {
     view.innerHTML = '<div class="error">' + esc(t('order_err')) + esc(e.message) + '</div>';

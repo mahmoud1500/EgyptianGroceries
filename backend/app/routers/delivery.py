@@ -107,6 +107,41 @@ def _record_event(db: Session, order_id: int, message: str, meta: dict) -> None:
     ))
 
 
+@router.get("/orders/{order_id}/tracking")
+def customer_delivery_tracking(
+    order_id: int,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.get_current_user),
+):
+    """Return customer-safe delivery progress for the authenticated customer's order.
+
+    Deliberately excludes courier costs, platform subsidy, settlement status,
+    internal notes, and provider references.
+    """
+    order = db.get(models.Order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if user.role != "admin" and order.customer_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your order")
+    if order.fulfillment != "delivery":
+        raise HTTPException(status_code=400, detail="Tracking is only available for delivery orders")
+
+    job = db.scalar(
+        select(models.DeliveryJob).where(models.DeliveryJob.order_id == order.id)
+    )
+    return {
+        "order_id": order.id,
+        "order_status": order.status,
+        "job": None if job is None else {
+            "id": job.id,
+            "mode": job.mode,
+            "provider": job.provider,
+            "status": job.status,
+            "updated_at": job.updated_at,
+        },
+    }
+
+
 @router.get("/jobs")
 def list_delivery_jobs(
     status: str | None = None,
