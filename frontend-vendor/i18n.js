@@ -326,6 +326,10 @@ en: {
   // === v40: money controls + analytics + moderation ===
   adm_tab_analytics: 'Analytics',
   an_days: 'Last {n} days',
+  dashboard_analytics: '📊 Dashboard insights',
+  dashboard_order_status: 'Orders by status',
+  dashboard_sales_7d: 'Sales — last 7 days',
+  dashboard_top_items: 'Top-selling items',
   an_gross: 'Collected sales',
   an_orders: 'Orders',
   an_avg_order: 'Avg order',
@@ -636,6 +640,7 @@ en: {
   adm_audit_more: 'Load more',
   /* ---- inventory: low-stock + stock view (Oct 2026) ---- */
   nav_stock: '📦 Stock',
+  nav_menu: '🍽️ Menu',
   th_stock: 'Stock',
   no_dishes: 'No dishes yet — add one from the Dashboard.',
   f_low_stock: 'Low-stock alert at (blank = 5)',
@@ -1215,6 +1220,10 @@ ar: {
   // === v40: money controls + analytics + moderation ===
   adm_tab_analytics: 'التحليلات',
   an_days: 'آخر {n} يوم',
+  dashboard_analytics: '📊 مؤشرات لوحة التحكم',
+  dashboard_order_status: 'الطلبات حسب الحالة',
+  dashboard_sales_7d: 'المبيعات — آخر ٧ أيام',
+  dashboard_top_items: 'الأصناف الأكثر مبيعًا',
   an_gross: 'المبيعات المحصّلة',
   an_orders: 'الطلبات',
   an_avg_order: 'متوسط الطلب',
@@ -1525,6 +1534,7 @@ ar: {
   adm_audit_more: 'تحميل المزيد',
   /* ---- المخزون: تنبيه نقص + صفحة المخزون (أكتوبر 2026) ---- */
   nav_stock: '📦 المخزون',
+  nav_menu: '🍽️ المنيو',
   th_stock: 'المخزون',
   no_dishes: 'مفيش أطباق لسه — ضيف واحد من لوحة التحكم.',
   f_low_stock: 'تنبيه نقص المخزون عند (فاضي = 5)',
