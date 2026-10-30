@@ -2,6 +2,7 @@
 import json
 import os
 import sys
+import unittest
 from decimal import Decimal
 from pathlib import Path
 
@@ -17,8 +18,8 @@ from app import models  # noqa: E402
 from app.routers.admin import analytics, list_refunds  # noqa: E402
 
 
-class AdminFinancialDashboardTests:
-    def setup_method(self):
+class TestAdminFinancialDashboard(unittest.TestCase):
+    def setUp(self):
         self.engine = create_engine("sqlite:///:memory:")
         models.Base.metadata.create_all(bind=self.engine)
         self.db = sessionmaker(bind=self.engine)()
@@ -47,7 +48,7 @@ class AdminFinancialDashboardTests:
         self.db.add(self.vendor)
         self.db.flush()
 
-    def teardown_method(self):
+    def tearDown(self):
         self.db.close()
         self.engine.dispose()
 
@@ -77,13 +78,13 @@ class AdminFinancialDashboardTests:
         result = analytics(days=30, db=self.db, admin=self.admin)
         totals = result["totals"]
 
-        assert totals["gross"] == 150.00
-        assert totals["orders"] == 2
-        assert totals["commission_earned"] == 13.00
-        assert totals["platform_commission"] == 8.00
-        assert totals["direct_commission_due"] == 5.00
-        assert totals["refunds"] == 60.00
-        assert totals["refunded_orders"] == 2
+        self.assertEqual(totals["gross"], 150.00)
+        self.assertEqual(totals["orders"], 2)
+        self.assertEqual(totals["commission_earned"], 13.00)
+        self.assertEqual(totals["platform_commission"], 8.00)
+        self.assertEqual(totals["direct_commission_due"], 5.00)
+        self.assertEqual(totals["refunds"], 60.00)
+        self.assertEqual(totals["refunded_orders"], 2)
 
     def test_refund_ledger_classifies_status_and_reconciles_vendor_commission(self):
         order = self._order("completed", "credit_card", "100.00", "10.00", "20.00")
@@ -114,12 +115,12 @@ class AdminFinancialDashboardTests:
         summary = result["summary"]
         by_status = {item["status"]: item for item in result["items"]}
 
-        assert summary["succeeded_count"] == 1
-        assert summary["succeeded_amount"] == 20.00
-        assert summary["pending_count"] == 1
-        assert summary["pending_amount"] == 5.00
-        assert summary["failed_count"] == 1
-        assert summary["needs_review_count"] == 1
-        assert by_status["succeeded"]["remaining_balance"] == 80.00
-        assert by_status["succeeded"]["commission_after_refund"] == 8.00
-        assert by_status["needs_review"]["unmatched_refund_ids"] == ["re_external"]
+        self.assertEqual(summary["succeeded_count"], 1)
+        self.assertEqual(summary["succeeded_amount"], 20.00)
+        self.assertEqual(summary["pending_count"], 1)
+        self.assertEqual(summary["pending_amount"], 5.00)
+        self.assertEqual(summary["failed_count"], 1)
+        self.assertEqual(summary["needs_review_count"], 1)
+        self.assertEqual(by_status["succeeded"]["remaining_balance"], 80.00)
+        self.assertEqual(by_status["succeeded"]["commission_after_refund"], 8.00)
+        self.assertEqual(by_status["needs_review"]["unmatched_refund_ids"], ["re_external"])
