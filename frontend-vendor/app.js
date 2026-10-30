@@ -3362,7 +3362,7 @@ async function vPayouts() {
 }
 
 /* ---------- Admin back-office (admin role only) ---------- */
-const ADM_TABS = ['overview', 'analytics', 'orders', 'customers', 'vendors', 'dishes', 'reviews', 'promos', 'retention', 'payouts', 'applications', 'loyalty', 'catering', 'problems', 'users', 'settings', 'audit_log', 'delivery']; // === F6: problems tab === // === v40: analytics tab ===
+const ADM_TABS = ['overview', 'analytics', 'refunds', 'orders', 'customers', 'vendors', 'dishes', 'reviews', 'promos', 'retention', 'payouts', 'applications', 'loyalty', 'catering', 'problems', 'users', 'settings', 'audit_log', 'delivery']; // === F6: problems tab === // === v40: analytics tab ===
 // === v40+: broadcasts + scorecards tabs (appended; staff sees a subset) ===
 const ADM_TABS_EXTRA = ['broadcasts', 'scorecards'];
 const ADM_TABS_ALL = ADM_TABS.concat(ADM_TABS_EXTRA);
@@ -3396,6 +3396,7 @@ async function vAdmin() {
   try {
     if (S.adminTab === 'overview') await admOverview();
     else if (S.adminTab === 'analytics') await admAnalytics(); // === v40 ===
+    else if (S.adminTab === 'refunds') await admRefunds();
     else if (S.adminTab === 'broadcasts') await admBroadcasts(); // === v40+ ===
     else if (S.adminTab === 'scorecards') await admScorecards(); // === v40+ ===
     else if (S.adminTab === 'orders') await admOrders();
@@ -3468,12 +3469,16 @@ async function admAnalytics() {
     [totals.orders, t('an_orders')],
     [money(totals.avg_order), t('an_avg_order')],
     [totals.customers, t('an_customers')],
+    [money(totals.commission_earned), t('an_commission_earned')],
+    [money(totals.refunds), t('an_refunds_period')],
     [a.repeat_rate + '%', t('an_repeat_rate')],
     [a.new_customers + ' / ' + a.returning_customers, t('an_new_returning')],
   ];
   html += '<div class="stat-grid">' +
     cards.map(c => '<div class="stat-card"><div class="num">' + c[0] + '</div><div class="lbl">' + esc(c[1]) + '</div></div>').join('') +
     '</div>';
+  html += '<p class="hint">' + esc(t('an_platform_commission')) + ': <strong>' + money(totals.platform_commission) +
+    '</strong> · ' + esc(t('an_direct_commission_due')) + ': <strong>' + money(totals.direct_commission_due) + '</strong></p>';
   // Revenue over time
   html += '<h4>' + esc(t('an_rev_time')) + '</h4>' +
     _anBarChart(a.revenue_over_time, r => r.date.slice(5), r => r.gross, v => money(v));
@@ -3497,6 +3502,51 @@ async function admAnalytics() {
     _anBarChart(a.peak_hours, r => String(r.hour).padStart(2, '0') + ':00', r => r.orders, v => String(v));
   html += '<h4>' + esc(t('an_peak_days')) + '</h4>' +
     _anBarChart(a.peak_days, r => _anWeekdayName(r.weekday), r => r.orders, v => String(v));
+  $('#adm-body').innerHTML = html;
+}
+
+/* ---------- Admin: refund history and reconciliation ---------- */
+async function admRefunds() {
+  const data = await api('/admin/refunds?limit=200');
+  const summary = data.summary || {};
+  const items = data.items || [];
+  const cards = [
+    [money(summary.succeeded_amount || 0), t('refunds_confirmed')],
+    [money(summary.pending_amount || 0), t('refunds_pending_amount')],
+    [summary.failed_count || 0, t('refunds_failed')],
+    [summary.needs_review_count || 0, t('refunds_needs_review')],
+  ];
+  let html = '<div class="delivery-page-header"><div><h3 class="section-title">' + esc(t('refunds_title')) +
+    '</h3><p class="hint">' + esc(t('refunds_hint')) + '</p></div>' +
+    '<button class="btn secondary" type="button" onclick="vAdmin()">' + esc(t('refunds_refresh')) + '</button></div>';
+  html += '<div class="stat-grid">' + cards.map(c =>
+    '<div class="stat-card"><div class="num">' + c[0] + '</div><div class="lbl">' + esc(c[1]) + '</div></div>'
+  ).join('') + '</div>';
+  if (!items.length) {
+    html += '<div class="empty">' + esc(t('refunds_empty')) + '</div>';
+  } else {
+    html += '<div class="table-wrap"><table class="menu-table"><thead><tr>' +
+      '<th>' + esc(t('refunds_date')) + '</th><th>' + esc(t('refunds_order')) + '</th>' +
+      '<th>' + esc(t('refunds_customer')) + '</th><th>' + esc(t('refunds_vendor')) + '</th>' +
+      '<th>' + esc(t('refunds_amount')) + '</th><th>' + esc(t('refunds_status')) + '</th>' +
+      '<th>' + esc(t('refunds_total_refunded')) + '</th><th>' + esc(t('refunds_remaining')) + '</th>' +
+      '<th>' + esc(t('refunds_commission_after')) + '</th><th></th></tr></thead><tbody>' +
+      items.map(item => {
+        const status = item.status || 'needs_review';
+        const reference = item.refund_id || (item.unmatched_refund_ids || []).join(', ') || '—';
+        return '<tr><td>' + esc(fmtDate(item.created_at)) + '</td>' +
+          '<td>#' + Number(item.order_id) + '</td>' +
+          '<td>' + esc(item.customer_name || '—') + '</td>' +
+          '<td>' + esc(item.vendor_name || '—') + '</td>' +
+          '<td>' + (item.amount == null ? '—' : money(item.amount)) + '</td>' +
+          '<td><span class="status-pill status-' + esc(status) + '">' + esc(t('refunds_status_' + status)) + '</span></td>' +
+          '<td>' + money(item.refunded_total) + '</td>' +
+          '<td>' + money(item.remaining_balance) + '</td>' +
+          '<td>' + money(item.commission_after_refund) + '</td>' +
+          '<td><button class="btn small" type="button" onclick="admOrderDetail(' + Number(item.order_id) + ')">' +
+            esc(t('adm_view')) + '</button><br><small>' + esc(reference) + '</small></td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
   $('#adm-body').innerHTML = html;
 }
 
@@ -3825,13 +3875,22 @@ function deliveryJobOrder(job) {
 function deliveryAdminSummary(jobs) {
   const active = jobs.filter(j => ['pending', 'assigned', 'picked_up'].includes(j.status)).length;
   const delivered = jobs.filter(j => j.status === 'delivered').length;
-  const subsidy = jobs.reduce((sum, j) => sum + Math.max(0, Number(j.platform_subsidy) || 0), 0);
-  const actual = jobs.reduce((sum, j) => sum + Math.max(0, Number(j.actual_cost) || 0), 0);
+  const unassigned = jobs.filter(j =>
+    j.status === 'pending' && (!String(j.provider || '').trim() || String(j.provider).trim().toLowerCase() === 'manual')
+  ).length;
+  const confirmed = jobs.filter(j => j.actual_cost_confirmed);
+  const subsidy = confirmed.reduce((sum, j) => sum + Math.max(0, Number(j.platform_subsidy) || 0), 0);
+  const actual = confirmed.reduce((sum, j) => sum + Math.max(0, Number(j.actual_cost) || 0), 0);
+  const unpaid = jobs.filter(j =>
+    j.status === 'delivered' && j.actual_cost_confirmed && j.payment_status === 'unpaid'
+  ).reduce((sum, j) => sum + Math.max(0, Number(j.actual_cost) || 0), 0);
   return '<div class="delivery-kpis">' +
+    '<div class="delivery-kpi"><span>Awaiting assignment</span><strong>' + unassigned + '</strong></div>' +
     '<div class="delivery-kpi"><span>Active deliveries</span><strong>' + active + '</strong></div>' +
     '<div class="delivery-kpi"><span>Delivered</span><strong>' + delivered + '</strong></div>' +
-    '<div class="delivery-kpi"><span>Actual delivery cost</span><strong>' + esc(deliveryMoney(actual)) + '</strong></div>' +
+    '<div class="delivery-kpi"><span>Confirmed actual cost</span><strong>' + esc(deliveryMoney(actual)) + '</strong></div>' +
     '<div class="delivery-kpi"><span>Platform subsidy</span><strong>' + esc(deliveryMoney(subsidy)) + '</strong></div>' +
+    '<div class="delivery-kpi"><span>Unpaid courier cost</span><strong>' + esc(deliveryMoney(unpaid)) + '</strong></div>' +
     '</div>';
 }
 function deliveryCreateForm() {
@@ -3847,7 +3906,7 @@ function deliveryCreateForm() {
       ? '<div class="delivery-create-grid"><label class="field">Delivery order<select id="delivery-new-order">' +
         eligible.map(o => '<option value="' + Number(o.id) + '">' + esc(deliveryOrderLabel(o)) + '</option>').join('') +
         '</select></label><label class="field">Delivery mode<select id="delivery-new-mode"><option value="third_party">Third-party delivery</option><option value="vendor">Vendor delivery</option></select></label>' +
-        '<label class="field">Provider<input id="delivery-new-provider" maxlength="40" value="manual" placeholder="e.g. in-house, courier name"></label>' +
+        '<label class="field">Assigned courier / provider<input id="delivery-new-provider" maxlength="40" value="manual" placeholder="e.g. in-house, courier name"></label>' +
         '<label class="field">Provider reference<input id="delivery-new-reference" maxlength="120" placeholder="Optional tracking/reference ID"></label>' +
         '<label class="field">Quoted cost ($)<input id="delivery-new-quoted" type="number" min="0" step="0.01" value="0"></label>' +
         '<label class="field">Customer delivery fee ($)<input id="delivery-new-fee" type="number" min="0" step="0.01" placeholder="Use order fee if blank"></label>' +
@@ -3873,10 +3932,11 @@ function deliveryJobCard(job) {
         DELIVERY_STATUSES.map(s => '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + esc(DELIVERY_STATUS_LABELS[s]) + '</option>').join('') +
       '</select></label>' +
       '<label class="field">Delivery mode<select data-delivery-field="mode"><option value="third_party"' + (mode === 'third_party' ? ' selected' : '') + '>Third-party</option><option value="vendor"' + (mode === 'vendor' ? ' selected' : '') + '>Vendor</option></select></label>' +
-      '<label class="field">Provider<input data-delivery-field="provider" maxlength="40" value="' + esc(provider) + '"></label>' +
+      '<label class="field">Assigned courier / provider<input data-delivery-field="provider" maxlength="40" value="' + esc(provider) + '"></label>' +
       '<label class="field">Provider reference<input data-delivery-field="provider_reference" maxlength="120" value="' + esc(job.provider_reference || '') + '" placeholder="Tracking/reference"></label>' +
       '<label class="field">Quoted cost ($)<input data-delivery-field="quoted_cost" type="number" min="0" step="0.01" value="' + esc(job.quoted_cost ?? '0') + '"></label>' +
-      '<label class="field">Actual cost ($)<input data-delivery-field="actual_cost" type="number" min="0" step="0.01" value="' + esc(job.actual_cost ?? '0') + '"></label>' +
+      '<label class="field">Actual cost ($)<input data-delivery-field="actual_cost" type="number" min="0" step="0.01" value="' +
+        (job.actual_cost_confirmed ? esc(job.actual_cost) : '') + '" placeholder="Not confirmed — leave blank until known"></label>' +
       '<label class="field">Customer fee ($)<input data-delivery-field="customer_fee" type="number" min="0" step="0.01" value="' + esc(job.customer_fee ?? '0') + '"></label>' +
       '<label class="field">Cost payment status<select data-delivery-field="payment_status">' +
         ['unpaid', 'paid', 'waived'].map(s => '<option value="' + s + '"' + (s === job.payment_status ? ' selected' : '') + '>' + esc(s.charAt(0).toUpperCase() + s.slice(1)) + '</option>').join('') +
@@ -3983,13 +4043,19 @@ window.saveDeliveryJob = async function (jobId) {
   const payload = {};
   card.querySelectorAll('[data-delivery-field]').forEach(el => {
     const key = el.getAttribute('data-delivery-field');
-    if (['quoted_cost', 'actual_cost', 'customer_fee'].includes(key)) {
+    if (key === 'actual_cost') {
+      const raw = el.value.trim();
+      payload[key] = raw === '' ? null : Number(raw);
+    } else if (['quoted_cost', 'customer_fee'].includes(key)) {
       payload[key] = Number(el.value);
     } else {
       payload[key] = el.value.trim();
     }
   });
-  if (['quoted_cost', 'actual_cost', 'customer_fee'].some(k => !Number.isFinite(payload[k]) || payload[k] < 0)) {
+  if (
+    ['quoted_cost', 'customer_fee'].some(k => !Number.isFinite(payload[k]) || payload[k] < 0) ||
+    (payload.actual_cost !== null && (!Number.isFinite(payload.actual_cost) || payload.actual_cost < 0))
+  ) {
     if (msg) msg.textContent = 'Enter valid non-negative costs.';
     return;
   }
