@@ -5,6 +5,7 @@ vendor portal (visible only when logged in as admin)."""
 import datetime as dt
 import json
 from decimal import Decimal, InvalidOperation
+from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -1477,8 +1478,14 @@ def list_refunds(
             Decimal(str(order.refunded_amount or 0)),
             _successful_refund_total(db, order.id),
         )
-        commission_order = __import__("copy").copy(order)
-        commission_order.refunded_amount = refunded_total
+        commission_order = SimpleNamespace(
+            commission_due=order.commission_due,
+            subtotal=order.subtotal,
+            discount_amount=order.discount_amount,
+            points_discount=order.points_discount,
+            total=order.total,
+            refunded_amount=refunded_total,
+        )
         commission_after_refund = commission_due_for_order(
             commission_order, order.vendor, default_rate
         )
