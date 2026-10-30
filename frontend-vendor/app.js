@@ -269,6 +269,17 @@ function stopPortalPoll() {
   stopMsgPoll();
 }
 
+function startPortalPoll() {
+  stopPortalPoll();
+  S.portal.timer = setInterval(() => {
+    if (S.route !== 'portal' && S.route !== 'menu') {
+      stopPortalPoll();
+      return;
+    }
+    portalReload(false).catch(e => console.warn('[vendor portal] refresh failed', e));
+  }, 15000);
+}
+
 async function vPortal() {
   const view = $('#view');
   if (!S.user || S.user.role !== 'vendor') {
@@ -285,8 +296,7 @@ async function vPortal() {
     await portalReload(true);
     S.categories = [...new Set(S.portal.menu.map(d => d.category))].sort();
     renderPortalShell();
-    stopPortalPoll();
-    S.portal.timer = setInterval(() => portalReload(false), 15000);
+    startPortalPoll();
   } catch (e) {
     view.innerHTML = '<div class="error">' + esc(t('portal_err')) + esc(e.message) + '</div>';
   }
@@ -1641,6 +1651,7 @@ function renderMenuShell() {
     '<h3 class="section-title">'+esc(t('slots_h'))+'</h3><div id="portal-slots"><div class="empty">'+esc(t('v_loading'))+'</div></div>'+
     '<h3 class="section-title">📦 '+esc(t('drops_title'))+'</h3><div id="portal-drops"><div class="empty">'+esc(t('v_loading'))+'</div></div>';
   $('#view').innerHTML=html; portalRefreshDynamic(); loadPortalBundles(); loadPortalSlots(); loadPortalDrops();
+  startPortalPoll();
 }
 
 async function vStock() {
