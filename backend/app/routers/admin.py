@@ -504,11 +504,46 @@ def analytics(
 
     orders = list(
         db.scalars(
-            select(models.Order).where(
+            select(models.Order)
+            .options(joinedload(models.Order.vendor))
+            .where(
                 models.Order.status == "completed",
                 models.Order.created_at >= start_utc,
             )
         ).all()
+    )
+
+    # Commission is calculated using the saved order snapshot and adjusted
+    # proportionally for successful refunds. Split the result by who collected
+    # the customer's payment: platform methods are withheld from vendor
+    # settlements; direct methods remain vendor receivables.
+    default_rate = _commission_default(db)
+    commission_earned = Decimal("0.00")
+    platform_commission = Decimal("0.00")
+    direct_commission_due = Decimal("0.00")
+    for order in orders:
+        due = commission_due_for_order(order, order.vendor, default_rate)
+        commission_earned += due
+        method = str(order.payment_method or "").strip().lower()
+        if is_platform_payment_method(method):
+            platform_commission += due
+        elif method in DIRECT_PAYMENT_METHODS:
+            direct_commission_due += due
+
+    # Refunds are reported against orders placed in the selected period,
+    # including cancelled orders. Pending/failed Stripe attempts are not
+    # reflected in Order.refunded_amount and therefore are not counted here.
+    period_orders = list(
+        db.scalars(
+            select(models.Order).where(models.Order.created_at >= start_utc)
+        ).all()
+    )
+    refund_total = sum(
+        (Decimal(str(order.refunded_amount or 0)) for order in period_orders),
+        Decimal("0.00"),
+    )
+    refunded_orders = sum(
+        1 for order in period_orders if Decimal(str(order.refunded_amount or 0)) > 0
     )
 
     def _la(o: models.Order) -> dt.datetime:
@@ -615,6 +650,11 @@ def analytics(
             "orders": len(orders),
             "avg_order": round(gross / len(orders), 2) if orders else 0,
             "customers": total_c,
+            "commission_earned": round(float(commission_earned), 2),
+            "platform_commission": round(float(platform_commission), 2),
+            "direct_commission_due": round(float(direct_commission_due), 2),
+            "refunds": round(float(refund_total), 2),
+            "refunded_orders": refunded_orders,
         },
         "revenue_over_time": list(day_map.values()),
         "revenue_by_vendor": [
@@ -1351,6 +1391,128 @@ def admin_order_detail(
         "events": [schemas.OrderEventOut.model_validate(e) for e in events],
         "messages": [schemas.OrderMessageOut.model_validate(m) for m in messages],
     }
+
+
+def _refund_event_status(message: str, meta: dict) -> str | None:
+    """Classify a locally recorded refund event without guessing that money moved."""
+    text = str(message or "").lower()
+    stripe_status = str(meta.get("stripe_status") or "").strip().lower()
+
+    if meta.get("unmatched_refund_ids") or "unmatched stripe refund" in text or "reconciliation unavailable" in text:
+        return "needs_review"
+    if stripe_status == "succeeded":
+        return "succeeded"
+    if stripe_status == "failed" or "failed" in text:
+        return "failed"
+    if stripe_status in {"pending", "requires_action"} or "not confirmed" in text:
+        return "pending"
+    if stripe_status and stripe_status not in {"succeeded", "failed", "pending", "requires_action"}:
+        return "needs_review"
+    # Legacy successful events predate stripe_status but include an amount
+    # and an "issued" message. Do not classify informational/no-refund events.
+    if meta.get("refund_id") and meta.get("amount") is not None:
+        return "succeeded"
+    if meta.get("amount") is not None and "issued" in text:
+        return "succeeded"
+    return None
+
+
+@router.get("/refunds")
+def list_refunds(
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(_admin),
+):
+    """Read-only refund ledger with order and vendor commission context.
+
+    This endpoint reports the local audit trail. It does not issue refunds or
+    call Stripe; unresolved/external refund records are marked for review.
+    """
+    rows = db.execute(
+        select(
+            models.OrderEvent,
+            models.Order,
+            models.User.name,
+            models.Vendor.name,
+        )
+        .join(models.Order, models.Order.id == models.OrderEvent.order_id)
+        .outerjoin(models.User, models.User.id == models.Order.customer_id)
+        .join(models.Vendor, models.Vendor.id == models.Order.vendor_id)
+        .where(models.OrderEvent.event_type == "refund")
+        .order_by(models.OrderEvent.created_at.desc(), models.OrderEvent.id.desc())
+        .limit(limit)
+    ).all()
+
+    default_rate = _commission_default(db)
+    summary = {
+        "succeeded_count": 0,
+        "succeeded_amount": 0.0,
+        "pending_count": 0,
+        "pending_amount": 0.0,
+        "failed_count": 0,
+        "needs_review_count": 0,
+    }
+    items = []
+    succeeded_amount = Decimal("0.00")
+    pending_amount = Decimal("0.00")
+
+    for event, order, customer_name, vendor_name in rows:
+        try:
+            meta = json.loads(event.meta) if event.meta else {}
+        except (ValueError, TypeError):
+            meta = {}
+        if not isinstance(meta, dict):
+            meta = {}
+
+        status = _refund_event_status(event.message, meta)
+        if status is None:
+            continue
+
+        try:
+            amount = Decimal(str(meta["amount"])) if meta.get("amount") is not None else None
+        except (InvalidOperation, ValueError, TypeError):
+            amount = None
+
+        refunded_total = max(
+            Decimal(str(order.refunded_amount or 0)),
+            _successful_refund_total(db, order.id),
+        )
+        commission_order = __import__("copy").copy(order)
+        commission_order.refunded_amount = refunded_total
+        commission_after_refund = commission_due_for_order(
+            commission_order, order.vendor, default_rate
+        )
+        order_total = Decimal(str(order.total or 0))
+        remaining = max(Decimal("0.00"), order_total - refunded_total)
+
+        summary[f"{status}_count"] += 1
+        if status == "succeeded" and amount is not None:
+            succeeded_amount += amount
+        elif status == "pending" and amount is not None:
+            pending_amount += amount
+
+        items.append({
+            "event_id": event.id,
+            "order_id": order.id,
+            "customer_name": customer_name,
+            "vendor_name": vendor_name,
+            "amount": float(amount) if amount is not None else None,
+            "status": status,
+            "refund_id": meta.get("refund_id"),
+            "unmatched_refund_ids": meta.get("unmatched_refund_ids") or [],
+            "stripe_status": meta.get("stripe_status"),
+            "payment_intent": meta.get("payment_intent"),
+            "message": event.message,
+            "created_at": event.created_at.isoformat() if event.created_at else None,
+            "order_total": float(order_total),
+            "refunded_total": float(refunded_total),
+            "remaining_balance": float(remaining),
+            "commission_after_refund": float(commission_after_refund),
+        })
+
+    summary["succeeded_amount"] = float(succeeded_amount.quantize(Decimal("0.01")))
+    summary["pending_amount"] = float(pending_amount.quantize(Decimal("0.01")))
+    return {"summary": summary, "items": items}
 
 
 # ---------- standalone refund (v40 rework) ----------
